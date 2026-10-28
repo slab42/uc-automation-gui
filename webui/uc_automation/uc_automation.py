@@ -1,0 +1,82 @@
+import reflex as rx
+
+from .config import APP_NAME, PLATFORMS
+from .pages.advertised_patterns import advertised_patterns
+from .pages.css import css
+from .pages.credentials import credentials
+from .pages.cucm_home import cucm_home
+from .pages.devices import (
+    common_device_configs,
+    mpp_phones,
+    phone_button_templates,
+    phones,
+    softkey_templates,
+)
+from .pages.home import home
+from .pages.logs import logs
+from .pages.partitions import partitions
+from .pages.pickup_groups import pickup_groups
+from .pages.platform import platform_page
+from .pages.settings import settings
+from .state.advertised_patterns import AdvertisedPatternsState
+from .state.css import CssState
+from .state.cucm import CucmState
+from .state.devices import (
+    CommonDeviceConfigsState,
+    MppPhonesState,
+    PhoneButtonTemplatesState,
+    PhonesState,
+    SoftkeyTemplatesState,
+)
+from .state.logs import LogsState
+from .state.partitions import PartitionsState
+from .state.pickup_groups import PickupGroupsState
+
+app = rx.App(
+    head_components=[rx.el.link(rel="icon", href="/slab42.jpg")],
+)
+
+app.add_page(home, route="/", title=APP_NAME)
+for _p in PLATFORMS:
+    if _p.slug == "cucm":
+        continue
+    app.add_page(platform_page(_p), route=f"/{_p.slug}", title=f"{_p.label} | {APP_NAME}")
+app.add_page(logs, route="/logs", title=f"Logs | {APP_NAME}", on_load=LogsState.on_page_load)
+app.add_page(settings, route="/settings", title=f"Settings | {APP_NAME}")
+
+app.add_page(cucm_home, route="/cucm", title=f"CUCM | {APP_NAME}", on_load=CucmState.load_connections)
+app.add_page(
+    advertised_patterns,
+    route="/cucm/advertised-patterns",
+    title=f"Advertised Patterns | {APP_NAME}",
+    on_load=AdvertisedPatternsState.on_page_load,
+)
+app.add_page(credentials, route="/credentials", title=f"Credentials | {APP_NAME}", on_load=CucmState.load_connections)
+app.add_page(
+    partitions,
+    route="/cucm/partitions",
+    title=f"Partitions | {APP_NAME}",
+    on_load=PartitionsState.on_page_load,
+)
+app.add_page(
+    css,
+    route="/cucm/calling-search-spaces",
+    title=f"Calling Search Spaces | {APP_NAME}",
+    on_load=CssState.on_page_load,
+)
+
+app.add_page(
+    pickup_groups,
+    route="/cucm/call-pickup-groups",
+    title=f"Call Pickup Groups | {APP_NAME}",
+    on_load=PickupGroupsState.on_page_load,
+)
+
+for _route, _title, _page, _state in [
+    ("/cucm/phones", "Phones", phones, PhonesState),
+    ("/cucm/softkey-templates", "Softkey Templates", softkey_templates, SoftkeyTemplatesState),
+    ("/cucm/common-device-configs", "Common Device Configs", common_device_configs, CommonDeviceConfigsState),
+    ("/cucm/phone-button-templates", "Phone Button Templates", phone_button_templates, PhoneButtonTemplatesState),
+    ("/cucm/mpp-phones", "Physical Phones (MPP)", mpp_phones, MppPhonesState),
+]:
+    app.add_page(_page, route=_route, title=f"{_title} | {APP_NAME}", on_load=_state.on_page_load)

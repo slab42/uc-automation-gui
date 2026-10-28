@@ -12,3 +12,7 @@ openpyxl  # cuc/build_call_trees.py (Excel output)
 fastapi
 uvicorn[standard]
 python-multipart
+
+# Reflex web UI only - `cd webui && reflex run` (webui/). Same file as webui/requirements.txt.
+# Use a venv inside webui/ (see webui/README.md). Not needed for the terminal menu or the old gui/.
+reflex>=0.10,<0.11

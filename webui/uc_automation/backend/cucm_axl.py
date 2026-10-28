@@ -1,0 +1,250 @@
+"""AXL access for the web UI: version detection and Advertised Pattern operations.
+
+Written for this app (the CLI scripts in cucm/ were used as reference only). The
+WSDL files are shared with the CLI under cucm/schema/<version>/.
+"""
+
+import re
+import threading
+from dataclasses import dataclass
+from xml.etree import ElementTree as ET
+
+import requests
+import urllib3
+from requests.auth import HTTPBasicAuth
+
+from .cucm_connections import CucmConnection
+from .paths import CUCM_SCHEMA_DIR
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+PATTERN_TYPES = ["+E.164 Number", "Enterprise Number"]
+PSTN_RULES = ["No PSTN", "Use pattern", "Specify"]
+PATTERN_FIELDS = ["description", "pattern", "patternType", "hostedRoutePSTNRule",
+                  "pstnFailStrip", "pstnFailPrepend"]
+
+_VERSION_RE = re.compile(r"^(\d+)\.(\d+)")
+
+
+class AxlError(Exception):
+    pass
+
+
+def available_schemas() -> list[str]:
+    """Numeric schema folders (8.5 ... 15.0), ascending. 'current' is excluded."""
+    found = [p.name for p in CUCM_SCHEMA_DIR.iterdir()
+             if p.is_dir() and _VERSION_RE.match(p.name) and (p / "AXLAPI.wsdl").exists()]
+    return sorted(found, key=lambda v: tuple(int(x) for x in v.split(".")))
+
+
+def pick_schema(major: str) -> str:
+    """Exact schema folder for the release, else the closest older one, else the oldest."""
+    schemas = available_schemas()
+    if not schemas:
+        raise AxlError(f"No AXL schema folders found in {CUCM_SCHEMA_DIR}")
+    if major in schemas:
+        return major
+    key = tuple(int(x) for x in major.split("."))
+    older = [s for s in schemas if tuple(int(x) for x in s.split(".")) <= key]
+    return older[-1] if older else schemas[0]
+
+
+def _soap(server: str, username: str, password: str, body: str, ns_version: str, timeout: int = 15) -> ET.Element:
+    envelope = (
+        '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" '
+        f'xmlns:ns="http://www.cisco.com/AXL/API/{ns_version}"><soapenv:Header/>'
+        f"<soapenv:Body>{body}</soapenv:Body></soapenv:Envelope>"
+    )
+    try:
+        resp = requests.post(
+            f"https://{server}:8443/axl/", data=envelope.encode(), timeout=timeout, verify=False,
+            auth=HTTPBasicAuth(username, password),
+            headers={"Content-Type": "text/xml", "SOAPAction": f'"CUCM:DB ver={ns_version}"'},
+        )
+    except requests.exceptions.SSLError as e:
+        raise AxlError(f"TLS error talking to {server}: {e}")
+    except requests.exceptions.ConnectTimeout:
+        raise AxlError(f"Timed out connecting to {server}:8443")
+    except requests.exceptions.ConnectionError as e:
+        raise AxlError(f"Cannot reach {server}:8443 ({e.__class__.__name__})")
+    if resp.status_code == 401:
+        raise AxlError("Authentication failed (401). Check the username and password.")
+    if resp.status_code == 403:
+        raise AxlError("Access denied (403). The account needs the Standard AXL API Access role.")
+    try:
+        root = ET.fromstring(resp.content)
+    except ET.ParseError:
+        raise AxlError(f"Unexpected response from {server} (HTTP {resp.status_code}). Is AXL enabled?")
+    fault = root.find(".//faultstring")
+    if fault is not None:
+        raise AxlError(fault.text or "AXL fault")
+    return root
+
+
+def detect_version(server: str, username: str, password: str) -> tuple[str, str]:
+    """Return (full version string, schema major like '15.0') via getCCMVersion.
+
+    The AXL namespace 1.0 means "whatever release the server runs"; fall back to
+    trying known releases newest first if the server refuses it.
+    """
+    body = "<ns:getCCMVersion/>"
+    last: AxlError | None = None
+    for ns in ["1.0"] + list(reversed(available_schemas())):
+        try:
+            root = _soap(server, username, password, body, ns)
+        except AxlError as e:
+            msg = str(e).lower()
+            if "authentication" in msg or "denied" in msg or "reach" in msg or "timed out" in msg or "tls" in msg:
+                raise
+            last = e
+            continue
+        node = root.find(".//version")
+        full = (node.text or "").strip() if node is not None else ""
+        m = _VERSION_RE.match(full)
+        if not m:
+            raise AxlError(f"CUCM did not return a recognizable version ({full or 'empty'})")
+        return full, f"{m.group(1)}.{m.group(2)}"
+    raise last or AxlError("Could not determine CUCM version")
+
+
+# --- zeep client (built lazily and cached: parsing a CUCM WSDL takes seconds) ---
+
+_clients: dict[tuple, object] = {}
+_lock = threading.Lock()
+
+
+def _service(conn: CucmConnection):
+    from zeep import Client, Settings
+    from zeep.transports import Transport
+    from requests import Session
+
+    schema = conn.schema_version or pick_schema(conn.version or available_schemas()[-1])
+    key = (conn.server, conn.username, schema)
+    with _lock:
+        svc = _clients.get(key)
+        if svc is None:
+            session = Session()
+            session.verify = False
+            session.auth = HTTPBasicAuth(conn.username, conn.password)
+            client = Client(
+                wsdl=(CUCM_SCHEMA_DIR / schema / "AXLAPI.wsdl").as_uri(),
+                transport=Transport(session=session, timeout=30),
+                settings=Settings(strict=False, xml_huge_tree=True),
+            )
+            svc = client.create_service(
+                "{http://www.cisco.com/AXLAPIService/}AXLAPIBinding", f"https://{conn.server}:8443/axl/")
+            _clients[key] = svc
+    return svc
+
+
+def forget(server: str) -> None:
+    """Drop cached clients for a server (after credentials change)."""
+    with _lock:
+        for k in [k for k in _clients if k[0] == server]:
+            del _clients[k]
+
+
+def _fault_message(e: Exception) -> str:
+    return getattr(e, "message", None) or str(e)
+
+
+def _text(value) -> str:
+    """AXL returns reference fields (device pool, CSS, ...) as {'_value_1': name, 'uuid': ...}."""
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        return _text(value.get("_value_1"))
+    return str(value)
+
+
+def list_paged(conn: CucmConnection, op: str, result_key: str, search: dict, tags: list[str],
+               page: int = 500) -> list[dict[str, str]]:
+    """Run an AXL list call page by page (AXL refuses unpaged lists over 1000 rows)."""
+    from zeep.exceptions import Fault
+    from zeep.helpers import serialize_object
+    svc = _service(conn)
+    rows: list[dict] = []
+    skip = 0
+    while True:
+        try:
+            resp = getattr(svc, op)(searchCriteria=search, returnedTags={t: "" for t in tags},
+                                    skip=skip, first=page)
+        except Fault as e:
+            raise AxlError(_fault_message(e))
+        data = serialize_object(resp["return"]) if resp["return"] is not None else {}
+        batch = (data or {}).get(result_key) or []
+        rows.extend(batch)
+        if len(batch) < page:
+            break
+        skip += page
+    return [{t: _text(r.get(t)) for t in tags} for r in rows]
+
+
+def list_patterns(conn: CucmConnection) -> list[dict[str, str]]:
+    rows = list_paged(conn, "listAdvertisedPatterns", "advertisedPatterns",
+                      {"pattern": "%"}, PATTERN_FIELDS)
+    return sorted(rows, key=lambda r: r["pattern"])
+
+
+def _clean(row: dict[str, str]) -> dict[str, str]:
+    r = {f: (row.get(f) or "").strip() for f in PATTERN_FIELDS}
+    if not r["pattern"]:
+        raise AxlError("pattern is required")
+    if r["patternType"] and r["patternType"] not in PATTERN_TYPES:
+        raise AxlError(f"patternType must be one of: {', '.join(PATTERN_TYPES)}")
+    if r["hostedRoutePSTNRule"] and r["hostedRoutePSTNRule"] not in PSTN_RULES:
+        raise AxlError(f"hostedRoutePSTNRule must be one of: {', '.join(PSTN_RULES)}")
+    if r["pstnFailStrip"] and not r["pstnFailStrip"].isdigit():
+        raise AxlError("pstnFailStrip must be a number")
+    return r
+
+
+def add_pattern(conn: CucmConnection, row: dict[str, str]) -> None:
+    from zeep.exceptions import Fault
+    r = _clean(row)
+    body = {"pattern": r["pattern"]}
+    if r["description"]:
+        body["description"] = r["description"]
+    body["patternType"] = r["patternType"] or "Enterprise Number"
+    body["hostedRoutePSTNRule"] = r["hostedRoutePSTNRule"] or "No PSTN"
+    body["pstnFailStrip"] = r["pstnFailStrip"] or "0"
+    if r["pstnFailPrepend"]:
+        body["pstnFailPrepend"] = r["pstnFailPrepend"]
+    try:
+        _service(conn).addAdvertisedPatterns(advertisedPatterns=body)
+    except Fault as e:
+        raise AxlError(_fault_message(e))
+
+
+def update_pattern(conn: CucmConnection, row: dict[str, str]) -> None:
+    """Update an existing pattern. Blank CSV cells leave that field unchanged."""
+    from zeep.exceptions import Fault
+    r = _clean(row)
+    body = {"pattern": r["pattern"]}
+    for f in ["description", "patternType", "hostedRoutePSTNRule", "pstnFailStrip", "pstnFailPrepend"]:
+        if r[f]:
+            body[f] = r[f]
+    if len(body) == 1:
+        raise AxlError("nothing to change")
+    try:
+        _service(conn).updateAdvertisedPatterns(**body)
+    except Fault as e:
+        raise AxlError(_fault_message(e))
+
+
+def remove_pattern(conn: CucmConnection, pattern: str) -> None:
+    """Remove a pattern; retries with a '+' prefix if the bare pattern is not found."""
+    from zeep.exceptions import Fault
+    svc = _service(conn)
+    try:
+        svc.removeAdvertisedPatterns(pattern=pattern)
+        return
+    except Fault as e:
+        first = _fault_message(e)
+    if not pattern.startswith("+"):
+        try:
+            svc.removeAdvertisedPatterns(pattern="+" + pattern)
+            return
+        except Fault:
+            pass
+    raise AxlError(first)

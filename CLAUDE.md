@@ -171,6 +171,22 @@ api_endpoint = https://example.com/api
 
 `python3 main.py --gui` serves the same inventory as a web app ("slab42 UC-Automations") at http://127.0.0.1:8420/: FastAPI backend in `gui/backend/`, React frontend in `gui/frontend/` (build once with `cd gui/frontend && npm install && npm run build`). Scripts run unchanged: a `sitecustomize` shim in `gui/backend/shim/` turns every `input()`/`getpass()` prompt into a web form field (no terminal in the browser), argparse flags become an options form, and the Settings page edits `.env/credentials.env` without ever displaying a password. Keep new scripts to the existing prompt conventions (`prompt_yes_no`, numbered `Select ... [1-N]:` lists, `[default]` suffixes) so the GUI can classify them. Design notes: `.doc/gui-web-frontend.md`. Update that doc in the same commit as any GUI change.
 
+## Reflex Web UI (`webui/`) - the going-forward GUI
+
+`webui/` is the new web app (Reflex, Python backend). It is NOT a wrapper around the CLI scripts: every
+feature is re-implemented as backend AXL code + a Reflex page, and the CLI scripts are reference only
+(never import or modify them). `gui/` is the old wrapper and is frozen. Run: `cd webui && .venv/bin/reflex run`.
+
+Full guide: `.doc/webui-reflex.md`. Read it before touching `webui/`, and update it in the same commit as any
+structural change. The rules:
+- Three layers: `backend/` (plain Python AXL, no Reflex), `state/` (Reflex state), `pages/` + `components/` (layout only).
+- A new CUCM list/add/modify/delete resource is: backend functions + a `ResourceSpec` + `class XState(CucmState, CrudMixin)`
+  + a `build_crud_page(...)` config + one `add_page` + one entry in `GROUPS` (`components/cucm_nav.py`). Do not copy the page code.
+- Custom behavior goes through `CrudPageConfig.extra_toolbar` / `extra_dialogs`, not a forked page.
+- Passwords stay in backend (`_`-prefixed) vars and `.env/credentials.env`; never send one to the browser.
+- Check AXL request shapes against `cucm/schema/current/AXLSoap.xsd` with zeep `create_message`, and compile with
+  `reflex export --frontend-only --no-zip`. Say plainly that nothing was tested against a real CUCM.
+
 ## Running CUCM/CUC/CUBE Scripts
 
 All scripts follow the same pattern:

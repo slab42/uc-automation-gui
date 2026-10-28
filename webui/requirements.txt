@@ -1,0 +1,5 @@
+reflex>=0.10,<0.11
+zeep
+requests
+lxml
+urllib3
