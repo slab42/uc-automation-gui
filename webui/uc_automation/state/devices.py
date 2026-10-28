@@ -1,13 +1,11 @@
 """States for CUCM > Devices: phones, softkey templates, common device configs, button templates, MPP."""
 
-import asyncio
 import csv
 import io
 
 import reflex as rx
 
 from ..backend import cucm_devices as d
-from ..backend.cucm_axl import AxlError
 from .crud import CrudMixin, DepCheckMixin, ResourceSpec
 from .cucm import CucmState
 
@@ -67,6 +65,22 @@ BUTTON_TEMPLATES = ResourceSpec(
     add_defaults={"name": "", "basePhoneTemplateName": "Cisco 8845 SIP"},
 )
 
+CTIRPS = ResourceSpec(
+    noun="CTI route point",
+    key="name",
+    fields=d.CTIRP_FIELDS,
+    export_prefix="cti_route_points",
+    template_csv=(
+        "name,description,devicePoolName,callingSearchSpaceName,locationName\n"
+        "CTIRP_MainAA,Main auto attendant,DP-HQ,CSS-Internal,Hub_None\n"
+    ),
+    bulk_template_csv="name\nCTIRP_MainAA\n",
+    list_fn=d.list_cti_route_points, add_fn=d.add_cti_route_point,
+    update_fn=d.update_cti_route_point, remove_fn=d.remove_cti_route_point,
+    add_defaults={"name": "", "description": "", "devicePoolName": "", "callingSearchSpaceName": "",
+                  "locationName": "Hub_None"},
+)
+
 MPP = ResourceSpec(
     noun="phone",
     key="name",
@@ -91,6 +105,11 @@ class SoftkeyTemplatesState(CucmState, CrudMixin):
 class CommonDeviceConfigsState(CucmState, CrudMixin):
     def _spec(self) -> ResourceSpec:
         return CDCS
+
+
+class CtiRoutePointsState(CucmState, CrudMixin):
+    def _spec(self) -> ResourceSpec:
+        return CTIRPS
 
 
 class PhoneButtonTemplatesState(CucmState, CrudMixin, DepCheckMixin):
@@ -157,7 +176,7 @@ class MppPhonesState(CucmState, CrudMixin):
         async for ev in self._mpp_run(targets):
             yield ev
         self.dialog = "mppresult"
-        failed = {r["key"] for r in self.results if r["status"] != "OK"}
+        failed = {r["id"] for r in self.results if r["status"] != "OK"}
         self.selected = [s for s in targets if s in failed]
 
     @rx.event

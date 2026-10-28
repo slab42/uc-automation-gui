@@ -1,4 +1,5 @@
-"""AXL access for the web UI: version detection and Advertised Pattern operations.
+"""Shared AXL plumbing for the web UI: errors, schema/version handling, the cached zeep client, paged lists,
+SQL rows and small call helpers. Resource operations live in the cucm_<area>.py modules.
 
 Written for this app (the CLI scripts in cucm/ were used as reference only). The
 WSDL files are shared with the CLI under cucm/schema/<version>/.
@@ -6,7 +7,6 @@ WSDL files are shared with the CLI under cucm/schema/<version>/.
 
 import re
 import threading
-from dataclasses import dataclass
 from xml.etree import ElementTree as ET
 
 import requests
@@ -17,11 +17,6 @@ from .cucm_connections import CucmConnection
 from .paths import CUCM_SCHEMA_DIR
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-PATTERN_TYPES = ["+E.164 Number", "Enterprise Number"]
-PSTN_RULES = ["No PSTN", "Use pattern", "Specify"]
-PATTERN_FIELDS = ["description", "pattern", "patternType", "hostedRoutePSTNRule",
-                  "pstnFailStrip", "pstnFailPrepend"]
 
 _VERSION_RE = re.compile(r"^(\d+)\.(\d+)")
 
@@ -154,7 +149,23 @@ def _text(value) -> str:
         return ""
     if isinstance(value, dict):
         return _text(value.get("_value_1"))
+    if hasattr(value, "_value_1"):  # zeep object (not yet serialized)
+        return _text(value._value_1)
     return str(value)
+
+
+def _call(conn: CucmConnection, op: str, **kwargs):
+    """Call one AXL operation by name, turning a zeep Fault into AxlError."""
+    from zeep.exceptions import Fault
+    try:
+        return getattr(_service(conn), op)(**kwargs)
+    except Fault as e:
+        raise AxlError(_fault_message(e))
+
+
+def _non_blank(r: dict[str, str], skip: tuple[str, ...] = ()) -> dict[str, str]:
+    """The entries of a form row that have a value (blank cells mean "leave unchanged / use default")."""
+    return {k: v for k, v in r.items() if v and k not in skip}
 
 
 def list_paged(conn: CucmConnection, op: str, result_key: str, search: dict, tags: list[str],
@@ -180,71 +191,40 @@ def list_paged(conn: CucmConnection, op: str, result_key: str, search: dict, tag
     return [{t: _text(r.get(t)) for t in tags} for r in rows]
 
 
-def list_patterns(conn: CucmConnection) -> list[dict[str, str]]:
-    rows = list_paged(conn, "listAdvertisedPatterns", "advertisedPatterns",
-                      {"pattern": "%"}, PATTERN_FIELDS)
-    return sorted(rows, key=lambda r: r["pattern"])
+def sql_rows(conn: CucmConnection, query: str, columns: int) -> list[dict[str, str]]:
+    """Run executeSQLQuery. Use only where AXL has no list/get call (dependency checks).
 
-
-def _clean(row: dict[str, str]) -> dict[str, str]:
-    r = {f: (row.get(f) or "").strip() for f in PATTERN_FIELDS}
-    if not r["pattern"]:
-        raise AxlError("pattern is required")
-    if r["patternType"] and r["patternType"] not in PATTERN_TYPES:
-        raise AxlError(f"patternType must be one of: {', '.join(PATTERN_TYPES)}")
-    if r["hostedRoutePSTNRule"] and r["hostedRoutePSTNRule"] not in PSTN_RULES:
-        raise AxlError(f"hostedRoutePSTNRule must be one of: {', '.join(PSTN_RULES)}")
-    if r["pstnFailStrip"] and not r["pstnFailStrip"].isdigit():
-        raise AxlError("pstnFailStrip must be a number")
-    return r
-
-
-def add_pattern(conn: CucmConnection, row: dict[str, str]) -> None:
+    AXL returns each column as its own element; `columns` is how many the query selects, so the flat
+    sequence can be cut back into rows. Values are text, NULL becomes "".
+    """
     from zeep.exceptions import Fault
-    r = _clean(row)
-    body = {"pattern": r["pattern"]}
-    if r["description"]:
-        body["description"] = r["description"]
-    body["patternType"] = r["patternType"] or "Enterprise Number"
-    body["hostedRoutePSTNRule"] = r["hostedRoutePSTNRule"] or "No PSTN"
-    body["pstnFailStrip"] = r["pstnFailStrip"] or "0"
-    if r["pstnFailPrepend"]:
-        body["pstnFailPrepend"] = r["pstnFailPrepend"]
     try:
-        _service(conn).addAdvertisedPatterns(advertisedPatterns=body)
+        resp = _service(conn).executeSQLQuery(sql=query)
     except Fault as e:
         raise AxlError(_fault_message(e))
+    ret = resp["return"]
+    raw = None if ret is None else ret["row"]
+    if raw is None:
+        return []
+    cells: list[tuple[str, str]] = []
+
+    def collect(item):
+        if isinstance(item, (list, tuple)):
+            for x in item:
+                collect(x)
+        elif isinstance(item, dict):
+            cells.extend((k.split("}")[-1], "" if v is None else str(v)) for k, v in item.items())
+        elif hasattr(item, "tag"):
+            kids = list(item)
+            if kids and columns > 1 and len(kids) >= columns:   # a whole <row> element
+                for k in kids:
+                    cells.append((k.tag.split("}")[-1], k.text or ""))
+            else:
+                cells.append((item.tag.split("}")[-1], item.text or ""))
+
+    collect(raw)
+    return [dict(cells[i:i + columns]) for i in range(0, len(cells) - columns + 1, columns)]
 
 
-def update_pattern(conn: CucmConnection, row: dict[str, str]) -> None:
-    """Update an existing pattern. Blank CSV cells leave that field unchanged."""
-    from zeep.exceptions import Fault
-    r = _clean(row)
-    body = {"pattern": r["pattern"]}
-    for f in ["description", "patternType", "hostedRoutePSTNRule", "pstnFailStrip", "pstnFailPrepend"]:
-        if r[f]:
-            body[f] = r[f]
-    if len(body) == 1:
-        raise AxlError("nothing to change")
-    try:
-        _service(conn).updateAdvertisedPatterns(**body)
-    except Fault as e:
-        raise AxlError(_fault_message(e))
-
-
-def remove_pattern(conn: CucmConnection, pattern: str) -> None:
-    """Remove a pattern; retries with a '+' prefix if the bare pattern is not found."""
-    from zeep.exceptions import Fault
-    svc = _service(conn)
-    try:
-        svc.removeAdvertisedPatterns(pattern=pattern)
-        return
-    except Fault as e:
-        first = _fault_message(e)
-    if not pattern.startswith("+"):
-        try:
-            svc.removeAdvertisedPatterns(pattern="+" + pattern)
-            return
-        except Fault:
-            pass
-    raise AxlError(first)
+def sql_quote(value: str) -> str:
+    return value.replace("'", "''")

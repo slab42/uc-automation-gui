@@ -3,7 +3,7 @@ phone button templates, and the MPP firmware workflows."""
 
 import re
 
-from .cucm_axl import AxlError, _fault_message, _service, list_paged
+from .cucm_axl import AxlError, list_paged, sql_quote, sql_rows, _call, _non_blank, _text
 from .cucm_connections import CucmConnection
 
 PHONE_FIELDS = ["name", "description", "product", "protocol", "devicePoolName", "callingSearchSpaceName",
@@ -12,6 +12,7 @@ PHONE_FIELDS = ["name", "description", "product", "protocol", "devicePoolName", 
 SOFTKEY_FIELDS = ["name", "description", "baseSoftkeyTemplateName"]
 CDC_FIELDS = ["name", "softkeyTemplateName", "userLocale"]
 BUTTON_TEMPLATE_FIELDS = ["name", "basePhoneTemplateName"]
+CTIRP_FIELDS = ["name", "description", "devicePoolName", "callingSearchSpaceName", "locationName"]
 MPP_FIELDS = ["name", "description", "model", "devicePoolName", "loadInformation"]
 
 MPP_LOAD_SERVER = "cloudupgrader.webex.com"
@@ -22,18 +23,6 @@ def _clean(row: dict[str, str], fields: list[str], key: str = "name") -> dict[st
     if not r[key]:
         raise AxlError(f"{key} is required")
     return r
-
-
-def _call(conn: CucmConnection, op: str, **kwargs):
-    from zeep.exceptions import Fault
-    try:
-        return getattr(_service(conn), op)(**kwargs)
-    except Fault as e:
-        raise AxlError(_fault_message(e))
-
-
-def _non_blank(r: dict[str, str], skip: tuple[str, ...] = ()) -> dict[str, str]:
-    return {k: v for k, v in r.items() if v and k not in skip}
 
 
 # --- Phones ---
@@ -175,6 +164,89 @@ def update_phone_button_template(conn: CucmConnection, row: dict[str, str]) -> N
 
 def remove_phone_button_template(conn: CucmConnection, name: str) -> None:
     _call(conn, "removePhoneButtonTemplate", name=name)
+
+
+# --- CTI route points ---
+
+def list_cti_route_points(conn: CucmConnection) -> list[dict[str, str]]:
+    return sorted(list_paged(conn, "listCtiRoutePoint", "ctiRoutePoint", {"name": "%"}, CTIRP_FIELDS),
+                  key=lambda r: r["name"].lower())
+
+
+def add_cti_route_point(conn: CucmConnection, row: dict[str, str]) -> None:
+    r = _clean(row, CTIRP_FIELDS)
+    if not r["devicePoolName"]:
+        raise AxlError("devicePoolName is required")
+    body = _non_blank(r)
+    body.setdefault("locationName", "Hub_None")
+    body["product"] = "CTI Route Point"
+    body["class"] = "CTI Route Point"
+    body["protocol"] = "SCCP"
+    body["protocolSide"] = "User"
+    body["useTrustedRelayPoint"] = "Default"
+    _call(conn, "addCtiRoutePoint", ctiRoutePoint=body)
+
+
+def update_cti_route_point(conn: CucmConnection, row: dict[str, str]) -> None:
+    r = _clean(row, CTIRP_FIELDS)
+    body = _non_blank(r, skip=("name",))
+    if not body:
+        raise AxlError("nothing to change")
+    _call(conn, "updateCtiRoutePoint", name=r["name"], **body)
+
+
+def _cti_route_point_lines(conn: CucmConnection, name: str) -> list[tuple[str, str]]:
+    resp = _call(conn, "getCtiRoutePoint", name=name, returnedTags={
+        "lines": {"line": {"dirn": {"pattern": "", "routePartitionName": ""}}}})
+    lines = resp["return"]["ctiRoutePoint"].lines
+    items = (lines.line if lines is not None else None) or []
+    if not isinstance(items, list):
+        items = [items]
+    out = []
+    for ln in items:
+        dirn = getattr(ln, "dirn", None)
+        if dirn is not None and dirn.pattern:
+            out.append((dirn.pattern, _text(dirn.routePartitionName)))
+    return out
+
+
+def _line_devices(conn: CucmConnection, pattern: str, partition: str) -> list[str]:
+    """Devices, device profiles and remote destination profiles that still use a directory number."""
+    where = (f"rp.name = '{sql_quote(partition)}'" if partition else "n.fkroutepartition IS NULL")
+    rows = sql_rows(conn, f"""
+        SELECT d.name AS name
+        FROM numplan n
+        LEFT JOIN routepartition rp ON rp.pkid = n.fkroutepartition
+        INNER JOIN devicenumplanmap m ON m.fknumplan = n.pkid
+        INNER JOIN device d ON d.pkid = m.fkdevice
+        WHERE n.dnorpattern = '{sql_quote(pattern)}' AND {where}
+        """, 1)
+    return [r["name"] for r in rows if r.get("name")]
+
+
+def remove_cti_route_point(conn: CucmConnection, name: str) -> str:
+    """Remove the route point, then delete its directory numbers that no device uses any more
+    (ctiRP_delete.py). Returns a detail line; a DN that cannot be removed does not fail the removal."""
+    lines = _cti_route_point_lines(conn, name)
+    _call(conn, "removeCtiRoutePoint", name=name)
+    if not lines:
+        return "Removed (no directory numbers)"
+    notes = []
+    for pattern, partition in lines:
+        label = f"{pattern} ({partition or 'no partition'})"
+        try:
+            devices = _line_devices(conn, pattern, partition)
+            if devices:
+                notes.append(f"DN {label} kept: still on {', '.join(devices[:3])}")
+                continue
+            kwargs = {"pattern": pattern}
+            if partition:
+                kwargs["routePartitionName"] = partition
+            _call(conn, "removeLine", **kwargs)
+            notes.append(f"DN {label} removed")
+        except AxlError as e:
+            notes.append(f"DN {label} kept: {e}")
+    return "Removed. " + "; ".join(notes)
 
 
 # --- Physical phones: MPP firmware workflows ---

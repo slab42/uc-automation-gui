@@ -7,6 +7,7 @@ import reflex as rx
 
 from ..backend import cucm_axl, cucm_connections
 from ..backend.applog import OpLog
+from ..backend.cucm_connections import CucmConnection
 
 _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,40}$")
 
@@ -48,6 +49,10 @@ class CucmState(rx.State):
         if not c:
             return ""
         return f"CUCM {c['version']}" if c.get("version") else "version unknown"
+
+    def _conn(self) -> CucmConnection | None:
+        """The active connection with its stored credentials (backend only), or None."""
+        return cucm_connections.load(self.active) if self.active else None
 
     # --- loading / selection ---
 

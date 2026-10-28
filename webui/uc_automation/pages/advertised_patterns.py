@@ -1,6 +1,6 @@
 import reflex as rx
 
-from ..backend.cucm_axl import PATTERN_TYPES, PSTN_RULES
+from ..backend.cucm_routing import PATTERN_TYPES, PSTN_RULES
 from ..components.crud_page import Column, CrudPageConfig, build_crud_page, form_field, text_input
 from ..state.advertised_patterns import AdvertisedPatternsState as S
 
@@ -39,6 +39,7 @@ advertised_patterns = build_crud_page(S, CrudPageConfig(
         Column("Strip", "pstnFailStrip"), Column("Prepend", "pstnFailPrepend"),
     ],
     add_body=_add_body,
+    can_copy=True,
     import_notes=("patternType: +E.164 Number, Enterprise Number. "
                   "hostedRoutePSTNRule: No PSTN, Use pattern, Specify."),
 ))

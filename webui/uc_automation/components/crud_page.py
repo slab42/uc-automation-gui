@@ -23,10 +23,14 @@ class CrudPageConfig:
     key: str                        # row key field
     columns: list[Column]
     add_body: Callable[[type], rx.Component] | None = None   # builds the add-form fields for state S
+    add_required: str = ""          # form field that must be filled to enable Add (default: key)
     import_notes: str = ""
     can_add: bool = True
     can_import: bool = True
     can_modify: bool = True
+    import_add: bool = True          # show the Add button in the import dialog
+    modify_label: str = "Modify"     # label of the import dialog's second button (it runs update_fn)
+    can_copy: bool = False           # Copy button: Add dialog pre-filled from the one selected row
     can_delete: bool = True          # delete selected + bulk delete
     delete_note: str = ""
     extra_toolbar: Callable[[type], list[rx.Component]] | None = None
@@ -63,7 +67,7 @@ def dependency_dialogs(S, h, title: str, noun_header: str, checking_text: str) -
                     rx.fragment(),
                 ),
                 rx.foreach(S.dep_warnings, lambda w: rx.callout(w, icon="triangle-alert", color_scheme="amber",
-                                                               size="1", width="100%")),
+                                                               size="2", width="100%")),
                 rx.cond(
                     S.dep_results.length() > 0,
                     rx.vstack(
@@ -88,9 +92,9 @@ def dependency_dialogs(S, h, title: str, noun_header: str, checking_text: str) -
                                     rx.table.cell(r["count"]),
                                     rx.table.cell(r["detail"]),
                                 ))),
-                                size="1",
+                                size="2",
                             ),
-                            max_height="320px",
+                            max_height="calc(70vh - 15rem)",
                         ),
                         spacing="2", align="start", width="100%",
                     ),
@@ -106,7 +110,8 @@ def dependency_dialogs(S, h, title: str, noun_header: str, checking_text: str) -
                 ),
                 spacing="3", align="start", width="100%",
             ),
-            width="800px",
+            width="70vw",
+            height="70vh",
         ),
     ]
 
@@ -114,9 +119,10 @@ def dependency_dialogs(S, h, title: str, noun_header: str, checking_text: str) -
 def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
     """Return a page function for state class S (a CucmState + CrudMixin subclass)."""
 
-    def dialog(name: str, title: str, *body: rx.Component, width: str = "640px") -> rx.Component:
+    def dialog(name: str, title: str, *body: rx.Component, width: str = "640px", height: str = "") -> rx.Component:
+        size = {"width": width, "height": height} if height else {}
         return rx.dialog.root(
-            rx.dialog.content(rx.dialog.title(title), *body, max_width=width),
+            rx.dialog.content(rx.dialog.title(title), *body, max_width=width, **size),
             open=S.dialog == name,
             on_open_change=lambda o: S.set_dialog(name, o),
         )
@@ -203,7 +209,7 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
                 rx.hstack(
                     close_button("Cancel"),
                     rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add",
-                              on_click=S.add_one, disabled=S.busy | (S.new_form[cfg.key] == "")),
+                              on_click=S.add_one, disabled=S.busy | (S.new_form[cfg.add_required or cfg.key] == "")),
                     justify="end", spacing="3", width="100%",
                 ),
                 spacing="3", align="start", width="100%",
@@ -217,8 +223,9 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
                 rx.text(f"The CSV needs a header row with these columns. Only {cfg.key} is required.",
                         size="2", color="var(--gray-11)"),
                 code_block(S.template_text),
-                rx.text(cfg.import_notes + (" Add uses defaults for blank cells; Modify leaves blank cells unchanged."
-                                            if cfg.can_modify else " Add uses defaults for blank cells."),
+                rx.text(cfg.import_notes + (
+                    (" Add uses defaults for blank cells; Modify leaves blank cells unchanged."
+                     if cfg.can_modify else " Add uses defaults for blank cells.") if cfg.import_add else ""),
                         size="1", color="var(--gray-10)"),
                 rx.button(rx.icon("download", size=15), "Download template", variant="ghost", size="1",
                           on_click=S.download_template),
@@ -228,9 +235,11 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
                 rx.hstack(
                     close_button(),
                     rx.spacer(),
-                    rx.button(rx.icon("plus", size=16), "Add",
-                              on_click=S.import_add(rx.upload_files(upload_id="import_upload")), disabled=S.busy),
-                    *([rx.button(rx.icon("pencil", size=16), "Modify", variant="soft",
+                    *([rx.button(rx.icon("plus", size=16), "Add",
+                                 on_click=S.import_add(rx.upload_files(upload_id="import_upload")),
+                                 disabled=S.busy)] if cfg.import_add else []),
+                    *([rx.button(rx.icon("pencil", size=16), cfg.modify_label,
+                                 variant="soft" if cfg.import_add else "solid",
                                  on_click=S.import_modify(rx.upload_files(upload_id="import_upload")),
                                  disabled=S.busy)] if cfg.can_modify else []),
                     spacing="3", width="100%",
@@ -358,6 +367,9 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
             rx.icon_button(rx.icon("refresh-cw", size=16), variant="soft", on_click=S.fetch, loading=S.loading,
                            title="Reload from CUCM"),
             *([rx.button(rx.icon("plus", size=16), "Add", on_click=S.set_dialog("add", True))] if cfg.can_add else []),
+            *([rx.button(rx.icon("copy", size=16), "Copy", variant="soft",
+                         disabled=S.selected_count != 1, on_click=S.copy_selected,
+                         title="Add a new row based on the selected one")] if cfg.can_copy and cfg.can_add else []),
             *([rx.button(rx.icon("upload", size=16), "Import", variant="soft",
                          on_click=S.set_dialog("import", True))] if cfg.can_import else []),
             rx.button(rx.icon("download", size=16), "Export", variant="soft", on_click=S.export_click),

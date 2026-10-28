@@ -17,7 +17,7 @@ import reflex as rx
 from ..backend.applog import OpLog
 from ..backend.cucm_axl import AxlError
 from ..backend.cucm_connections import CucmConnection
-from ..backend import cucm_connections
+from ..backend.keys import KEY_SEP, split_key
 
 
 DISPLAY_LIMIT = 500  # rows rendered at once; search and select-all still cover every match
@@ -37,6 +37,27 @@ class ResourceSpec:
     remove_fn: Callable[[CucmConnection, str], None]
     add_defaults: dict[str, str] = field(default_factory=dict)
     build_add_row: Callable[[dict[str, str]], dict[str, str]] = lambda form: dict(form)
+    # Objects identified by more than one field (pattern + partition): set key="id" and list the parts here.
+    # Rows then carry an extra "id" field (parts joined with KEY_SEP) that is used for selection, delete
+    # targets and results. remove_fn receives that id; use split_key() to take it apart.
+    key_parts: tuple[str, ...] = ()
+
+
+def make_key(spec: ResourceSpec, row: dict[str, str]) -> str:
+    return KEY_SEP.join((row.get(p) or "").strip() for p in spec.key_parts)
+
+
+def display_key(spec: ResourceSpec, key: str) -> str:
+    """Human label for a row key: 'pattern' or 'pattern in partition' for composite keys."""
+    if not spec.key_parts:
+        return key
+    first, *rest = split_key(key, len(spec.key_parts))
+    rest = [r for r in rest if r]
+    return f"{first} in {', '.join(rest)}" if rest else first
+
+
+def row_label(spec: ResourceSpec, row: dict[str, str]) -> str:
+    return display_key(spec, make_key(spec, row)) if spec.key_parts else row[spec.key]
 
 
 def parse_csv(data: bytes, spec: ResourceSpec) -> list[dict[str, str]]:
@@ -45,13 +66,16 @@ def parse_csv(data: bytes, spec: ResourceSpec) -> list[dict[str, str]]:
     if not reader.fieldnames:
         raise ValueError("The CSV file is empty.")
     lookup = {(h or "").strip().lower(): h for h in reader.fieldnames}
-    if spec.key.lower() not in lookup:
-        raise ValueError(f"The CSV needs a header row with a '{spec.key}' column.")
+    required = spec.key_parts[0] if spec.key_parts else spec.key
+    if required.lower() not in lookup:
+        raise ValueError(f"The CSV needs a header row with a '{required}' column.")
     cols = {f: lookup.get(f.lower()) for f in spec.fields}
     rows = []
     for raw in reader:
         row = {f: (raw.get(h) or "").strip() if h else "" for f, h in cols.items()}
         if any(row.values()):
+            if spec.key_parts:
+                row[spec.key] = make_key(spec, row)
             rows.append(row)
     return rows
 
@@ -123,9 +147,6 @@ class CrudMixin(rx.State, mixin=True):
 
     # --- helpers ---
 
-    def _conn(self) -> CucmConnection | None:
-        return cucm_connections.load(self.active) if self.active else None
-
     def _form_defaults(self):
         self.new_form = dict(self._spec().add_defaults)
 
@@ -153,7 +174,10 @@ class CrudMixin(rx.State, mixin=True):
             self.error = ""
             yield
             try:
-                self.items = await asyncio.to_thread(self._spec().list_fn, conn)
+                spec = self._spec()
+                self.items = await asyncio.to_thread(spec.list_fn, conn)
+                if spec.key_parts:
+                    self.items = [{**r, spec.key: make_key(spec, r)} for r in self.items]
                 self.loaded_for = self.active
                 log.info(f"Listed {len(self.items)} {self._spec().noun}(s)")
             except AxlError as e:
@@ -178,17 +202,18 @@ class CrudMixin(rx.State, mixin=True):
         for i, t in enumerate(targets, 1):
             self.progress = f"{verb} {i} of {len(targets)}"
             yield
-            label = t if isinstance(t, str) else t[key]
+            label = display_key(self._spec(), t) if isinstance(t, str) else row_label(self._spec(), t)
+            rid = t if isinstance(t, str) else t.get(key, label)
             try:
                 ret = await asyncio.to_thread(op, conn, t)
                 detail = ret if isinstance(ret, str) and ret else done
-                self.results.append({"key": label, "status": "OK", "detail": detail})
+                self.results.append({"key": label, "id": rid, "status": "OK", "detail": detail})
                 log.info(f"{label}: OK - {detail}")
             except AxlError as e:
-                self.results.append({"key": label, "status": "Failed", "detail": str(e)})
+                self.results.append({"key": label, "id": rid, "status": "Failed", "detail": str(e)})
                 log.error(f"{label}: Failed - {e}")
             except Exception as e:
-                self.results.append({"key": label, "status": "Failed", "detail": f"Unexpected error: {e}"})
+                self.results.append({"key": label, "id": rid, "status": "Failed", "detail": f"Unexpected error: {e}"})
                 log.error(f"{label}: Failed unexpectedly - {e!r}")
         log.info(f"{verb} finished: {sum(1 for r in self.results if r['status'] == 'OK')} OK, "
                  f"{sum(1 for r in self.results if r['status'] != 'OK')} failed")
@@ -251,6 +276,21 @@ class CrudMixin(rx.State, mixin=True):
         self.add_error = ""
 
     @rx.event
+    def copy_selected(self):
+        """Open the Add dialog pre-filled from the one selected row."""
+        if len(self.selected) != 1:
+            return rx.toast.error("Select exactly one row to copy.")
+        key = self._spec().key
+        src = next((r for r in self.items if r[key] == self.selected[0]), None)
+        if src is None:
+            return rx.toast.error("That row is no longer in the list.")
+        self.new_form = {f: src.get(f, d) for f, d in self._spec().add_defaults.items()}
+        self.results = []
+        self.progress = ""
+        self.add_error = ""
+        self.dialog = "add"
+
+    @rx.event
     def set_new(self, field: str, value: str):
         self.new_form = {**self.new_form, field: value}
 
@@ -266,7 +306,7 @@ class CrudMixin(rx.State, mixin=True):
         try:
             async for ev in self._run_each(conn, targets, self._spec().remove_fn, "Removing", "Removed", log):
                 yield ev
-            failed = {r["key"] for r in self.results if r["status"] != "OK"}
+            failed = {r["id"] for r in self.results if r["status"] != "OK"}
             self.selected = [s for s in targets if s in failed]
             self.dialog = "result" if failed else ""
             async for ev in self._fetch(log):
@@ -321,26 +361,27 @@ class CrudMixin(rx.State, mixin=True):
             self.busy = True
             self.add_error = ""
             yield
-            log.info(f"Adding {row[spec.key]}")
+            label = row_label(spec, row)
+            log.info(f"Adding {label}")
             try:
                 await asyncio.to_thread(spec.add_fn, conn, row)
             except AxlError as e:
                 self.add_error = str(e)
-                log.error(f"{row[spec.key]}: Failed - {e}")
+                log.error(f"{label}: Failed - {e}")
                 self.busy = False
                 return
             except Exception as e:
                 self.add_error = f"Unexpected error: {e}"
-                log.error(f"{row[spec.key]}: Failed unexpectedly - {e!r}")
+                log.error(f"{label}: Failed unexpectedly - {e!r}")
                 self.busy = False
                 return
-            log.info(f"{row[spec.key]}: OK - Added")
+            log.info(f"{label}: OK - Added")
             self.busy = False
             self.dialog = ""
             self._form_defaults()
             async for ev in self._fetch(log):
                 yield ev
-            yield rx.toast.success(f"Added {row[spec.key]}")
+            yield rx.toast.success(f"Added {label}")
         finally:
             log.close()
 
@@ -417,7 +458,7 @@ class CrudMixin(rx.State, mixin=True):
             return rx.toast.error("Nothing to export.")
         spec = self._spec()
         buf = io.StringIO()
-        w = csv.DictWriter(buf, fieldnames=spec.fields, lineterminator="\n")
+        w = csv.DictWriter(buf, fieldnames=spec.fields, lineterminator="\n", extrasaction="ignore")
         w.writeheader()
         w.writerows(rows)
         server = (self.active_info or {}).get("server", "cucm")
@@ -465,7 +506,8 @@ class DepCheckMixin(rx.State, mixin=True):
         yield
         log = self._open_log("Check dependencies", conn)
         try:
-            log.info(f"Checking {len(names)} {self._spec().noun}(s): {', '.join(names)}")
+            log.info(f"Checking {len(names)} {self._spec().noun}(s): "
+                     f"{', '.join(display_key(self._spec(), n) for n in names)}")
             try:
                 usage, warnings = await asyncio.to_thread(self._dep_fn(), conn, names)
             except AxlError as e:
@@ -481,7 +523,9 @@ class DepCheckMixin(rx.State, mixin=True):
             for w in warnings:
                 log.warning(w)
             for n in names:
-                log.info(f"{n}: {len(usage.get(n, []))} reference(s)")
+                log.info(f"{display_key(self._spec(), n)}: {len(usage.get(n, []))} reference(s)")
+                for ref in usage.get(n, []):
+                    log.debug(f"    {ref}")
         finally:
             log.close()
         unconfirmed = bool(warnings)
@@ -490,13 +534,14 @@ class DepCheckMixin(rx.State, mixin=True):
             refs = usage.get(n, [])
             if refs:
                 shown = "; ".join(refs[:6]) + (f"; and {len(refs) - 6} more" if len(refs) > 6 else "")
-                rows.append({"key": n, "status": "In use", "count": str(len(refs)), "detail": shown})
+                rows.append({"key": display_key(self._spec(), n), "status": "In use", "count": str(len(refs)),
+                             "detail": shown})
             else:
-                rows.append({"key": n, "status": "Unconfirmed" if unconfirmed else "Unused", "count": "0",
-                             "detail": "See warnings" if unconfirmed else "No references found"})
+                rows.append({"key": display_key(self._spec(), n), "status": "Unconfirmed" if unconfirmed else "Unused",
+                             "count": "0", "detail": "See warnings" if unconfirmed else "No references found"})
         self.dep_results = rows
         self.dep_warnings = warnings
-        self.dep_unused = [r["key"] for r in rows if r["status"] == "Unused"]
+        self.dep_unused = [n for n, r in zip(names, rows) if r["status"] == "Unused"]
         self.dep_checking = False
 
     @rx.event

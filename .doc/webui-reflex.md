@@ -20,9 +20,14 @@ Every feature has the same three layers. Keep them separate.
 | Page | `uc_automation/pages/`, `components/` | Layout only. Reads state vars, binds buttons to state handlers. |
 
 ```
-backend/cucm_axl.py          zeep client cache, version detection, paged list helper, advertised patterns
-backend/cucm_routing.py      partitions, calling search spaces, call pickup groups (incl. dependency check)
-backend/cucm_devices.py      phones, softkey templates, common device configs, button templates, MPP workflows
+backend/cucm_axl.py          shared plumbing only: AxlError, schema/version, cached zeep client, `_call`, `list_paged`, `sql_rows`
+backend/cucm_routing.py      advertised patterns, partitions, calling search spaces, call pickup groups, route patterns, translation patterns
+backend/cucm_hunt.py         hunt pilots, plus hunt list / line group cleanup and the line group dependency check
+backend/cucm_system.py       System: audio codec preference lists, regions, locations, device pools (+ SQL dependency checks)
+backend/cucm_dn.py           directory numbers: move partition, alternate numbers, orphans (SQL)
+backend/cucm_tools.py        tools: EM bulk login/logout/check, phone count by device pool, set user PIN
+backend/keys.py              composite row keys (pattern + partition) shared by backend and state
+backend/cucm_devices.py      phones, CTI route points (delete cleans up orphaned DNs), softkey templates, common device configs, button templates, MPP workflows
 backend/cucm_connections.py  saved CUCM connections ([CUCM:<name>] in .env/credentials.env)
 backend/applog.py            operation logs: OpLog writer, plus list/read/export helpers for the Logs page
 backend/ini_store.py         comment-preserving credentials.env editor (copied from gui/backend/ini_editor.py)
@@ -88,16 +93,43 @@ Example: a new CUCM object "Foo" with name and description.
 You get search, per-row checkboxes, select-all, delete selected, bulk delete from CSV, export (all or
 selected), add, import with Add/Modify, result tables, and the connection picker for free.
 
+`CrudPageConfig.import_add=False` hides the import dialog's Add button, and `modify_label` renames the button that runs
+`update_fn`. Action pages (Directory Numbers > Move Partition, Alternate Numbers) use both so import means "Move" /
+"Remove alternate numbers". Orphans finds DNs with pattern usage 2 (Device) and no `devicenumplanmap` row; the usage
+number and SQL are unverified, so test on a lab CUCM.
+
+### Objects identified by pattern + partition
+
+Route patterns, translation patterns and hunt pilots are only unique per partition. Give the `ResourceSpec`
+`key="id"` and `key_parts=("pattern", "routePartitionName")`. Rows then get an `id` (parts joined with `|`,
+`backend/keys.py`) that drives selection, delete targets and result rows; results show "9.911 in PT-A". `remove_fn`
+receives the id (use `split_key`). CSVs need only the first key part as a required header. Set
+`CrudPageConfig.add_required` to the field that enables the Add button (for example `pattern`). Examples:
+`state/route_patterns.py`, `state/translation_patterns.py`, `state/hunt_groups.py`.
+
+### Delete with cleanup
+
+`remove_fn` may return a string, which becomes the result detail. CTI route points and hunt pilots use this: after
+the object is removed they also remove what is left unused (DNs on no device; hunt list and line groups no other
+pilot or hunt list uses) and report each step. A cleanup failure is noted in the detail and does not fail the removal.
+System pages (`pages/system.py`) hide built in objects the scripts skip (region Default; locations Phantom, Shadow,
+Hub_None). Their dependency checks (`find_region_usage`, `find_location_usage`, `find_device_pool_usage`) join each
+candidate table to the referenced table by `fk<table>`; a table or column missing on a release is skipped, any other
+SQL error becomes a warning (status Unconfirmed). Regions cannot be modified: AXL `updateRegion` has no `defaultCodec`.
+Cleanup needs `executeSQLQuery` (`cucm_axl.sql_rows`, AXL has no call for "which devices use this DN"). SQL is
+copied from the CLI scripts and is the least verified part, so test it on a lab CUCM.
+
 ### Dependency check (`DepCheckMixin`)
 
 For resources CUCM refuses to delete while in use (phone button templates, call pickup groups): add
 `DepCheckMixin` to the state, implement `_dep_fn()` returning `(conn, names) -> ({name: [refs]}, warnings)`, and use
 `dependency_toolbar` / `dependency_dialogs` from `components/crud_page.py` as `extra_toolbar` / `extra_dialogs`.
-Examples: `PickupGroupsState`, `PhoneButtonTemplatesState`.
+Examples: `PickupGroupsState`, `PhoneButtonTemplatesState`, `HuntGroupsState` (line groups that still have members).
 
 ### Config flags (`CrudPageConfig`)
 
-`can_add`, `can_import`, `can_modify`, `can_delete` hide the matching buttons. `delete_note` adds text to the
+`can_add`, `can_import`, `can_modify`, `can_delete` hide the matching buttons. `can_copy` (off by default) adds a
+Copy button: with one row selected it opens the Add dialog pre-filled from that row (Advertised Patterns, Route Patterns, Translation Patterns and CTI Route Points use it). `delete_note` adds text to the
 delete confirmation. `import_notes` adds text under the import template.
 
 ### Custom actions on top of the shared page
@@ -112,6 +144,14 @@ Use `extra_toolbar` (returns buttons) and `extra_dialogs` (returns dialogs, rece
 
 Dialogs are driven by one string var, `dialog` (`""`, `"add"`, `"import"`, `"bulk"`, `"confirm"`,
 `"result"`, `"exportchoice"`, or your own name). Open with `S.set_dialog("name", True)`.
+
+## Tool pages (not CRUD)
+
+CUCM > Tools (`pages/tools.py`, `state/tools.py`, `components/tool_widgets.py`) are one-off runners, not lists.
+`_RunMixin` gives them busy / progress / per-row results and `_run_items`, which runs each item in a thread and logs it.
+Their routes are registered with `on_load=<State>.load_connections`. Secrets: PINs come from a password input (backend
+var) or an uploaded CSV, go straight to CUCM or the EM servlet, and are never logged or shown. EM login and logout call
+`http://<server>:8080/emapp/EMAppServlet` from the app's host, so that host must be able to reach the EM server.
 
 ## Shared behavior worth knowing
 

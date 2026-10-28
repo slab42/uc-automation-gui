@@ -5,7 +5,9 @@ from .pages.advertised_patterns import advertised_patterns
 from .pages.css import css
 from .pages.credentials import credentials
 from .pages.cucm_home import cucm_home
+from .pages.dn import alternate_numbers, move_partition, orphans
 from .pages.devices import (
+    cti_route_points,
     common_device_configs,
     mpp_phones,
     phone_button_templates,
@@ -13,15 +15,22 @@ from .pages.devices import (
     softkey_templates,
 )
 from .pages.home import home
+from .pages.hunt_groups import hunt_groups
 from .pages.logs import logs
 from .pages.partitions import partitions
+from .pages.tools import em_bulk_login, phone_count, set_user_pin
+from .pages.system import codec_lists, device_pools, locations, regions
 from .pages.pickup_groups import pickup_groups
+from .pages.route_patterns import route_patterns
+from .pages.translation_patterns import translation_patterns
 from .pages.platform import platform_page
 from .pages.settings import settings
 from .state.advertised_patterns import AdvertisedPatternsState
 from .state.css import CssState
 from .state.cucm import CucmState
+from .state.dn import AlternateNumbersState, MoveDnState, OrphansState
 from .state.devices import (
+    CtiRoutePointsState,
     CommonDeviceConfigsState,
     MppPhonesState,
     PhoneButtonTemplatesState,
@@ -29,8 +38,13 @@ from .state.devices import (
     SoftkeyTemplatesState,
 )
 from .state.logs import LogsState
+from .state.hunt_groups import HuntGroupsState
 from .state.partitions import PartitionsState
+from .state.tools import EmBulkState, PhoneCountState, SetPinState
+from .state.system import CodecListsState, DevicePoolsState, LocationsState, RegionsState
 from .state.pickup_groups import PickupGroupsState
+from .state.route_patterns import RoutePatternsState
+from .state.translation_patterns import TranslationPatternsState
 
 app = rx.App(
     head_components=[rx.el.link(rel="icon", href="/slab42.jpg")],
@@ -73,10 +87,30 @@ app.add_page(
 )
 
 for _route, _title, _page, _state in [
+    ("/cucm/audio-codec-preference-lists", "Audio Codec Preference Lists", codec_lists, CodecListsState),
+    ("/cucm/device-pools", "Device Pools", device_pools, DevicePoolsState),
+    ("/cucm/locations", "Locations", locations, LocationsState),
+    ("/cucm/regions", "Regions", regions, RegionsState),
+    ("/cucm/dn-move-partition", "Move Partition", move_partition, MoveDnState),
+    ("/cucm/dn-alternate-numbers", "Alternate Numbers", alternate_numbers, AlternateNumbersState),
+    ("/cucm/dn-orphans", "Orphan Directory Numbers", orphans, OrphansState),
     ("/cucm/phones", "Phones", phones, PhonesState),
+    ("/cucm/cti-route-points", "CTI Route Points", cti_route_points, CtiRoutePointsState),
+    ("/cucm/hunt-groups", "Hunt Groups", hunt_groups, HuntGroupsState),
+    ("/cucm/route-patterns", "Route Patterns", route_patterns, RoutePatternsState),
+    ("/cucm/translation-patterns", "Translation Patterns", translation_patterns, TranslationPatternsState),
     ("/cucm/softkey-templates", "Softkey Templates", softkey_templates, SoftkeyTemplatesState),
     ("/cucm/common-device-configs", "Common Device Configs", common_device_configs, CommonDeviceConfigsState),
     ("/cucm/phone-button-templates", "Phone Button Templates", phone_button_templates, PhoneButtonTemplatesState),
     ("/cucm/mpp-phones", "Physical Phones (MPP)", mpp_phones, MppPhonesState),
 ]:
     app.add_page(_page, route=_route, title=f"{_title} | {APP_NAME}", on_load=_state.on_page_load)
+
+for _route, _title, _page, _state in [
+    ("/cucm/em-bulk-login", "EM Bulk Login", em_bulk_login, EmBulkState),
+    ("/cucm/set-user-pin", "Set User PIN", set_user_pin, SetPinState),
+]:
+    app.add_page(_page, route=_route, title=f"{_title} | {APP_NAME}", on_load=_state.load_connections)
+
+app.add_page(phone_count, route="/cucm/phone-count-by-dp", title=f"Phone Count by DP | {APP_NAME}",
+             on_load=PhoneCountState.on_page_load)

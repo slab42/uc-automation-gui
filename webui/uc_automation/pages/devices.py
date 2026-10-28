@@ -5,6 +5,7 @@ from ..components.crud_page import (
 )
 from ..state.devices import (
     CommonDeviceConfigsState,
+    CtiRoutePointsState,
     MppPhonesState,
     PhoneButtonTemplatesState,
     PhonesState,
@@ -122,6 +123,35 @@ phone_button_templates = build_crud_page(PhoneButtonTemplatesState, CrudPageConf
     can_modify=False,
     extra_toolbar=_pbt_toolbar,
     extra_dialogs=_pbt_dialogs,
+))
+
+
+# --- CTI route points ---
+
+def _ctirp_form(S) -> rx.Component:
+    return rx.vstack(
+        form_field("Name", text_input(S, "name", "CTIRP_MainAA")),
+        form_field("Description", text_input(S, "description")),
+        rx.grid(
+            form_field("Device pool", text_input(S, "devicePoolName")),
+            form_field("Calling search space", text_input(S, "callingSearchSpaceName")),
+            form_field("Location", text_input(S, "locationName")),
+            columns="2", spacing="3", width="100%",
+        ),
+        _hint("Names must match existing CUCM objects. Lines are added separately."),
+        spacing="3", align="start", width="100%",
+    )
+
+
+cti_route_points = build_crud_page(CtiRoutePointsState, CrudPageConfig(
+    title="CTI Route Points", noun="CTI route point", key="name",
+    columns=[Column("Name", "name", code=True), Column("Description", "description"),
+             Column("Device pool", "devicePoolName"), Column("CSS", "callingSearchSpaceName"),
+             Column("Location", "locationName")],
+    add_body=_ctirp_form,
+    import_notes="name and devicePoolName are required to add. Modify changes the other columns that are filled in.",
+    delete_note="Directory numbers on the route point that no other device uses are removed too.",
+    can_copy=True,
 ))
 
 

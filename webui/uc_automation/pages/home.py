@@ -17,7 +17,7 @@ def platform_card(p) -> rx.Component:
                 ),
                 rx.heading(p.label, size="4"),
                 rx.text(p.description, size="2", color="var(--gray-11)"),
-                rx.badge("Coming soon", variant="soft", color_scheme="gray"),
+                rx.fragment() if p.available else rx.badge("Coming soon", variant="soft", color_scheme="gray"),
                 align="start",
                 spacing="2",
             ),

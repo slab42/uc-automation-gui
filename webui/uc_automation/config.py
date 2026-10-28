@@ -12,10 +12,11 @@ class Platform:
     label: str
     description: str
     icon: str  # lucide icon name
+    available: bool = False  # False shows a "Coming soon" badge on the home page
 
 
 PLATFORMS = [
-    Platform("cucm", "CUCM", "Cisco Unified Communications Manager", "phone"),
+    Platform("cucm", "CUCM", "Cisco Unified Communications Manager", "phone", available=True),
     Platform("cuc", "CUC", "Cisco Unity Connection", "voicemail"),
     Platform("cube", "CUBE", "Cisco Unified Border Element", "router"),
     Platform("webex", "Webex", "Webex Calling / Control Hub", "message-square"),
