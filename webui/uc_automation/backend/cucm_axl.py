@@ -2,7 +2,7 @@
 SQL rows and small call helpers. Resource operations live in the cucm_<area>.py modules.
 
 Written for this app (the CLI scripts in cucm/ were used as reference only). The
-WSDL files are shared with the CLI under cucm/schema/<version>/.
+WSDL files live in the webui under schemas/cucm/<version>/.
 """
 
 import re
