@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="GlobalUser">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a GlobalUser object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AltFirstName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The alternate spelling of a user first name in an internationally recognizable format (i.e., ASCII only characters) used for TUI client name lookup and message addressing, and for VUI client name lookup.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AltLastName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The alternate spelling of a user last name in an internationally recognizable format (i.e., ASCII only characters) used for TUI client name lookup and message addressing, and for VUI client name lookup.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The preferred text name of a person to be used when displaying entries such as in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfNameFirstLast" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The digits corresponding to the numeric keypad mapping on a standard touchtone phone representing the first name of the user. These digits are used for searching the user by name via the phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfNameLastFirst" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The digits corresponding to the numeric keypad mapping on a standard touchtone phone representing the last name of the user. These digits are used for searching the user by name via the phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="FirstName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The first name (i.e., givenName) of this user. Not their surname nor middle name.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The last name (i.e., surname or family name) of this user, by which a user is commonly known.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ListInDirectory" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection should list the subscriber in the phone directory for outside callers.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the LocationVMS object to which this user belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="Alias" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This column shadows the object&apos;s primary alias from tbl_Alias. It was added to speed up queries.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfAccessId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This column shadows the object&apos;s primary dtmfaccessid from tbl_DtmfAccessId. It was added to speed up queries.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="XferString" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The cross-server transfer extension. If NULL, the user&apos;s primary extension is used.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoiceName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the WAV file containing the recorded audio (voice name, greeting, etc.) for the parent object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="VoiceFileURI" type="xs:anyURI" minOccurs="0" />
+				<xs:element name="VoiceNameURI" type="xs:anyURI" minOccurs="0" />					
+				
+				<xs:element name="IsTemplate" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicated whether this global user object refers to a template.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PartitionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This column shadows the object&apos;s primary dtmfaccessid partionobjectid from tbl_DtmfAccessId. It was added to speed up queries.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PartitionURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="City" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of a locality, such as a city, county or other geographic region where the user is located, or with which a user is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Department" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name or number for the department or subdivision of an organization to which a person belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="GlobalUser" type="GlobalUser"/>
+	<xs:element name="GlobalUsers">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="GlobalUser" type="GlobalUser" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

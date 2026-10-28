@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="Location">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a Location object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DestinationType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For delivery locations, the destination type for that location, e.g. Connection, Unity, VPIM, Bridge.</xs:documentation>
+						<xs:documentation>7=Bridge, 1=Connection, 8=VPIM, 2=Unity, 9=Branch</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The series of digits corresponding to the numeric keypad mapping on a standard touchtone phone representing the display name of the location. These digits are used for searching the location by name via the phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SmtpDomain" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The domain portion (right-half) of an internet-addressable address (for example, london.cisco.com). This is used to form a user&apos;s, contact&apos;s, and distribution list&apos;s SMTP address (tbl_Alias.SmtpAddress).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name of this Location, e.g. &quot;Seattle Office.&quot;  Used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfAccessId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The dialable number.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoiceName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Name of stream file with voice name for this location. The name of the WAV file containing the recorded audio (voice name, greeting, etc.) for the parent object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="VoiceFileURI" type="xs:anyURI" minOccurs="0" />
+				<xs:element name="VoiceNameURI" type="xs:anyURI" minOccurs="0" />					
+				
+				<xs:element name="HostAddress" type="xs:string" minOccurs="0">
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="Location" type="Location"/>
+	<xs:element name="Locations">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Location" type="Location" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

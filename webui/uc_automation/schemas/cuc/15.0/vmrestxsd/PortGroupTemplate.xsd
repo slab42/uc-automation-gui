@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="PortGroupTemplate">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="CopyTelephonyIntegrationMethodEnum" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The method used by lines in this group to integrate with the switch.</xs:documentation>
+						<xs:documentation>3=PIMG, 2=SIP, 1=Skinny</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a MediaPortGroupTemplate object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TemplateDescriptionDefault" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A description of the MediaPortGroupTemplate to aid the user in the selection of a template for the purpose of creating a new MediaPortGroup. Information such as Cisco Unity Connection system requirements and PBX requirements are contained in this column. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="PortGroupTemplate" type="PortGroupTemplate"/>
+	<xs:element name="PortGroupTemplates">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="PortGroupTemplate" type="PortGroupTemplate" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

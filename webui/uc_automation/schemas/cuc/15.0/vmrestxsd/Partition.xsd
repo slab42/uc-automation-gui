@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="Partition">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table.  A system-generated, globally unique object identifier.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Name" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name of this Partition.  Used when displaying entries in the administrative interface.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Description" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The description of the Partition.  If a description is not entered, the partition name is entered.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the LocationVms on which this Partition was created.  Used by networking to determine on which LocationVms the properties of the Partition are administered.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="Partition" type="Partition"/>
+	<xs:element name="Partitions">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Partition" type="Partition" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

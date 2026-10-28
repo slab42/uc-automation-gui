@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="LocalNetworkJoin">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="AcceptCertificateErrors" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Controls whether or not certificate errors are allowed. Some possible errors are: mismatched hostname, expired certificate not-yet-valid certificate</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AcceptSelfSignedCertificates" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Controls whether or not self signed certificates will be accepted when connecting to a node.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a Location object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseSSL" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Controls whether or not SSL will be used when communicating with this location.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SyncDistributionLists" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Controls whether or not public distribution lists are synced from this remote network.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="RemoteServer" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The description for the RemoteServer.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="RemoteUsername" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The description for the RemoteUserName.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="RemotePassword" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The description for the RemotePassword.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="EnableVoicenameSync" type="xs:boolean">
+				<xs:annotation>
+					<xs:documentation>The description for the EnableVoicenameSync.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="EnableDirectorySync" type="xs:boolean">
+				<xs:annotation>
+					<xs:documentation>The description for the EnableDirectorySync.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="LocalNetworkJoin" type="LocalNetworkJoin"/>
+	<xs:element name="LocalNetworkJoins">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="LocalNetworkJoin" type="LocalNetworkJoin" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

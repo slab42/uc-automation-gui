@@ -64,8 +64,9 @@ uc_automation.py             app + every add_page()
 - Passwords never reach the browser. The password input is uncontrolled and feeds a **backend var**
   (`_password`, underscore prefix = not sent to the client). Saved passwords show only as "Stored".
 - The Test button calls `getCCMVersion`, derives the major release (for example 14.0), picks the
-  closest installed schema (`cucm/schema/<version>/`, exact match else nearest older), and saves both.
-- The AXL schema files are shared with the CLI. Do not copy them into `webui/`.
+  closest installed schema (`webui/uc_automation/schemas/cucm/<version>/`, exact match else nearest older), and saves both.
+- Schemas are tracked in git under `webui/uc_automation/schemas/<platform>/<version>/` (`cucm`, `cuc`); a new platform gets its own folder and a constant in `backend/paths.py`.
+- The webui keeps its own copy of the schemas; it does not read the CLI's `cucm/schema/` or `cuc/schema/`.
 
 ## Adding a new CRUD resource (the normal case)
 
@@ -184,7 +185,7 @@ var) or an uploaded CSV, go straight to CUCM or the EM servlet, and are never lo
 
 ## AXL notes
 
-- Verify request shapes against `cucm/schema/current/AXLSoap.xsd` (element names, required fields, the
+- Verify request shapes against `webui/uc_automation/schemas/cucm/current/AXLSoap.xsd` (element names, required fields, the
   result key such as `phoneButtonTemplate` vs `phoneTemplate`). Easy offline check that needs no CUCM:
   ```python
   client = zeep.Client(wsdl=(CUCM_SCHEMA_DIR/"15.0"/"AXLAPI.wsdl").as_uri(), settings=zeep.Settings(strict=False))

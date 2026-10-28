@@ -1,0 +1,76 @@
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="PhoneSystemAssociation">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="Alias" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name for either a user, distribution list, or personal group.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The preferred text name of a person to be used when displaying entries such as in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaSwitchDisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name (e.g., &quot;Unified Communications Manager Cluster - Seattle&quot;) of the media switch to be used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaSwitchObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a MediaSwitch object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PhoneSystemURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="numNotificationDevice" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Number of notification devices.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="numNotificationMWI" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Number of MWI devices.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="numPrimaryCallHandler" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Number of primary call handlers.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a User object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="PhoneSystemAssociation" type="PhoneSystemAssociation"/>
+	<xs:element name="PhoneSystemAssociations">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="PhoneSystemAssociation" type="PhoneSystemAssociation" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>
+

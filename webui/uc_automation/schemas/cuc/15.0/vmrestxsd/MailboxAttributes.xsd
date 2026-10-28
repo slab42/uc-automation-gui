@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Mailbox attributes that are available via CUPI
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="MailboxAttributes">
+		<xs:sequence>
+		    <xs:element name="ByteSize" type="xs:int" minOccurs="0"/>
+		    <xs:element name="MessageAgingPolicyObjectId" type="xs:string"/>
+		    <xs:element name="MessageAgingPolicyURI" type="xs:anyURI" minOccurs="0" />
+		    <xs:element name="Mounted" type="xs:boolean" minOccurs="0" />
+		    <xs:element name="NotificationType" type="xs:short"/>
+		    <xs:element name="SendReadReceipts" type="xs:boolean" minOccurs="0" />
+		    <xs:element name="NumMessages" type="xs:int" minOccurs="0" />
+		    <xs:element name="Send" type="xs:int" minOccurs="0" />
+		    <xs:element name="Receive" type="xs:int" minOccurs="0" />
+		    <xs:element name="Warn" type="xs:int" minOccurs="0" />
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="MailboxAttributes" type="MailboxAttributes"/>
+	
+</xs:schema>

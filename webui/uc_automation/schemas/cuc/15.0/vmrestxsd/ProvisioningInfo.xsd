@@ -1,0 +1,42 @@
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="ProvisioningInfo">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element type="xs:int" name="TotalParts"/>
+        <xs:element type="xs:int" name="PartNumber"/>
+        <xs:element type="xs:long" name="Checksum"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  
+  <xs:complexType name="ProvisioningResult">
+  	<xs:sequence>
+  		<xs:element name="BranchObjectId" type="xs:string" />
+  		<xs:element name="Status" type="xs:string" />
+		<xs:element name="Users" type="ProvisioningUsers" />
+		<xs:element name="DistributionLists" type="ProvisioningDL" />
+	</xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="ProvisioningUsers">
+		<xs:sequence>
+			<xs:element name="Total" type="xs:int" />
+			<xs:element name="Success" type="xs:int" />
+			<xs:element name="Failure" type="xs:int" />
+		</xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ProvisioningDL">
+		<xs:sequence>
+			<xs:element name="Total" type="xs:int" />
+			<xs:element name="Success" type="xs:int" />
+			<xs:element name="Failure" type="xs:int" />
+		</xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="ProvisioningStart">
+		<xs:sequence>
+			<xs:element name="AuthToken" type="xs:string" />
+		</xs:sequence>
+  </xs:complexType>
+  
+</xs:schema>

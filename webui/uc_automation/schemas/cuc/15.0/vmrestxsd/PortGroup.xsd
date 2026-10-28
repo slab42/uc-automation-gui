@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="PortGroup">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="MediaPortGroupTemplateObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the template from which the MediaPortGroup object was created.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaSwitchObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the MediaSwitch object to which this MediaPortGroup belongs. The MediaSwitch represents the PBX/switch at the other end of the phone lines.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PhoneSystemURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="TelephonyIntegrationMethodEnum" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The method used by lines in this group to integrate with the switch.</xs:documentation>
+						<xs:documentation>3=PIMG, 2=SIP, 1=Skinny</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableMWI" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this port group can transmit message waiting indicator (MWI) on/off messages to the switch.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name of this MediaPortGroup. Used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableAGC" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection should apply software-based gain control when recording messages.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CcmDoAutoFailback" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection should automatically re-register (i.e. failback) with a higher-precedence CCM server if one becomes available. This is pertinent if a Cisco Unity Connection Skinny device is currently registered to a CCM server that is not the primary server.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MwiOnCode" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The access code that Cisco Unity Connection uses to activate (light) a message waiting indicator (MWI).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MwiOffCode" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The access code that Cisco Unity Connection uses to deactivate (extinguish) a message waiting indicator (MWI).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MwiRetryCountOnSuccess" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of times Cisco Unity Connection should repeat activating/deactivating an MWI upon success.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MwiRetryIntervalOnSuccessMs" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The minimum time interval (in milliseconds) between repeated transmissions of MWI on/off, see MWIRetryIntervalCountOnSuccess.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a MediaPortGroup object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipContactLineName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The dialable (extension) number of the lines in this group, i.e., pilot number.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipTransportProtocolEnum" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The transport protocol Cisco Unity Connection should use for the SIP integration.</xs:documentation>
+						<xs:documentation>11=TCP, 10=UDP</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipRegisterWithProxyServer" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection should register with a SIP proxy server.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipDoAuthenticate" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection should authenticate with the remote endpoint.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipAuthenticateAsUser" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The user name used for SIP authentication.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipAuthenticatePassword" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The password to use during SIP authentication.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkinnyDevicePrefix" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The prefix Cisco Unity Connection uses to generate Skinny device name for ports belonging to this group.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MwiMinRequestIntervalMs" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The minimum amount of time (in milliseconds) between sending MWI on/off requests to the switch.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="OutgoingGuardTimeMs" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time (in milliseconds) a port in this group must be on-hook before the Cisco Unity Connection will allow an outgoing call on that port.  </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="OutgoingPostDialDelayMs" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The delay (in milliseconds) after dialing an outgoing call.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="OutgoingPreDialDelayMs" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The delay (in milliseconds) before dialing.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DelayBeforeOpeningMs" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The delay (in milliseconds) after a call is connected before playing the opening greeting.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfDialInterDigitDelayMs" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time (in milliseconds) between DTMF digits when sending DTMF to the PBX.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MwiReqPortSpecific" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether MWI requests require a MediaPort. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MwiMaxConcurrentRequests" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum number of MWI requests that can be in progress at any instant.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaSwitchDisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The name of the parent MediaSwitch.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PortCount" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The total number of MediaPorts in the MediaPortGroup.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="WaitForCallInfoMs" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Number of milliseconds to wait for call information (CallerID, CalledID, etc.) to arrive after answering the call.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipDoSRTP" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the audio stream between Cisco Unity Connection and the remote endpoint should be encrypted.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipDoDtmfRfc2833" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Send/receive DTMF in RTP stream (RFC 2833)</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipDoDtmfKPML" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Send/receive DTMF out-of-band as SIP events (KPML)</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaSipSecurityProfileObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Unique identifier of the Sip security profile used by this port group. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaCertificateObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Unique identifier of the Sip certificate object used by this port group. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipTLSModeEnum" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Specifies cipher to use for TLS</xs:documentation>
+						<xs:documentation>10=Authenticated, 11=Encrypted</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ResetStatusEnum" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Shows whether the port group needs to be reset in order to cause configuration changes to take effect</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipRPIDDisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> SIP Remote-Party-ID header display name</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RecordingDTMFClipMs" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Number of milliseconds to remove from the end of a recording when the recording is terminated with a digit press.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RecordingToneExtraClipMs" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Additional number of milliseconds to remove from the end of a recording when the recording is terminated by a tone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PreferredCallControl" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates call control signaling preference.</xs:documentation>
+						<xs:documentation>0=IPmodeV4, 1=IPmodeV6, 2=IPmodeV4_V6</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipPreferredMedia" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates SIP media preference when sending an SDP offer.</xs:documentation>
+						<xs:documentation>0=IPmodeV4, 1=IPmodeV6, 2=IPmodeV4_V6</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="NoiseFreeEnable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Enable NoiseFree noise cancellation.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipEnableNextGenSecurity" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag which indicates next  generation Security is enable or not in sip</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VideoProfile" type="xs:int" minOccurs="0">
+				</xs:element>
+				
+
+				<xs:element name="MediaRemoteServiceEnum" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The type of IP service.</xs:documentation>
+						<xs:documentation>105=ASRMediaServer, 100=CCM, 103=CCMAXL, 101=CCMTFTP, 104=PIMG, 102=SIPPROXY, 106=TTSMediaServer</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaPortGroupObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the MediaPortGroup object to which this row corresponds.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PortGroupURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="HostOrIPAddress" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The DNS name or IP address of the computer hosting the remote service .</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Port" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The IP port at which the service is found.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TlsPort" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The IP port at which the service is found. Cisco Unity Connection must negotiate a TLS session when using this port.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkinnyStateMachineEnum" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this MediaPortGroup is integrated with Cisco Unified Communications Manager or Cisco CallManager Express. This is used to switch on a special state engine in the Skinny TSP for Cisco CallManager Express.</xs:documentation>
+						<xs:documentation>10=CCM, 20=CCME</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaServerName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The preferred name of the media server, if applicable.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="HostOrIPAddressV6" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Server DNS name or IPv6 address for remote service. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="PortGroupServerURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to change the server address.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="PortGroupCodecURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to codec Information</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="PortURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to ports Information</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="PortGroup" type="PortGroup"/>
+	<xs:element name="PortGroups">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="PortGroup" type="PortGroup" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

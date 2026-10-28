@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="PrivateListMember">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="PersonalVoiceMailListObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the PersonalGroup object to which this member belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PrivateListURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MemberPersonalVoiceMailListObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The member of this personal group. If the member is another personal group, the unique identifier of the corresponding PersonalGroup object in tbl_PersonalGroup. Otherwise, this attribute is set ot NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="MemberPrivateListURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MemberSubscriberObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The member of this personal group. If the member is a user, the ObjectId of the user(s). Otherwise, this attribute is set ot NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="MemberUserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MemberDistributionListObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The member of this personal group. If the member is a distribution list, the unique identifier of the corresponding DistributionList object in tbl_DistributionList. Otherwise, this attribute is set ot NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="MemberDistributionListURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Surrogate key. A globally unique, system-generated identifier for a PersonalGroupMember object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MemberContactObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The member of this personal group. If the member is a system contact, the unique identifier of the corresponding Contact object in tbl_Contact. Otherwise, this attribute is set ot NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="MemberContactURI" type="xs:anyURI" minOccurs="0" />
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="Alias" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Alias of private list member.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="DisplayName" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Display name of private list member.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="Extension" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Extension of private list member.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="PrivateListMember" type="PrivateListMember"/>
+	<xs:element name="PrivateListMembers">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="PrivateListMember" type="PrivateListMember" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

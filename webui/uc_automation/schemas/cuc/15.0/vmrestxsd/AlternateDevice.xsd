@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="AlternateDevice">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The text name of this DtmfAccessId to be used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfAccessId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The dialable number.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a DtmfAccessId object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UserDefined" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this DtmfAccessId was created by the end-user.  The default setting is false.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="AlternateDevice" type="AlternateDevice"/>
+	<xs:element name="AlternateDevices">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="AlternateDevice" type="AlternateDevice" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

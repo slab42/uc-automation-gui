@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="LanguageMapping">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="LanguageCode" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> LanguageCode (LCID)</xs:documentation>
+						<xs:documentation>1078=Afrikaans, 1052=Albanian, 5121=ArabicAlgeria, 15361=ArabicBahrain, 3073=ArabicEgypt, 2049=ArabicIraq, 11265=ArabicJordan, 13313=ArabicKuwait, 12289=ArabicLebanon, 4097=ArabicLibya, 6145=ArabicMorocco, 8193=ArabicOman, 16385=ArabicQatar, 1025=ArabicSaudiArabia, 10241=ArabicSyria, 7169=ArabicTunisia, 14337=ArabicUAE, 9217=ArabicYemen, 1067=Armenian, 2092=AzeriCyrillic, 1068=AzeriLtin, 1069=Basque, 1059=Belarusian, 1026=Bulgarian, 1027=Catalan, 3076=ChineseHongKong, 5124=ChineseMacau, 2052=ChinesePRC, 4100=ChineseSingapore, 1028=ChineseTaiwan, 1050=Croatian, 1029=Czech, 1030=Danish, 1125=Divehi, 2067=DutchBelgian, 1043=DutchStandard, 3081=EnglishAustralian, 10249=EnglishBelize, 4105=EnglishCandian, 9225=EnglishCaribean, 6153=EnglishIreland, 8201=EnglishJamaica, 5129=EnglishNewZealand, 13321=EnglishPhilippines, 7177=EnglishSouthAfrica, 11273=EnglishTrinidad, 2057=EnglishUnitedKingdom, 1033=EnglishUnitedStates, 12297=EnglishZimbabwe, 1061=Estonian, 1080=Faeroese, 1065=Farsi, 1035=Finnish, 2060=FrenchBelgian, 3084=FrenchCandian, 5132=FrenchLuxembourg, 6156=FrenchMonaco, 1036=FrenchStandard, 4108=FrenchSwiss, 1084=GaelicScots, 1110=Galician, 1079=Georgian, 3079=GermanAustrian, 5127=GermanLiechtenstein, 4103=GermanLuxembourg, 1031=GermanStandard, 2055=GermanSwiss, 1032=Greek, 1095=Gujarati, 1037=Hebrew, 1081=Hindi, 1038=Hungarian, 1039=Icelandic, 1057=Indonesian, 1040=ItalianStandard, 2064=ItalianSwiss, 1041=Japanese, 1099=Kannada, 1087=Kazakh, 1111=Konkani, 1042=Korean, 1088=Kyrgyz, 1062=Latvian, 1063=Lithuanian, 1071=Macedonian, 2110=MalayBruneiDarussalam, 1086=MalayMalaysia, 1082=Maltese, 1102=Marathi, 1104=Mongolian, 2068=NoewegianNynorsk, 1044=NorwegianBokmal, 1045=Polish, 2070=PortugeseStandard, 1046=PortugueseBrazilian, 1094=Punjabi, 1047=RhaetoRomanic, 1048=Romanian, 2072=RomanianMoldavia, 1049=Russian, 2073=RussianMoldavia, 1103=Sanskrit, 3098=SerbianCyrillic, 2074=SerbianLatin, 1051=Slovak, 1060=Slovenian, 1070=Sorbian, 11274=SpanishArgentina, 16394=SpanishBolivia, 13322=SpanishChile, 9226=SpanishColumbia, 5130=SpanishCostaRica, 7178=SpanishDominicanRepublic, 12298=SpanishEcuador, 17418=SpanishElSalvador, 4106=SpanishGuatemala, 18442=SpanishHonduras, 2058=SpanishMexican, 3082=SpanishModernSort, 19466=SpanishNicaragua, 6154=SpanishPanama, 15370=SpanishParaguay, 10250=SpanishPeru, 20490=SpanishPuertoRico, 1034=SpanishTraditionalSort, 14346=SpanishUruguay, 8202=SpanishVenezuela, 1072=Sutu, 1089=Swahili, 1053=Swedish, 2077=SwedishFinland, 1114=Syriac, 1097=Tanil, 1092=Tatar, 1098=Telugu, 1054=Thai, 1073=Tsonga, 1074=Tswana, 1055=Turkish, 1058=Ukrainian, 1056=Urdu, 2115=UzbekCyrillic, 1091=UzbekLatin, 1066=Vietnamese, 1076=Xhosa, 1085=Yiddish, 1077=Zulu, 33801=ENX, 16393=EnglishIndian</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LanguageAbbreviation" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Three letter language abbreviation such as &quot;ENU&quot;</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LanguageTag" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The locale identification expressed as a combination of the ISO language and country codes separated by a hyphen.  The format used is &lt;ll&gt;-&lt;CC&gt; where &lt;ll&gt; is the lowercase ISO language code and &lt;CC&gt; is the uppercase ISO country code.  e.g. fr-FR, fr-CH, fr-CA .</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="LanguageMapping" type="LanguageMapping"/>
+	<xs:element name="LanguageMappings">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="LanguageMapping" type="LanguageMapping" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

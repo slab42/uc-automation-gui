@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="SipSecurityProfile">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Port" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> UDP or TCP port number for incoming SIP requests</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DoTLS" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether SIP between Cisco Unity Connection and the remote endpoint should be encrypted.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="SipSecurityProfile" type="SipSecurityProfile"/>
+	<xs:element name="SipSecurityProfiles">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="SipSecurityProfile" type="SipSecurityProfile" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

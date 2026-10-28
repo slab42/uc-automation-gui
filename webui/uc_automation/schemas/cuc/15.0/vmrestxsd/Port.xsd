@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="Port">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a MediaPort object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaPortGroupObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the MediaPortGroup object to which this port belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PortGroupURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="TelephonyIntegrationMethodEnum" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The method used to integrate with the switch.</xs:documentation>
+						<xs:documentation>3=PIMG, 2=SIP, 1=Skinny</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PortNumInGroup" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The port number of this line as assigned by Cisco Unity Connection. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Extension" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The dialable number (extension) of this line/port.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkinnySecurityModeEnum" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The security mode used for Skinny protocol sessions.</xs:documentation>
+						<xs:documentation>1=Authenticated, 2=Encrypted, 0=Insecure</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkinnyDoMediaEncryption" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the audio stream between Cisco Unity Connection and the remote endpoint should be encrypted.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VmsServerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the VMSServer object to which this line belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="HuntOrder" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The position of this line in the hunt group as configured on the switch, with the highest numbers representing the lines that are first (&quot;use me first&quot;) in the hunt group. Ports can have the same HuntOrder, and in that case ports will be selected on a round-robin (or longest-idle) basis.  
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The name of media port. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkinnyDeviceName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>For a CCM SCCP integration, the name of the SCCP device.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PimgPortNumber" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The port number for PIMG.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CapAnswer" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the media port is capable of answering calls.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CapNotification" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the media port is capable of performing the function of notifying subscribers of messages.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CapMWI" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the media port is capable of performing the function of turning MWIs on and off.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CapEnabled" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the media port is enabled during normal operation.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CapDeliverAmis" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the media port is capable of performing the function of delivering AMIS messages.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CapTrapConnection" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the media port is capable of performing the function of enabling subscribers to use the phone as a recording and playback device in Cisco Unity Connection web applications and e-mail clients.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaSwitchDisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The name of the parent MediaSwitch.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaSwitchObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The unique identifier of the parent MediaSwitch.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PhoneSystemURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MediaPortGroupDisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The name of the parent MediaPortGroup.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaPortGroupEnableMWI" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this port group can transmit message waiting indicator (MWI) on/off messages to the switch.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaPortGroupMwiReqPortSpecific" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether MWI requests require a MediaPort. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SipSendPort" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>UDP port for outgoing SIP messages. UDP port for outgoing SIP messages.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VmsServerName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the server.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NumberOfPorts" type="xs:int">
+				<xs:annotation>
+					<xs:documentation>The URI to get the number of ports.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="Port" type="Port"/>
+	<xs:element name="Ports">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Port" type="Port" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

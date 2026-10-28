@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<!-- Similar to ATOM resource link -->
+	<xs:complexType name="linkType" mixed="true">
+		<xs:attribute name="href" use="required" type="xs:anyURI" />
+		<xs:attribute name="rel" type="xs:string" use="optional" />
+		<xs:attribute name="title" use="optional" type="xs:string" />
+	</xs:complexType>
+	<xs:simpleType name="priorityType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Normal" />
+			<xs:enumeration value="Urgent" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="sensitivityType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Normal" />
+			<xs:enumeration value="Personal" />
+			<xs:enumeration value="Private" />
+			<xs:enumeration value="Confidential" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="callerIdType">
+		<xs:sequence>
+			<xs:element name="CallerNumber" type="xs:string" />
+			<xs:element name="CallerName" type="xs:string" />
+			<xs:element name="CallerImage" type="xs:anyURI" />
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="addressType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="SUBSCRIBER" />
+			<xs:enumeration value="DISTRIBUTIONLIST" />
+			<xs:enumeration value="PRIVATELIST" />
+			<xs:enumeration value="CONTACT" />
+			<xs:enumeration value="VPIMCONTACT" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Address">
+		<xs:sequence>
+			<xs:element name="ObjectId" type="xs:string" minOccurs="0" />
+			<xs:element name="Type" type="addressType" minOccurs="0" />
+			<xs:element name="UserGuid" type="xs:string" minOccurs="0" />
+			<xs:element name="DisplayName" type="xs:string" minOccurs="0" />
+			<xs:element name="SmtpAddress" type="xs:string" minOccurs="0" />
+			<xs:element name="DtmfAccessId" type="xs:string" minOccurs="0" />
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="Address" type="Address" />
+	<xs:complexType name="Addresses">
+		<xs:sequence>
+			<xs:element name="Address" type="Address" maxOccurs="unbounded" />
+		</xs:sequence>
+		<xs:attribute name="total" type="xs:int" />
+	</xs:complexType>
+	<xs:element name="Addresses" type="Addresses" />
+	<xs:simpleType name="recipientType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="TO" />
+			<xs:enumeration value="CC" />
+			<xs:enumeration value="BCC" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Recipient">
+		<xs:sequence>
+			<xs:element name="Type" type="recipientType" />
+			<xs:element name="Address" type="Address" />
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="Recipient" type="Recipient" />
+	<xs:complexType name="Recipients">
+		<xs:sequence>
+			<xs:element name="Recipient" type="Recipient" maxOccurs="unbounded" />
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="Recipients" type="Recipients" />
+	<xs:complexType name="Attachment">
+		<xs:sequence>
+			<xs:element name="URI" type="xs:anyURI" />
+			<xs:element name="contentType" type="xs:string" />
+			<xs:element name="contentTransferEncoding" type="xs:string" />
+			<xs:element name="contentDisposition" type="xs:string" />
+			<xs:element name="contentID" type="xs:string" />
+			<xs:element name="EmbeddedMessage" type="EmbeddedMessage" />
+			<xs:element name="position" type="xs:string" />
+			<xs:element name="Duration" type="xs:unsignedLong" />
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="Attachment" type="Attachment" />
+	<xs:complexType name="Attachments">
+		<xs:sequence>
+			<xs:element name="Attachment" type="Attachment" maxOccurs="unbounded" />
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="messageType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Email" />
+			<xs:enumeration value="DR" />
+			<xs:enumeration value="Voice" />
+			<xs:enumeration value="RR" />
+			<xs:enumeration value="Fax" />
+			<xs:enumeration value="NDR" />
+			<xs:enumeration value="Receipt" />
+			<xs:enumeration value="Video" />
+			<xs:enumeration value="Text" />
+			<xs:enumeration value="Msg" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Message">
+		<xs:sequence>
+			<!-- fields that can be modified by the client at any time -->
+			<xs:element name="Subject" type="xs:string" minOccurs="0" />
+			<xs:element name="Read" type="xs:boolean" minOccurs="0" />
+			<!-- flags that can be set by the client on send -->
+			<xs:element name="Dispatch" type="xs:boolean" minOccurs="0" />
+			<xs:element name="Secure" type="xs:boolean" minOccurs="0" />
+			<xs:element name="Priority" type="priorityType" minOccurs="0" />
+			<xs:element name="Sensitivity" type="sensitivityType" minOccurs="0" />
+			<xs:element name="ReadReceiptRequested" type="xs:boolean" minOccurs="0" />
+			<xs:element name="DeliveryReceiptRequested" type="xs:boolean" minOccurs="0" />
+			<xs:element name="InvestigativeHold" type="xs:boolean" minOccurs="0" />
+			<xs:element name="FutureDelivery" type="xs:string" />
+			<!-- fields that are only filled out when getting individual message details -->
+			<xs:element name="Attachments" type="Attachments" minOccurs="0" />
+			<xs:element name="SessionId" type="xs:string" />
+			<xs:element name="Recipients" type="Recipients" minOccurs="0" />
+			<!-- message envelope elements -->
+			<xs:element name="URI" type="xs:anyURI" />
+			<xs:element name="MsgId" type="xs:string" />
+			<xs:element name="From" type="Address" />
+			<xs:element name="CallerId" type="callerIdType" />
+			<xs:element name="ArrivalTime" type="xs:long" />
+			<xs:element name="Size" type="xs:unsignedLong" />
+			<xs:element name="Duration" type="xs:unsignedLong" />
+			<xs:element name="IMAPUid" type="xs:string" />
+			<xs:element name="FromSub" type="xs:boolean" />
+			<xs:element name="Flagged" type="xs:boolean" minOccurs="0" />
+			<xs:element name="MsgType" type="messageType" minOccurs="0" />
+			<xs:element name="ModificationTime" type="xs:long" minOccurs="0" />
+			<xs:element name="IsDraft" type="xs:boolean" minOccurs="0" />
+			<xs:element name="IsDeleted" type="xs:long" minOccurs="0" />
+			<xs:element name="IsSent" type="xs:long" minOccurs="0" />
+			<xs:element name="IsFuture" type="xs:long" minOccurs="0" />
+			<xs:element name="FolderURI" type="xs:anyURI" minOccurs="0" />
+			<xs:element name="MediaHint" type="xs:string" minOccurs="0"></xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="Message" type="Message" />
+	<xs:element name="Messages">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Message" type="Message" maxOccurs="unbounded" />
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="EmbeddedMessage">
+		<xs:sequence>
+			<!-- message envelope elements -->
+			<xs:element name="Recipients" type="Recipients" minOccurs="0" />
+			<xs:element name="URI" type="xs:anyURI" />
+			<xs:element name="MsgId" type="xs:string" />
+			<xs:element name="From" type="Address" />
+			<xs:element name="CallerId" type="callerIdType" />
+			<xs:element name="CreationTime" type="xs:long" />
+			<xs:element name="MsgType" type="messageType" minOccurs="0" />
+			<xs:element name="Subject" type="xs:string"></xs:element>
+			<xs:element name="Priority" type="priorityType"></xs:element>
+			<xs:element name="Sensitivity" type="sensitivityType"></xs:element>
+			<xs:element name="Secure" type="xs:boolean"></xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="EmbeddedMessage" type="EmbeddedMessage" />
+</xs:schema>

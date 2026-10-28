@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:complexType name="SpeechSearchContext">
+    <xs:sequence>
+      <xs:element name="minimumConfidence" type="xs:int" minOccurs="0" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="SpeechSearchContext" type="SpeechSearchContext" />
+  
+  <xs:complexType name="SpeechSearchResult">
+    <xs:sequence>
+      <xs:element name="Name" type="xs:string" minOccurs="0" />
+      <xs:element name="ID" type="xs:string" minOccurs="0" />
+      <xs:element name="Type" type="xs:string" minOccurs="0" />
+      <xs:element name="Confidence" type="xs:string" minOccurs="0" />
+    </xs:sequence>    
+  </xs:complexType>
+  
+  <xs:element name="SpeechSearchResults">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SpeechSearchResult" type="SpeechSearchResult" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element> 
+</xs:schema>

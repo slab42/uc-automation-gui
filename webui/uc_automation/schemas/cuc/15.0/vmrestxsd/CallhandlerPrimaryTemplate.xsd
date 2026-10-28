@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="CallhandlerPrimaryTemplate">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="Language" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The Windows Locale ID (LCID) which identifies the language that Cisco Unity Connection plays the handler system prompts.</xs:documentation>
+						<xs:documentation>1078=Afrikaans, 1052=Albanian, 5121=ArabicAlgeria, 15361=ArabicBahrain, 3073=ArabicEgypt, 2049=ArabicIraq, 11265=ArabicJordan, 13313=ArabicKuwait, 12289=ArabicLebanon, 4097=ArabicLibya, 6145=ArabicMorocco, 8193=ArabicOman, 16385=ArabicQatar, 1025=ArabicSaudiArabia, 10241=ArabicSyria, 7169=ArabicTunisia, 14337=ArabicUAE, 9217=ArabicYemen, 1067=Armenian, 2092=AzeriCyrillic, 1068=AzeriLtin, 1069=Basque, 1059=Belarusian, 1026=Bulgarian, 1027=Catalan, 3076=ChineseHongKong, 5124=ChineseMacau, 2052=ChinesePRC, 4100=ChineseSingapore, 1028=ChineseTaiwan, 1050=Croatian, 1029=Czech, 1030=Danish, 1125=Divehi, 2067=DutchBelgian, 1043=DutchStandard, 3081=EnglishAustralian, 10249=EnglishBelize, 4105=EnglishCandian, 9225=EnglishCaribean, 6153=EnglishIreland, 8201=EnglishJamaica, 5129=EnglishNewZealand, 13321=EnglishPhilippines, 7177=EnglishSouthAfrica, 11273=EnglishTrinidad, 2057=EnglishUnitedKingdom, 1033=EnglishUnitedStates, 12297=EnglishZimbabwe, 1061=Estonian, 1080=Faeroese, 1065=Farsi, 1035=Finnish, 2060=FrenchBelgian, 3084=FrenchCandian, 5132=FrenchLuxembourg, 6156=FrenchMonaco, 1036=FrenchStandard, 4108=FrenchSwiss, 1084=GaelicScots, 1110=Galician, 1079=Georgian, 3079=GermanAustrian, 5127=GermanLiechtenstein, 4103=GermanLuxembourg, 1031=GermanStandard, 2055=GermanSwiss, 1032=Greek, 1095=Gujarati, 1037=Hebrew, 1081=Hindi, 1038=Hungarian, 1039=Icelandic, 1057=Indonesian, 1040=ItalianStandard, 2064=ItalianSwiss, 1041=Japanese, 1099=Kannada, 1087=Kazakh, 1111=Konkani, 1042=Korean, 1088=Kyrgyz, 1062=Latvian, 1063=Lithuanian, 1071=Macedonian, 2110=MalayBruneiDarussalam, 1086=MalayMalaysia, 1082=Maltese, 1102=Marathi, 1104=Mongolian, 2068=NoewegianNynorsk, 1044=NorwegianBokmal, 1045=Polish, 2070=PortugeseStandard, 1046=PortugueseBrazilian, 1094=Punjabi, 1047=RhaetoRomanic, 1048=Romanian, 2072=RomanianMoldavia, 1049=Russian, 2073=RussianMoldavia, 1103=Sanskrit, 3098=SerbianCyrillic, 2074=SerbianLatin, 1051=Slovak, 1060=Slovenian, 1070=Sorbian, 11274=SpanishArgentina, 16394=SpanishBolivia, 13322=SpanishChile, 9226=SpanishColumbia, 5130=SpanishCostaRica, 7178=SpanishDominicanRepublic, 12298=SpanishEcuador, 17418=SpanishElSalvador, 4106=SpanishGuatemala, 18442=SpanishHonduras, 2058=SpanishMexican, 3082=SpanishModernSort, 19466=SpanishNicaragua, 6154=SpanishPanama, 15370=SpanishParaguay, 10250=SpanishPeru, 20490=SpanishPuertoRico, 1034=SpanishTraditionalSort, 14346=SpanishUruguay, 8202=SpanishVenezuela, 1072=Sutu, 1089=Swahili, 1053=Swedish, 2077=SwedishFinland, 1114=Syriac, 1097=Tanil, 1092=Tatar, 1098=Telugu, 1054=Thai, 1073=Tsonga, 1074=Tswana, 1055=Turkish, 1058=Ukrainian, 1056=Urdu, 2115=UzbekCyrillic, 1091=UzbekLatin, 1066=Vietnamese, 1076=Xhosa, 1085=Yiddish, 1077=Zulu, 33801=ENX, 16393=EnglishIndian</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The text name of the handler to be used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration. For example, the display name for the default opening greeting call handler is &quot;Opening Greeting.&quot;</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseDefaultLanguage" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>A flag indicating whether the language for this call handler template is derived from the call handler template object attribute or the default language from the location to which the call handler template belongs. Always use the Language column - if this is set, then the column Language is being derived directly from the location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoiceName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the WAV file containing the recorded audio (voice name, greeting, etc.) for the parent object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="VoiceFileURI" type="xs:anyURI" minOccurs="0" />
+				<xs:element name="VoiceNameURI" type="xs:anyURI" minOccurs="0" />					
+				
+				<xs:element name="EditMsg" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag that determines whether the caller can edit messages.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxMsgLen" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum recording length (in seconds) for messages left by unidentified callers.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="OneKeyDelay" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time (in milliseconds) that Cisco Unity Connection waits for additional input after callers press a single key that is not locked. If there is no input within this time, Cisco Unity Connection performs the action assigned to the single key.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ScheduleSetObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the schedule set Cisco Unity Connection will use for making standard versus off hours decisions within this call handler.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="ScheduleSetURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="SendUrgentMsg" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether an unidentified caller can mark a message as &quot;urgent.&quot;</xs:documentation>
+						<xs:documentation>1=Always, 2=Ask, 0=Never</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a CallHandler object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AfterMessageAction" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The type of call action to take, e.g., hang-up, goto another object, etc.</xs:documentation>
+						<xs:documentation>3=Error, 2=Goto, 1=Hangup, 0=Ignore, 5=SkipGreeting, 4=TakeMsg, 6=RestartGreeting, 7=TransferAltContact, 8=RouteFromNextRule</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AfterMessageTargetConversation" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the conversation to which the caller is routed.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AfterMessageTargetHandlerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the specific object to send along to the target conversation.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseCallLanguage" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection will use the language assigned to the call.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SendSecureMsg" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether an unidentified caller can mark a message as &quot;secure.&quot;</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnablePrependDigits" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag to indicate weather or not to prepend digits when dialing a extension number to transfer too.
+
+</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PrependDigits" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Touch-Tone digits to prepended to extension when dialing transfer number  ( #, 0,1...9,*).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PlayPostGreetingRecording" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates whether the recording referenced by PostGreetingRecordingObjectId should be played.</xs:documentation>
+						<xs:documentation>0=No, 1=Always, 2=External</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PostGreetingRecordingObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A link to a PostGreetingRecording</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SendPrivateMsg" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Determines if an outside caller can mark their message as private.</xs:documentation>
+						<xs:documentation>0=Never, 1=Always, 2=Ask</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PlayAfterMessage" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates whether the Sent Message Prompt Recording referenced by Post Greeting</xs:documentation>
+						<xs:documentation>0=No, 1=Default, 2=Recorded</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PlayAfterMessageRecordingObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A Link To a PostGreetingRecording that is used as After Message Recording</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:element name="UserTemplateGreetingsURI" type="xs:anyURI" minOccurs="0" /> 
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="TransferOptionsURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to get transfer rules.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="MenuEntriesURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to change Menu Entries.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="CallhandlerPrimaryTemplate" type="CallhandlerPrimaryTemplate"/>
+	<xs:element name="CallhandlerPrimaryTemplates">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="CallhandlerPrimaryTemplate" type="CallhandlerPrimaryTemplate" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

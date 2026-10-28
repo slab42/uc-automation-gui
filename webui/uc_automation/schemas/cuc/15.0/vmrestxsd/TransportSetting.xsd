@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mailbox attributes that are available via CUPI
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+    <xs:complexType name="TransportSetting">
+        <xs:sequence>
+            <xs:element name="transportMode" type="xs:int" minOccurs="0"/>
+            <xs:element name="transportUrl" type="xs:string" minOccurs="0"/>
+            <xs:element name="httpHost" type="xs:string" minOccurs="0"/>
+            <xs:element name="httpPort" type="xs:int" minOccurs="0"/>
+            <xs:element name="isPrivacyEnabled" type="xs:boolean" minOccurs="0"/>
+            <xs:element name="isProxyAuthReq" type="xs:boolean" minOccurs="0"/>
+            <xs:element name="httpProxyUser" type="xs:string" minOccurs="0"/>
+            <xs:element name="httpProxyPasswd" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="TransportSetting" type="TransportSetting"/>
+</xs:schema>

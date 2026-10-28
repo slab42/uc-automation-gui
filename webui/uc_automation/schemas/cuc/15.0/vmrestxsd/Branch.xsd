@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="Branch">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a  Branch.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsAlive" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The live status of Branch is maintained in this column.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsDisabled" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Flag to indicate whether the branch is enabled or not</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="OperatorObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The is used to store the Branch&apos;s operator.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Password" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The Password for central unity connection to be used by branch.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Port" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> To be used by Central Unity Connection for creating a connection with Branch.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ProvisionState" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This column indicates about the current provisioning state of the branch. It can have values like: Idle, In-progress, Scheduled</xs:documentation>
+						<xs:documentation>0=Idle, 1=Schedule, 2=InProgress</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ServerAddress" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This is used to store the FQDN of a branch</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SyncGreetings" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This field indicates if the personal greetings for the users of this branch will be sent to the actual branch, while provisioning</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SyncVoiceName" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This field indicates if the voice name for the users of this branch will be sent to the actual branch, while provisioning</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UserName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The UserName for central unity connection to be used by branch.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VmUploadState" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This column indicates about the current VM Upload state of the branch. It can have values like: Idle, In-progress.</xs:documentation>
+						<xs:documentation>0=Idle, 1=Schedule, 2=InProgress</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name of this Location, e.g. &quot;Seattle Office.&quot;  Used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PartitionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Primary key for the table Partition. This will be used to map the particular partition against the Branch.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PartitionURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="SmtpDomain" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The domain portion (right-half) of an internet-addressable address (for example, london.cisco.com). This is used to form a user&apos;s, contact&apos;s, and distribution list&apos;s SMTP address (tbl_Alias.SmtpAddress).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="Branch" type="Branch"/>
+	<xs:element name="Branches">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Branch" type="Branch" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>
+

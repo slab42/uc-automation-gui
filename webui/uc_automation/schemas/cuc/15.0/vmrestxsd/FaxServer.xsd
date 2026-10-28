@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="FaxServer">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table.  A globally unique, system-generated identifier for a FaxServer object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Enabled" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating weather the Fax server is enabled.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SmtpAddress" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The SmtpAddress for FaxServer</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IpAddress" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The IP address of the Fax server.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseSmartHost" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether to send messages through the smart host or directly to the server address</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Points to the LocationVMS record identifying where this Fax Server location was
+created.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="FaxServerName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A unique name for the FaxServer.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="FaxServer" type="FaxServer"/>
+	<xs:element name="FaxServers">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="FaxServer" type="FaxServer" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

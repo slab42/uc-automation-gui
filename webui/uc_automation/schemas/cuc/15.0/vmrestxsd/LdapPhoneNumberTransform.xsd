@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="LdapPhoneNumberTransform">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a LdapPhoneNumberTransform object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Regex" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Regular Expression used for specifying LDAP phone number pattern and dividing the number into groups</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Replacement" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Replacment string that specifies the pattern of the new extensions</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="LdapPhoneNumberTransform" type="LdapPhoneNumberTransform"/>
+	<xs:element name="LdapPhoneNumberTransforms">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="LdapPhoneNumberTransform" type="LdapPhoneNumberTransform" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

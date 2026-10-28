@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="UserTemplateSmtpDevice">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="PhoneNumber" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The phone number or alphanumeric text (as applicable) for sending a notification message to a text-compatible cell phone or pager. In the SA, this is referred to as the &quot;From:&quot; field. Typically, this field contains the number that the subscriber calls to check messages. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SendCount" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection will include a count of each voice mail, fax, and e-mail message with the notification message. When the subscriber receives the notification, the message count appears as a line for each type of message. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SmtpAddress" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The e-mail address of the text pager, text-compatible cell phone, or another e-mail account (such as a home e-mail address) to which the notification message is to be sent. In the SA, this is referred to as the &quot;To:&quot; field.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="StaticText" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The actual text message that the subscriber wants to receive in a Text Pager notification. The SA refers to this as the &quot;Send:&quot; field.
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a NotificationDeviceSMTP object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Active" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the device is active or inactive (enabled/disabled).</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DeviceName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The &quot;DeviceName&quot; of the notification device.</xs:documentation>
+						<xs:documentation>Home Phone=HomePhone, Pager=Pager, SMS=SMS, Work Phone=WorkPhone, Mobile Phone=MobilePhone, Spare Phone=SparePhone, Other=Other, SMTP=SMTP, HTML=HTML</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The preferred text name of the notification device to be used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration. For example, &quot;Home Phone,&quot; Pager 2,&quot; &quot;Work Phone, &quot; etc. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxBody" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum number of characters allowed in the &apos;body&apos; of a notification message.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxSubject" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum number of characters allowed in the &apos;subject&apos; of a notification message.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SubscriberObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Subscriber object to which this notification device belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="UserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="SendCallerId" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection will include the caller id (if available) with the notification message. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SendPcaLink" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection will include a link to the PCA with the notification message. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Undeletable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Device cannot be deleted.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="HeaderText" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The actual header text message that the subscriber wants to receive in a Text Pager notification. The SA refers to this as the &quot;Header Text:&quot; field.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="FooterText" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The actual footer text message that the subscriber wants to receive in a Text Pager notification. The SA refers to this as the &quot;Footer Text:&quot; field.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="EventList" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Comma separated list of events that trigger notification rules to be evaluated.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="ScheduleSetObjectId" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>ObjectId of the ScheduleSet for when the notification rule is active.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="InitialDelay" type="xs:int">
+				<xs:annotation>
+					<xs:documentation>The amount of time (in minutes) from the time when a message is received until message notification triggers.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="RepeatInterval" type="xs:int">
+				<xs:annotation>
+					<xs:documentation>The amount of time (in minutes) Cisco Unity Connection will wait before re-notifying a subscriber of new messages.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="RepeatNotify" type="xs:boolean">
+				<xs:annotation>
+					<xs:documentation>A flag indicating whether Cisco Unity Connection begins a notification process immediately upon the arrival of each message that matches the specified critera.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="VoiceMessage" type="xs:boolean">
+				<xs:annotation>
+					<xs:documentation>A flag indicating whether Cisco Unity Connection sends transcription of voice message</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="UrgentOnly" type="xs:boolean">
+				<xs:annotation>
+					<xs:documentation>A flag indicating whether Cisco Unity Connection sends voice message transcripted in urgent mode or not</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="FailDeviceObjectId" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>ObjectId of the NotificationDevice that Cisco Unity Connection will use if attempted notification to this device fails.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="UserTemplateSmtpDevice" type="UserTemplateSmtpDevice"/>
+	<xs:element name="UserTemplateSmtpDevices">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="UserTemplateSmtpDevice" type="UserTemplateSmtpDevice" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>
+

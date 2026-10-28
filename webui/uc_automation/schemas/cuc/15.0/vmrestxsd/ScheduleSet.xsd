@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="ScheduleSet">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a ScheduleSet object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name of this schedule set to be used when displaying entries in the administrative console and Cisco Personal Assistant.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="OwnerLocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The owner of this schedule set. If the owner is a LocationVMS, the unique identifier of the LocationVMS object to which this schedule set (i.e., &quot;system&quot; schedule) belongs. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="OwnerLocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="OwnerSubscriberObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The owner of this schedule set. If the owner is a subscriber, the unique identifier of the Subscriber object to which this schedule set belongs. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="OwnerUserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="OwnerPersonalRuleSetObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The owner of this schedule set. If the owner is a personal rule set, the unique identifier of the PersonalRuleSet to which this schedule set belongs. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Undeletable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this schedule set can be deleted via an administrative application such as Cisco Unity Connection Administration. It is used to prevent deletion of factory defaults.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:element name="ScheduleSetMembersURI" type="xs:anyURI" minOccurs="0" /> 
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="ScheduleSet" type="ScheduleSet"/>
+	<xs:element name="ScheduleSets">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ScheduleSet" type="ScheduleSet" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

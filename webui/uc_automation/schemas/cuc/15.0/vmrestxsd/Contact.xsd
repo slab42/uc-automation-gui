@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="Contact">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the LocationVMS object to which this contact belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a Contact object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The preferred text name of a person to be used when displaying entries such as in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisableOutbound" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For an AMIS remote contact, indicates no messages are being delivered to this target</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="FirstName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The first name (i.e., givenName) of a contact. Not their surname nor middle name.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The last name (i.e., surname or family name) of a contact, by which a contact is commonly known.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfNameFirstLast" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Digits corresponding to the numeric keypad mapping on a standard touchtone phone representing the first name followed by the last name of the contact. These digits are used for searching the contact by name via the phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfNameLastFirst" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Digits corresponding the numeric keypad mapping on a standard touchtone phone representing the last name followed by the first name of the contact. These digits are used for searching the contact by name via the phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AltFirstName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Alternate spelling of a contact&apos;s first name in an internationally recognizable format (i.e., ASCII only characters) used for TUI client name lookup and message addressing, and for VUI client name lookup.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AltLastName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Alternate spelling of a contact&apos;s last name in an internationally recognizable format (i.e., ASCII only characters) used for TUI client name lookup and message addressing, and for VUI client name lookup.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RemoteAddress" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A mail address on the remote system.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ListInDirectory" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection should list the contact in the phone directory for outside callers.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The type of call transfer Cisco Unity Connection will perform - supervised or unsupervised (also referred to as &quot;Release to Switch&quot; transfer).</xs:documentation>
+						<xs:documentation>1=Supervised, 0=Unsupervised</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferRings" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of times the extension rings before Cisco Unity Connection considers it a &quot;ring no answer&quot; and plays the subscriber or handler greeting.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoiceName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the WAV file containing the recorded audio (voice name, greeting, etc.) for the parent object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="VoiceFileURI" type="xs:anyURI" minOccurs="0" />
+				<xs:element name="VoiceNameURI" type="xs:anyURI" minOccurs="0" />					
+				
+				<xs:element name="Alias" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name for either a user, distribution list, or personal group.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfAccessId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This column shadows the object&apos;s optional dtmfaccessid from tbl_DtmfAccessId. It was added to speed up queries.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DeliveryLocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the location to which this contact&apos;s messages will be sent.  Currently, this is a LocationVPIM, but in the future as we add other types of interops it could be another type of Location such as LocationOctel or LocationAMIS.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="DeliveryLocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="DeliveryLocationDtmfAccessId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The dtmf access id for the location to which this object belongs. The dialable number.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CallHandlerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the primary CallHandler object for the contact.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="CallhandlerURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="TransferEnabled" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Transfer enabled? A flag indicating whether or not a call handler has Transfer Enabled.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ContactType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Identifies the type of contact based on the DeliveryLocationObjectId.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsTemplate" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this instance of a Contact object is a &quot;template&quot; for creating contacts.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AutoCreateCallHandler" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether or not a call handler should be automatically created for a contact.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PartitionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Partition to which the Contact is assigned.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PartitionURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="DeliveryLocationPartitionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The partition assigned to the delivery location. The unique identifier of the Partition to which the DtmfAccessId is assigned.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="DeliveryLocationPartitionURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="IsAddressable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the entity to which the alias belongs is addressable. By default all distribution lists are addressable. All subscribers (users with a voice mailbox, except UnityCinnection Messaging System user) are addressable. All contacts that are associated with a delivery location are addressable.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferExtension" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The extension (phone number) to transfer to</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="AlternateNamesURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to get the alternate names of the contact.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="Contact" type="Contact"/>
+	<xs:element name="Contacts">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Contact" type="Contact" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

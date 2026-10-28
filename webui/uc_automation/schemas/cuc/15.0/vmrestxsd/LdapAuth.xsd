@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">		
+	<xs:complexType name="LdapAuth">
+		<xs:sequence>
+			<xs:element name="ldapdn" type="xs:string" minOccurs="0"/>
+			<xs:element name="ldappassword" type="xs:string" minOccurs="0"/>
+			<xs:element name="userbase" type="xs:string" minOccurs="0"/>
+			<xs:element name="authenticatewithcorpdir" type="xs:boolean" minOccurs="0"/>
+			<xs:element name="sslenabled" type="xs:boolean" minOccurs="0"/>
+			<xs:element name="hostname" type="xs:string" minOccurs="0"/>
+			<xs:element name="portnumber" type="xs:int" minOccurs="0"/>
+			<xs:element name="pkid" type="xs:string" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="LdapAuth" type="LdapAuth"/>
+</xs:schema>
+

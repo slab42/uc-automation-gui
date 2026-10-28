@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="MessageExpiration">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Primary key for the table</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Enabled" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> True if the feature is enabled</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaximumAgeDays" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum number of days a message can exist, regardless of forwarding history, before being forcibly deleted.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxVideoMsgAgeDays" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum number of days a video message can exist, regardless of forwarding history, before being forcibly deleted.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="MessageExpiration" type="MessageExpiration"/>
+	<xs:element name="MessageExpirations">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="MessageExpiration" type="MessageExpiration" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="VnmapLocationHttps">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a Location object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name of this Location, e.g. &quot;Seattle Office.&quot;  Used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="HostAddress" type="xs:string" minOccurs="0">
+				</xs:element>
+				
+				<xs:element name="DestinationType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For delivery locations, the destination type for that location, e.g. Connection, Unity, VPIM, Bridge.</xs:documentation>
+						<xs:documentation>7=Bridge, 1=Connection, 8=VPIM, 2=Unity, 9=Branch</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The ObjectId of the network location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MaxUsn" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Max usn recieved in feed response.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastUsn" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Last USN synched</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ReplicationSetId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The remote ReplicationSet that this location is consuming.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Status" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates the status of the directory synchronication with this location.(Idle or synching)</xs:documentation>
+						<xs:documentation>0=Idle, 1=Syncing</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoiceNameSyncStatus" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates the status of voice name synchronication with this location.</xs:documentation>
+						<xs:documentation>0=Idle, 1=Syncing</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TimeOfLastSync" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Reflects the time at which we last synchronized with the this location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="NeighbourLocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Location objectid of immediately connected location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="NeighbourLocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MediatorLocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Location objectid of direclty connected locations</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="MediatorLocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="RetryQueueSizeCount" type="xs:int" minOccurs="0">
+				</xs:element>
+				
+				<xs:element name="IsPrimary" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this location object is the &quot;primary&quot; location, which cannot be deleted. (Used to prevent deletion of factory defaults.)</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsVpimBridgehead" type="xs:boolean" minOccurs="0">
+				</xs:element>
+				
+				<xs:element name="DirectorySynchronizationRole" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> It specifies the directory synchronization mode in the cluster.</xs:documentation>
+						<xs:documentation>0=Standard, 1=Alert, 2=Surrogate</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="VnmapLocationHttps" type="VnmapLocationHttps"/>
+	<xs:element name="VnmapLocationHttpses">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="VnmapLocationHttps" type="VnmapLocationHttps" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

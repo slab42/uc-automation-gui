@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:import schemaLocation="ErrorDetails.xsd"/>
+	<xs:simpleType name="BatchJobStatusCode">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="QUEUED"/>
+			<xs:enumeration value="STARTED"/>
+			<xs:enumeration value="DONE"/>
+			<xs:enumeration value="CANCELLED"/>
+			<xs:enumeration value="CANCELLEDINQUEUE"/>
+			<xs:enumeration value="ERROR"/>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:complexType name="BatchJobStatus">
+		<xs:sequence>
+			<xs:element name="Code" type="BatchJobStatusCode"/>
+			<xs:element name="PercentDone" type="xs:int"/>
+			<xs:element name="ErrorDetails" type="ErrorDetails"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="BatchJobStatus" type="BatchJobStatus"/>
+	
+	<xs:simpleType name="BatchItemStatus">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="ERROR"/>
+			<xs:enumeration value="STARTED"/>
+			<xs:enumeration value="DONE"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:complexType name="BatchItemResult">
+		<xs:sequence>
+			<!-- an internal indicator of the status of this item -->
+			<xs:element name="Status" type="BatchItemStatus"/>
+			<!-- batch operations PUT, POST and DELETE all return an http response -->
+			<xs:element name="ResponseStatus" type="xs:int"/>
+			<!--  A batch item post will return a URI for the created item  -->
+			<xs:element name="URI" type="xs:string"/>
+			<!--  if an operation throws an exception, the error information will be in the error details -->
+			<xs:element name="ErrorDetails" type="ErrorDetails"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="BatchItemResult" type="BatchItemResult"/>
+
+	<xs:element name="BatchResults">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="BatchJobStatus" type="BatchJobStatus"/>
+				<xs:element name="BatchItemResult" type="BatchItemResult" maxOccurs="unbounded"/>
+			</xs:sequence>			
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

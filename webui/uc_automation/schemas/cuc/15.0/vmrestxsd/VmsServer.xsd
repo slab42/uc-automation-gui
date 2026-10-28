@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="VmsServer">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a VMSServer object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ServerName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the server.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IpAddress" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The IP address of the server.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VmsServerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a VMSServer object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ClusterMemberId" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A unique number assigned to each server in the cluster as per their failover order</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ServerState" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Specifies the current state of the server</xs:documentation>
+						<xs:documentation>0=Pri_Init, 1=Pri_Active, 2=Pri_Act_Secondary, 3=Pri_Idle, 4=Pri_Failover, 5=Pri_Takeover, 6=Pri_SBR, 7=Sec_Init, 8=Sec_Active, 9=Sec_Act_Primary, 10=Sec_Idle, 11=Sec_Takeover, 12=Sec_Failover, 13=Sec_SBR, 14=Db_Sync, 15=Set_Peer_Idle, 16=Undefined, 17=Pri_Active_Disconnected, 18=Pri_Connecting, 19=Pri_Choose_Role, 20=Pri_Single_Server, 21=Sec_Act_Primary_Disconnected, 22=Sec_Connecting, 23=Sec_Choose_Role, 24=Shutdown</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="HostName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Hostname of the VMS server</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ServerDisplayState" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Values for the admin to display current server status</xs:documentation>
+						<xs:documentation>0=UNKNOWN, 1=DOWN, 2=INITIALIZING, 3=PRIMARY, 4=SECONDARY, 5=IDLE, 6=IN_DB_SYNC, 7=IN_SBR</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IpAddressV6" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The IPv6 address of the server.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SubToPerformReplicationRole" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Whether the subscriber machine is enabled for directory replication; On Publisher machine its value is always false.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="VmsServer" type="VmsServer"/>
+	<xs:element name="VmsServers">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="VmsServer" type="VmsServer" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>
+
+

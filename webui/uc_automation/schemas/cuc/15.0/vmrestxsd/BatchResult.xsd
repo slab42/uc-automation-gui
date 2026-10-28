@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">	
+	<xs:simpleType name="BatchItemStatusCode">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="ERROR"/>
+			<xs:enumeration value="STARTED"/>
+			<xs:enumeration value="DONE"/>
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>

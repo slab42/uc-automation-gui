@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+This xsd creates two POJO classes.
+1)When xjc is run, corresponding 2 classes AuditLog.java and AuditLogs.java are created
+2)This xsd is created corresponding to table tbl_auditlog
+3)Each column of table is defined as an element in the xsd
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+ElementFormDefault="qualified">
+<xs:complexType name="AuditLog">
+    <xs:sequence>
+      <xs:element name="id"  type="xs:int"/>
+      <xs:element name="date"  type="xs:string"/>
+      <xs:element name="Alias"  type="xs:string"/>
+      <xs:element name="component"  type="xs:string"/>
+      <xs:element name="event"  type="xs:int"/>
+      <xs:element name="text"  type="xs:string"/>
+      <xs:element name="clientprocessid"  type="xs:int"/>
+      <xs:element name="database"  type="xs:string"/>
+      <xs:element name="source"  type="xs:string"/>
+      <xs:element name="clienthostname"  type="xs:string"/>
+      <xs:element name="username"  type="xs:string"/>
+      <xs:element name="sessionid"  type="xs:int"/>
+    </xs:sequence>
+</xs:complexType>
+<xs:element name="AuditLog" type="AuditLog"/>
+
+<xs:element name="AuditLogs" type="AuditLog">
+	<xs:complexType>
+		<xs:sequence>
+			<xs:element name="AuditLog" type="AuditLog" minOccurs="0" maxOccurs="unbounded" />
+		</xs:sequence>
+		<xs:attribute name="total" type="xs:integer"/>
+	</xs:complexType>
+</xs:element>
+
+</xs:schema>
+

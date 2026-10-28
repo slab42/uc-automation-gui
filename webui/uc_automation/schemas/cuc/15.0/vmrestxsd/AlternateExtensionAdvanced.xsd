@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="AlternateExtensionAdvanced">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="AddressMode" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The default method the subscriber will use to address messages to other subscribers.  This can be addressing by ID, addressing by first name then last name, or by last name and then first name.
+</xs:documentation>
+						<xs:documentation>1=Extension, 2=FirstNameFirst, 0=LastNameFirst</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CommandDigitTimeout" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time (in milliseconds) between digits on a multiple digit menu command entry (i.e. different than the inter digit timeout that is used for strings of digits such as extensions and transfer strings).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ConfirmDeleteMessage" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection will request confirmation from a subscriber before proceeding with a deletion of a single new or saved message. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ContinuousAddMode" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether when addressing, after entering one recipient name, whether the subscriber is asked to enter another name or assume the subscriber is finished adding names and is ready to move on to recording the message or applying message options.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DeviceDtmfAccessIdObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The device to which this DeviceCustomConvSetting object belongs.  The unique identifier of the DtmfAccessId object to which these setting apply.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="FirstDigitTimeout" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time to wait (in milliseconds) for first digit when collecting touch tones.
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="InterDigitDelay" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time to wait (in milliseconds) for input between touch tones when collecting digits in TUI.
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="JumpToMessagesOnLogin" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber conversation jumps directly to the first message in the message stack after subscriber sign-in.
+</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MessageSpeed" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The audio speed Cisco Unity Connection uses to play back messages to the subscriber.
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MessageVolume" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The audio volume expressed as a percentage that Cisco Unity Connection uses to play
+back message.
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="NameConfirmation" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates whether the voice name of the subscriber or distribution list added to an address list when a subscriber addresses a message to other subscribers is played.  The default value for this is off (no voice name played) since the voice name was just played as part of the list of matches .  To most users this sounds redundant when on, but some users prefer it.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table.  A globally unique, system-generated identifier for a DeviceCustomConvSetting object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PromptSpeed" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The audio speed Cisco Unity Connection uses to play back prompts to the subscriber.
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PromptVolume" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The volume level for playback of system prompts.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RepeatMenu" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of times to repeat a menu in TUI.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SaveMessageOnHangup" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating when hanging up while listening to a new message, whether the message is marked new again or is marked read.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SendMessageOnHangup" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates when hanging up while addressing a message that has a recording and at least one recipient, whether the message is discarded, saved or the message is sent.</xs:documentation>
+						<xs:documentation>0=Discard, 1=Send, 2=Save</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkipForwardTime" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates the amount of time (in milliseconds) to jump forward when skipping ahead in a voice or TTS message using either DTMF or voice commands while reviewing messages.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkipReverseTime" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates the amount of time (in milliseconds) to jump backward when skipping in reverse in a voice or TTS message using either DTMF or voice commands while reviewing messages.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkipPasswordForKnownDevice" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber will be asked for his/her PIN.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SpeechIncompleteTimeout" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Specifies the required length of silence (in milliseconds) from when the speech prior to
+the silence matches an active grammar, but where it is possible to speak further and still
+match the grammar. By contrast, the SpeechCompleteTimeout property is used when the speech prior to the silence matches an active grammar and no further words can be spoken.
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SpeechSensitivity" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A variable level of sound sensitivity that enables the speech engine to filter out background noise and not mistake it for speech.  A higher value means higher sensitivity.
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseVui" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the speech recognition conversation is the default conversation for the subscriber.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SubscriberObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The unique identifier of the subscriber who is the owner of the device to which these device custom conversation setting values apply.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="UserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ConfirmationConfidenceThreshold" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Voice Recognition Confirmation Confidence Threshold</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="AlternateExtensionAdvanced" type="AlternateExtensionAdvanced"/>
+	<xs:element name="AlternateExtensionAdvanceds">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="AlternateExtensionAdvanced" type="AlternateExtensionAdvanced" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>
+ 

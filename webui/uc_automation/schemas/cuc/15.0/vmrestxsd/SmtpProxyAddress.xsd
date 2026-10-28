@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="SmtpProxyAddress">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique system-generated identifier for an SmtpProxyAddress object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SmtpAddress" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The full SMTP proxy address for this object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectContactObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> If the proxy address is for a Contact, the unique identifier of the Contact to which the proxy address refers. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="ObjectContactURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectDistributionListObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> If the proxy address is for a DistributionList, the unique identifier of the DistributionList to which the proxy address refers. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="ObjectDistributionListURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectGlobalUserObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> If the proxy address is for a GlobalUser, the unique identifier of the GlobalUser to which the proxy address refers. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="ObjectGlobalUserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectPersonalGroupObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> If the proxy address is for a PersonalGroup, the unique identifier of the PersonalGroup to which the proxy address refers. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="SmtpProxyAddress" type="SmtpProxyAddress"/>
+	<xs:element name="SmtpProxyAddresses">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="SmtpProxyAddress" type="SmtpProxyAddress" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

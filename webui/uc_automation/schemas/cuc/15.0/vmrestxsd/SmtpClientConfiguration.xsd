@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mailbox attributes that are available via CUPI
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+    <xs:complexType name="SmtpClientConfiguration">
+        <xs:sequence>
+            <xs:element name="smtpSmartHost" type="xs:string" minOccurs="0"/>
+            <xs:element name="isClientSecure" type="xs:boolean" minOccurs="0"/>
+            <xs:element name="smtpPort" type="xs:int" minOccurs="0"/>
+            <xs:element name="isAuthEnabled" type="xs:boolean" minOccurs="0"/>
+            <xs:element name="smtpUsername" type="xs:string" minOccurs="0"/>
+            <xs:element name="smtpPassword" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="SmtpClientConfiguration" type="SmtpClientConfiguration"/>
+</xs:schema>

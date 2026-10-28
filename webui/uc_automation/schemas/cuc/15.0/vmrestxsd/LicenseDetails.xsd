@@ -1,0 +1,49 @@
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="LicenseDetails">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element type="xs:string" name="SmartLicensing"/>
+        <xs:element type="Register" name="Register"/>
+        <xs:element type="Authorization" name="Authorization"/>
+        <xs:element type="LicenseUsage" name="LicenseUsage"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="Register">
+        <xs:sequence>
+                <xs:element name="Status" type="xs:string" />
+                <xs:element name="SmartAccount" type="xs:string" />
+                <xs:element name="VirtualAccount" type="xs:string" />
+                <xs:element name="LastRenewalAttempt" type="xs:string" />
+                <xs:element name="NextRenewalAttempt" type="xs:string" />
+                <xs:element name="LastRegistrationSuccessTime" type="xs:string" />
+                <xs:element name="ProductUDI" type="xs:string" />
+                <xs:element name="ExportControlFunctionality" type="xs:string" />
+        </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Authorization">
+        <xs:sequence>
+		<xs:element name="Status" type="xs:string" />
+ 		<xs:element name="LastCommunicationAttempt" type="xs:string" />
+	        <xs:element name="NextCommunicationAttempt" type="xs:string" />
+	        <xs:element name="EvaluationPeriodRemaining" type="xs:string" />
+        </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="LicenseUsage">
+        <xs:sequence>
+		<xs:element name="EntitlementTag" type="EntitlementTag" minOccurs="0" maxOccurs="5"/>
+        </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EntitlementTag">
+        <xs:sequence>
+                        <xs:element name="Id" type="xs:string" />
+                        <xs:element name="Count" type="xs:int" />
+                        <xs:element name="Status" type="xs:string" />
+        </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

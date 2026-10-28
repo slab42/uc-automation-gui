@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="DefaultUserTemplate">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a User object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseDefaultLanguage" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>A flag indicating whether the language for this user template is derived from the user template object attribute or the default language from the location to which the user template belongs. Always use the Language column - if this is set, then the column Language is being derived directly from the location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseDefaultTimeZone" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>A flag indicating whether the timezone for this user template is derived from the user template object attribute or the default timezone from the location to which the user template belongs. Always use the Timezone column - if this is set, then the column Timezone is being derived directly from the location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Alias" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name for either a user, distribution list, or personal group.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="City" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of a locality, such as a city, county or other geographic region where the user is located, or with which a user is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="State" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The full name of the state or province where this user is located, or with which a user is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Country" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The two-letter ISO 3166-1 country code where the user is located, or with which a user is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PostalCode" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For users in the United States, the zip code where the user is located. For users in Canada, Mexico, and other countries, the postal code where the user is located.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Department" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name or number for the department or subdivision of an organization to which a person belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Building" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the building where the user is based (e.g., SJ-21).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Address" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The physical address such as a house number and street name where the user is located, or with which a user is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The preferred text name of a person to be used when displaying entries such as in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="BillingId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Accounting information or project code associated with this user.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TimeZone" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The time zone to which this user account is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CreationTime" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date and time the user account was created. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CosObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the COS (Class of Service) object to which this user account is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="CosURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="Language" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The preferred language of this user. For a user with a voice mailbox, it is the language in which the subscriber hears instructions played to them. If the subscriber has TTS enabled by their COS, it is the language used for TTS. </xs:documentation>
+						<xs:documentation>1078=Afrikaans, 1052=Albanian, 5121=ArabicAlgeria, 15361=ArabicBahrain, 3073=ArabicEgypt, 2049=ArabicIraq, 11265=ArabicJordan, 13313=ArabicKuwait, 12289=ArabicLebanon, 4097=ArabicLibya, 6145=ArabicMorocco, 8193=ArabicOman, 16385=ArabicQatar, 1025=ArabicSaudiArabia, 10241=ArabicSyria, 7169=ArabicTunisia, 14337=ArabicUAE, 9217=ArabicYemen, 1067=Armenian, 2092=AzeriCyrillic, 1068=AzeriLtin, 1069=Basque, 1059=Belarusian, 1026=Bulgarian, 1027=Catalan, 3076=ChineseHongKong, 5124=ChineseMacau, 2052=ChinesePRC, 4100=ChineseSingapore, 1028=ChineseTaiwan, 1050=Croatian, 1029=Czech, 1030=Danish, 1125=Divehi, 2067=DutchBelgian, 1043=DutchStandard, 3081=EnglishAustralian, 10249=EnglishBelize, 4105=EnglishCandian, 9225=EnglishCaribean, 6153=EnglishIreland, 8201=EnglishJamaica, 5129=EnglishNewZealand, 13321=EnglishPhilippines, 7177=EnglishSouthAfrica, 11273=EnglishTrinidad, 2057=EnglishUnitedKingdom, 1033=EnglishUnitedStates, 12297=EnglishZimbabwe, 1061=Estonian, 1080=Faeroese, 1065=Farsi, 1035=Finnish, 2060=FrenchBelgian, 3084=FrenchCandian, 5132=FrenchLuxembourg, 6156=FrenchMonaco, 1036=FrenchStandard, 4108=FrenchSwiss, 1084=GaelicScots, 1110=Galician, 1079=Georgian, 3079=GermanAustrian, 5127=GermanLiechtenstein, 4103=GermanLuxembourg, 1031=GermanStandard, 2055=GermanSwiss, 1032=Greek, 1095=Gujarati, 1037=Hebrew, 1081=Hindi, 1038=Hungarian, 1039=Icelandic, 1057=Indonesian, 1040=ItalianStandard, 2064=ItalianSwiss, 1041=Japanese, 1099=Kannada, 1087=Kazakh, 1111=Konkani, 1042=Korean, 1088=Kyrgyz, 1062=Latvian, 1063=Lithuanian, 1071=Macedonian, 2110=MalayBruneiDarussalam, 1086=MalayMalaysia, 1082=Maltese, 1102=Marathi, 1104=Mongolian, 2068=NoewegianNynorsk, 1044=NorwegianBokmal, 1045=Polish, 2070=PortugeseStandard, 1046=PortugueseBrazilian, 1094=Punjabi, 1047=RhaetoRomanic, 1048=Romanian, 2072=RomanianMoldavia, 1049=Russian, 2073=RussianMoldavia, 1103=Sanskrit, 3098=SerbianCyrillic, 2074=SerbianLatin, 1051=Slovak, 1060=Slovenian, 1070=Sorbian, 11274=SpanishArgentina, 16394=SpanishBolivia, 13322=SpanishChile, 9226=SpanishColumbia, 5130=SpanishCostaRica, 7178=SpanishDominicanRepublic, 12298=SpanishEcuador, 17418=SpanishElSalvador, 4106=SpanishGuatemala, 18442=SpanishHonduras, 2058=SpanishMexican, 3082=SpanishModernSort, 19466=SpanishNicaragua, 6154=SpanishPanama, 15370=SpanishParaguay, 10250=SpanishPeru, 20490=SpanishPuertoRico, 1034=SpanishTraditionalSort, 14346=SpanishUruguay, 8202=SpanishVenezuela, 1072=Sutu, 1089=Swahili, 1053=Swedish, 2077=SwedishFinland, 1114=Syriac, 1097=Tanil, 1092=Tatar, 1098=Telugu, 1054=Thai, 1073=Tsonga, 1074=Tswana, 1055=Turkish, 1058=Ukrainian, 1056=Urdu, 2115=UzbekCyrillic, 1091=UzbekLatin, 1066=Vietnamese, 1076=Xhosa, 1085=Yiddish, 1077=Zulu, 33801=ENX, 16393=EnglishIndian</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the LocationVMS object to which this user belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="DisplayNameRule" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The format for generating the user display name. </xs:documentation>
+						<xs:documentation>1=FirstLast, 2=LastFirst</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DoesntExpire" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether or not the user credential will automatically expire (and the user required to change the credential upon its expiration) based on a defined schedule. Regardless, the user still may change the credential (if allowed by CantChange).  </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CantChange" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the user can set/change their credential (i.e., the credential specified by the associated credential policy).</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MailboxStoreObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the MailboxStore object where a mailbox is created for a new subscriber created with this template.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PabLastImported" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date and time when the personal address book was last imported from a groupware package into the personal groups for a user.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MailboxDn" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The distinguished name of the mailbox.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RouteNDRToSender" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating, for an undeliverable message, whether NDR messages will appear in the subscriber&apos;s mailbox or are deleted by the system.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Undeletable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this subscriber can be deleted via an administrative application such as Cisco Unity Connection Administration. It is used to prevent deletion of factory defaults.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ReadOnly" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> If set to 1 (true) user is read-only and cannot be modified.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PartitionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Partition to which a subscriber&apos;s DtmfAccessId created with this template will be assigned.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PartitionURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="LdapCcmPkid" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The pkid of associated end user in the sleeping SeaDragon database.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LdapType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The LDAP configuration information for the user.</xs:documentation>
+						<xs:documentation>0=None, 1=Sync, 2=Authenticate, 4=Inactive</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LdapCcmUserId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The userid of associated end user in the sleeping SeaDragon database.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CreateSmtpProxyFromCorp" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Flag indicating whether an SMTP proxy address matching the corporate e-mail address (column EmailAddress) should be created for this User.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="DefaultUserTemplateWebPasswordURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to change the web application password.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="DefaultUserTemplateVoicePinURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to change the voice mail pin of the template.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="DefaultUserTemplate" type="DefaultUserTemplate"/>
+	<xs:element name="DefaultUserTemplates">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="DefaultUserTemplate" type="DefaultUserTemplate" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>
+
+

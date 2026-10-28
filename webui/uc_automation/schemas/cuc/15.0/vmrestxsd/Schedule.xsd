@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="Schedule">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a Schedule object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="StartDate" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date and time when schedule becomes active, or NULL if active immediately.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EndDate" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date and time when schedule ends, or NULL if effective indefinitely.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The preferred text name of this schedule to be used when displaying entries in the administrative console and Cisco Personal Assistant.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="OwnerLocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The owner of this schedule. If the owner is a LocationVMS, the unique identifier of the LocationVMS object to which this schedule belongs. Commonly referred to as a &quot;system&quot; schedule. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="OwnerLocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="OwnerSubscriberObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The owner of this schedule. If the owner is a subscriber, the unique identifier of the Subscriber object to which this schedule belongs. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="OwnerUserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="OwnerPersonalRuleSetObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The owner of this schedule. If the owner is a personal rule set, the unique identifier of the PersonalRuleSet to which this schedule belongs. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsHoliday" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this schedule represents a holiday.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Undeletable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this schedule can be deleted via an administrative application such as Cisco Unity Connection Administration. It is used to prevent deletion of factory defaults.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TenantObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Unique ObjectId of the tbl_Tenant</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:element name="ScheduleDetailsURI" type="xs:anyURI" minOccurs="0" /> 
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="Schedule" type="Schedule"/>
+	<xs:element name="Schedules">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Schedule" type="Schedule" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="GeneralConfiguration">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a Location object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TlsCiphers" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Indicates the TLS Ciphers to be used for Secure SIP Indicates the TLS Ciphers to be used for Secure SIP.</xs:documentation>
+						<xs:documentation>0=AES256_SHA384_ONLY_RSA_PREFERRED, 1=AES256_SHA384_ONLY_ECDSA_PREFERRED, 2=AES256_AES128_ONLY_RSA_PREFERRED, 3=AES256_AES128_ONLY_ECDSA_PREFERRED, 4=ALL_CIPHERS_RSA_PREFERRED, 5=ALL_CIPHERS_ECDSA_PREFERRED</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SrtpCiphers" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Indicates the SRTP Ciphers to be used for Secure SIP Indicates the SRTP Ciphers to be used for Secure SIP</xs:documentation>
+						<xs:documentation>0=ALL_AES256_AES128_CIPHERS, 1=AEAD_AES256_GCM_CIPHERS, 2=AEAD_AES256_AES128_GCM_CIPHERS</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="HttpsCiphers" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates the Ciphers to be used for HTTPS.</xs:documentation>
+						<xs:documentation>0=All_Supported_EC_and_RSA_Ciphers, 1=RSA_Ciphers_Only</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="GeneralConfiguration" type="GeneralConfiguration"/>
+	<xs:element name="GeneralConfigurations">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="GeneralConfiguration" type="GeneralConfiguration" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

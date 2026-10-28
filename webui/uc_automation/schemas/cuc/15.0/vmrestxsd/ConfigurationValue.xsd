@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="ConfigurationValue">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="Type" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The data type of the node value.</xs:documentation>
+						<xs:documentation>11=Bool, 7=Date, 4=Float, 88=Guid, 3=Long, 1=Null, 8=String</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastModifiedTime" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date and time of the last modification.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastModifiedByComponent" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the component that last modified this node.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="FullName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The fully qualified name of the node.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Value" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Value of the node.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UserSetting" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this Configuration object is accessible to an end user (administrator). Some settings are essentially internal, and not meant to be configured by end users.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MinVal" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For integer values, the minimum allowed value.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxVal" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For integer values, the maximum allowed value.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RegexValidation" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For string values, a regular expression string used to validate the string value.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RequiresRestart" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether or not CUC will need to be restarted if this setting is changed.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="ConfigurationValue" type="ConfigurationValue"/>
+	<xs:element name="ConfigurationValues">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ConfigurationValue" type="ConfigurationValue" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="RestrictionTable">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a RestrictionTable object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CreationTime" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date and time this restriction table was created.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DefaultBlocked" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection permits the phone number in the case where a phone number does not match any call patterns in this restriction table. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the LocationVMS object to which this restriction table belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MaxDigits" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum number of digits in a dial string (including access codes) allowed by Cisco Unity Connection.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MinDigits" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The minimum number of digits in a dial string (including access codes) allowed by Cisco Unity Connection. 
+
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name of this restriction table to be used when displaying entries in the administrative console. For example,  &quot;{Default Transfer}.&quot;</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Undeletable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this restriction table can be deleted via an administrative application such as Cisco Unity Connection Administration. It is used to prevent deletion of factory defaults.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:element name="RestrictionPatternsURI" type="xs:anyURI" minOccurs="0" /> 
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="RestrictionTable" type="RestrictionTable"/>
+	<xs:element name="RestrictionTables">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="RestrictionTable" type="RestrictionTable" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

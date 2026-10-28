@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="InterviewQuestion">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="InterviewHandlerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the InterviewHandler object to which this interview question belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="InterviewHandlerURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="QuestionNumber" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The interview question number. Questions are numbered from 1 to 20.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxMsgLength" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum recording length (in seconds) allowed for caller responses to the question.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="StreamText" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The complete text of the question used for display purposes.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoiceFile" type="xs:string" minOccurs="0">
+				</xs:element>
+				
+				<xs:element name="IsActive" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the question is used.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="InterviewQuestion" type="InterviewQuestion"/>
+	<xs:element name="InterviewQuestions">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="InterviewQuestion" type="InterviewQuestion" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>
+

@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="MailboxStore">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="MailDatabase" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the mailbox database, such as &quot;UnityMbxDb1.&quot;</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Server" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the server on which the mailbox store resides.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a MailboxStore object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Mounted" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the mailbox store is mounted.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ServiceAlias" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name (alias) for a service to use to logon to mailbox store for message retrieval.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ServicePassword" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The password for a service to use to logon to mailbox store for message retrieval.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RequiredSecurity" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The method of encryption that Cisco Unity Connection will use on a mailstore connection.</xs:documentation>
+						<xs:documentation>3=IPSec, 0=None, 2=SSL, 1=TLS</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MailboxStoreType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The type of mailbox store (e.g., UMSS).</xs:documentation>
+						<xs:documentation>0=UMSS, 1=IMAP, 2=POP3, 3=WebDAV, 4=MPE_WS</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A descriptive name for the Message Store.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DbInstance" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the dbinstance on which the mailbox store resides.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Status" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Current status of the mailstore.  Will usually be OK.  Used by CUSA to show admins.</xs:documentation>
+						<xs:documentation>0=OK, 1=Creating, 2=CreationFailed, 3=Deleting, 4=DeletionFailed, 5=MailboxesMoving, 6=DatabaseFull</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Undeletable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this Mailbox Store can be deleted via an administrative application such as Cisco Unity Connection Administration. It is used to prevent deletion of factory defaults.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastError" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Last error result from a mailbox store maintenance action: create or delete</xs:documentation>
+						<xs:documentation>0=OK, 11=RemoteServerOffline, 2=DuplicateDisplayName, 3=InternalNameError, 4=DatabaseError, 5=InsufficientDiskSpace, 6=MailstoreNotEmpty, 7=MailstoreStillReferenced, 8=MailstoreOverMaxSize, 9=MailstoreNotFound, 10=MailstoreUndeletable, 1=UnknownError, 12=MailstoreNotMounted, 13=InvalidRequest, 14=MailboxNotMounted, 15=MustRunOnPublisher</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxSizeMB" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This is the max size in MB for the mailstore - when exceeded admin receives warnings.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:element name="MailboxesURI" type="xs:anyURI" minOccurs="0" /> 
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="MailboxURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to fetch the mailboxes.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="TotalSizeOfMailbox" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The total size of the voice messages and attachments.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="TimeAtWhichSizeCalculated" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The date and time when the size was calculated.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="MailboxStore" type="MailboxStore"/>
+	<xs:element name="MailboxStores">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="MailboxStore" type="MailboxStore" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

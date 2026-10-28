@@ -1,0 +1,1154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="User">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a User object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseDefaultLanguage" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Set to true (1) if call handler is using default language from the location it belongs to.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="FirstName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The first name (i.e., givenName) of this user. Not their surname nor middle name.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Initials" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The initial letters of some or all of the names of this user.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The last name (i.e., surname or family name) of this user, by which a user is commonly known.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Alias" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name for either a user, distribution list, or personal group.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="City" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of a locality, such as a city, county or other geographic region where the user is located, or with which a user is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="State" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The full name of the state or province where this user is located, or with which a user is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Country" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The two-letter ISO 3166-1 country code where the user is located, or with which a user is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PostalCode" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For users in the United States, the zip code where the user is located. For users in Canada, Mexico, and other countries, the postal code where the user is located.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Department" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name or number for the department or subdivision of an organization to which a person belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Manager" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the person who is the manager or supervisor of the user.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Title" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The position or function of a user within an organization, such as &apos;Vice President.&apos;</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Building" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the building where the user is based (e.g., SJ-21).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EmployeeId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The numeric or alphanumeric identifier assigned to a person, typically based on order of hire or association with an organization.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Address" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The physical address such as a house number and street name where the user is located, or with which a user is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The preferred text name of a person to be used when displaying entries such as in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="BillingId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Accounting information or project code associated with this user.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EmailAddress" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The corporate email address of the user. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TimeZone" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The time zone to which this user account is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CreationTime" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date and time the user account was created. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsTemplate" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this instance of a User object is a &quot;template&quot; for creating new users. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfNameFirstLast" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The digits corresponding to the numeric keypad mapping on a standard touchtone phone representing the first name followed by the last name of the user. These digits are used for searching the user by name via the phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfNameLastFirst" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The digits corresponding to the numeric keypad mapping on a standard touchtone phone representing the last name followed by the first name of the user. These digits are used for searching the user by name via the phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CosObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the COS (Class of Service) object to which this user account is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="CosURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="Language" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The preferred language of this user. For a user with a voice mailbox, it is the language in which the subscriber hears instructions played to them. If the subscriber has TTS enabled by their COS, it is the language used for TTS. </xs:documentation>
+						<xs:documentation>1078=Afrikaans, 1052=Albanian, 5121=ArabicAlgeria, 15361=ArabicBahrain, 3073=ArabicEgypt, 2049=ArabicIraq, 11265=ArabicJordan, 13313=ArabicKuwait, 12289=ArabicLebanon, 4097=ArabicLibya, 6145=ArabicMorocco, 8193=ArabicOman, 16385=ArabicQatar, 1025=ArabicSaudiArabia, 10241=ArabicSyria, 7169=ArabicTunisia, 14337=ArabicUAE, 9217=ArabicYemen, 1067=Armenian, 2092=AzeriCyrillic, 1068=AzeriLtin, 1069=Basque, 1059=Belarusian, 1026=Bulgarian, 1027=Catalan, 3076=ChineseHongKong, 5124=ChineseMacau, 2052=ChinesePRC, 4100=ChineseSingapore, 1028=ChineseTaiwan, 1050=Croatian, 1029=Czech, 1030=Danish, 1125=Divehi, 2067=DutchBelgian, 1043=DutchStandard, 3081=EnglishAustralian, 10249=EnglishBelize, 4105=EnglishCandian, 9225=EnglishCaribean, 6153=EnglishIreland, 8201=EnglishJamaica, 5129=EnglishNewZealand, 13321=EnglishPhilippines, 7177=EnglishSouthAfrica, 11273=EnglishTrinidad, 2057=EnglishUnitedKingdom, 1033=EnglishUnitedStates, 12297=EnglishZimbabwe, 1061=Estonian, 1080=Faeroese, 1065=Farsi, 1035=Finnish, 2060=FrenchBelgian, 3084=FrenchCandian, 5132=FrenchLuxembourg, 6156=FrenchMonaco, 1036=FrenchStandard, 4108=FrenchSwiss, 1084=GaelicScots, 1110=Galician, 1079=Georgian, 3079=GermanAustrian, 5127=GermanLiechtenstein, 4103=GermanLuxembourg, 1031=GermanStandard, 2055=GermanSwiss, 1032=Greek, 1095=Gujarati, 1037=Hebrew, 1081=Hindi, 1038=Hungarian, 1039=Icelandic, 1057=Indonesian, 1040=ItalianStandard, 2064=ItalianSwiss, 1041=Japanese, 1099=Kannada, 1087=Kazakh, 1111=Konkani, 1042=Korean, 1088=Kyrgyz, 1062=Latvian, 1063=Lithuanian, 1071=Macedonian, 2110=MalayBruneiDarussalam, 1086=MalayMalaysia, 1082=Maltese, 1102=Marathi, 1104=Mongolian, 2068=NoewegianNynorsk, 1044=NorwegianBokmal, 1045=Polish, 2070=PortugeseStandard, 1046=PortugueseBrazilian, 1094=Punjabi, 1047=RhaetoRomanic, 1048=Romanian, 2072=RomanianMoldavia, 1049=Russian, 2073=RussianMoldavia, 1103=Sanskrit, 3098=SerbianCyrillic, 2074=SerbianLatin, 1051=Slovak, 1060=Slovenian, 1070=Sorbian, 11274=SpanishArgentina, 16394=SpanishBolivia, 13322=SpanishChile, 9226=SpanishColumbia, 5130=SpanishCostaRica, 7178=SpanishDominicanRepublic, 12298=SpanishEcuador, 17418=SpanishElSalvador, 4106=SpanishGuatemala, 18442=SpanishHonduras, 2058=SpanishMexican, 3082=SpanishModernSort, 19466=SpanishNicaragua, 6154=SpanishPanama, 15370=SpanishParaguay, 10250=SpanishPeru, 20490=SpanishPuertoRico, 1034=SpanishTraditionalSort, 14346=SpanishUruguay, 8202=SpanishVenezuela, 1072=Sutu, 1089=Swahili, 1053=Swedish, 2077=SwedishFinland, 1114=Syriac, 1097=Tanil, 1092=Tatar, 1098=Telugu, 1054=Thai, 1073=Tsonga, 1074=Tswana, 1055=Turkish, 1058=Ukrainian, 1056=Urdu, 2115=UzbekCyrillic, 1091=UzbekLatin, 1066=Vietnamese, 1076=Xhosa, 1085=Yiddish, 1077=Zulu, 33801=ENX, 16393=EnglishIndian</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoiceName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the WAV file containing the recorded audio (voice name, greeting, etc.) for the parent object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="VoiceFileURI" type="xs:anyURI" minOccurs="0" />
+				<xs:element name="VoiceNameURI" type="xs:anyURI" minOccurs="0" />					
+				
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the LocationVMS object to which this user belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="EnhancedSecurityAlias" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name used to idenitify and authenticate the user with an RSA SecurID security system.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AddressMode" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The default method the subscriber will use to address messages to other subscribers.</xs:documentation>
+						<xs:documentation>1=Extension, 2=FirstNameFirst, 0=LastNameFirst</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ClockMode" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The time format used for the message timestamps that the subscriber hears when they listen to their messages over the phone.</xs:documentation>
+						<xs:documentation>1=HourClock12, 2=HourClock24, 0=SystemDefaultClock</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ConversationTui" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the conversation the subscriber uses to set up, send, and retrieve messages.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="GreetByName" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber hears his/her name when they log into their mailbox over the phone.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ListInDirectory" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection should list the subscriber in the phone directory for outside callers.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsVmEnrolled" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection plays the enrollment conversation (record a voice name, indicate if they are listed in the directory, etc.) for the subscriber when they login.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayCopiedNames" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the &quot;copied&quot; names during message playback for a subscriber.  </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayDistributionList" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the distribution list that sends a message, if applicable.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayMsgNumber" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the position of each message in the stack (i.e.,  &apos;Message 1&apos;, &apos;Message 2&apos; ,etc.) during message playback for the subscriber.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SaySender" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the sender of a message during message playback for the subscriber.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayTimestampAfter" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the timestamp after it plays back each message for the subscriber.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayTimestampBefore" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the timestamp before it plays back each for the subscriber.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayTotalNew" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the total number of new messages in the subscriber mailbox.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayTotalNewEmail" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the total number of new e-mail messages in the subscriber mailbox.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayTotalNewFax" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the total number of new fax messages in the subscriber mailbox.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayTotalNewVoice" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the total number of new voice messages in the subscriber mailbox.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayTotalReceipts" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the total number of new receipts in the subscriber mailbox.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayTotalSaved" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the total number of saved messages in the subscriber mailbox.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Speed" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The audio speed Cisco Unity Connection uses to play back messages to the subscriber.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaSwitchObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the MediaSwitch object Cisco Unity Connection uses for subscriber Telephone Record and Playback (TRAP) sessions and to dial MWI on or off requests when the Cisco Unity Connection system has a dual switch integration. 
+
+FK to tbl_MediaSwitchObjectId</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PhoneSystemURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="Undeletable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this subscriber can be deleted via an administrative application such as Cisco Unity Connection Administration. It is used to prevent deletion of factory defaults.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseBriefPrompts" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber hears brief or full phone menus when accessing Cisco Unity Connection over the phone.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Volume" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The audio volume expressed as a percentage that Cisco Unity Connection uses to play back message.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnAltGreetDontRingPhone" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a caller is prevented from being transferred to the subscriber phone when the subscriber alternate greeting is turned on.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnAltGreetPreventSkip" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether callers can skip the greeting while it is playing when the alternate greeting is turned on.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnAltGreetPreventMsg" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether callers can leave a message after the greeting when the subscriber alternate greeting is turned on.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EncryptPrivateMessages" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection encrypts messages from the subscriber that are marked private.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DeletedMessageSortOrder" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The order in which Cisco Unity Connection presents deleted messages to the subscriber.</xs:documentation>
+						<xs:documentation>2=FIFO, 1=LIFO</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayAltGreetWarning" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection notifies the subscriber when they login via the phone (plays conversation) or CPCA (displays a warning banner) if their alternate greeting is turned on.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SaySenderExtension" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection during message playback, plays the primary extension information of the subscriber who sent the message after playing the sender&apos;s voice name.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayAni" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection plays the Automatic Number Identification (ANI) information during message playback for voice messages from unidentified callers.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="XferString" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The cross-server transfer extension. If NULL, the user&apos;s primary extension is used.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CallAnswerTimeout" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of rings to wait for a subscriber destination to answer before the call is forwarded to the subscriber&apos;s primary phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CallHandlerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the primary CallHandler object for the subscriber.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="CallhandlerURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="AltFirstName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The alternate spelling of a user first name in an internationally recognizable format (i.e., ASCII only characters) used for TUI client name lookup and message addressing, and for VUI client name lookup.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AltLastName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The alternate spelling of a user last name in an internationally recognizable format (i.e., ASCII only characters) used for TUI client name lookup and message addressing, and for VUI client name lookup.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MessageTypeMenu" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection plays the message type menu when the subscriber logs on to Cisco Unity Connection over the phone. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="NewMessageSortOrder" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The order in which Cisco Unity Connection will sort new messages.</xs:documentation>
+						<xs:documentation>2=FIFO, 1=LIFO</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SavedMessageSortOrder" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The order in which Cisco Unity Connection will sort saved messages.</xs:documentation>
+						<xs:documentation>2=FIFO, 1=LIFO</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MessageLocatorSortOrder" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The order in which Cisco Unity Connection will sort messages when the &quot;Message Locator&quot; feature is enabled.</xs:documentation>
+						<xs:documentation>2=FIFO, 1=LIFO</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="NewMessageStackOrder" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The order in which Cisco Unity Connection plays the following types of &quot;new&quot; messages:
+*   Urgent voice messages
+*   Non-urgent voice messages
+*   Urgent fax messages
+*   Non-urgent fax messages
+*   Urgent e-mail messages
+*   Non-urgent e-mail messages
+*   Receipts and notices</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SavedMessageStackOrder" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The order in which Cisco Unity Connection plays the following types of &quot;saved&quot; messages:
+*   Urgent voice messages
+*   Non-urgent voice messages
+*   Urgent fax messages
+*   Non-urgent fax messages
+*   Urgent e-mail messages
+*   Non-urgent e-mail messages
+*   Receipts and notices</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnablePersonalRules" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a subscriber&apos;s personal rules are enabled. Subscribers can use this setting to disable all personal rules at once.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ForcedAuthorizationCode" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A valid authorization code that is entered prior to extending calls to classes of dialed numbers, for example, external, toll and international calls.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RecordUnknownCallerName" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a caller should be promoted to record his/her name if Unity does not receive caller id.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RingPrimaryPhoneFirst" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a subscriber&apos;s primary phone should be rung before trying other destinations in a personal group.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ExitAction" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The type of call action to take, e.g., hang-up, goto another object, etc.</xs:documentation>
+						<xs:documentation>3=Error, 2=Goto, 1=Hangup, 0=Ignore, 5=SkipGreeting, 4=TakeMsg, 6=RestartGreeting, 7=TransferAltContact, 8=RouteFromNextRule</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ExitTargetConversation" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the conversation to which the caller is routed.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PromptSpeed" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The audio speed Cisco Unity Connection uses to play back prompts to the subscriber.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ExitTargetHandlerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the specific object to send along to the target conversation.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RepeatMenu" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of times to repeat a menu in TUI.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="FirstDigitTimeout" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time to wait (in milliseconds) for first digit when collecting touch tones.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="InterdigitDelay" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time to wait (in milliseconds) for input between touch tones when collecting digits in TUI.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PromptVolume" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The volume level for playback of system prompts.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DelayAfterGreeting" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time (in milliseconds) Cisco Unity Connection will delay after playing greeting.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ClientMatterCode" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The client matter code to transmit to Call Manger when a phone number is dialed on an outbound call.  The CMC is entered after a phone number is dialed so that the customer can assigning account or billing codes to the call. Whether or not the CMC will be transmitted is dictated by a setting on outbound call. The subscriber&apos;s CMC is used only if the outbound call doesn&apos;t have its own CMC.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ExitCallActionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the CallAction object that is taken when a caller exits the subscriber conversation by pressing the * key or timing out.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AddressAfterRecord" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber will be prompted to address message before or after it is recorded.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfAccessId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The DTMF access id (i.e., extension) of the subscriber. The dialable number.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ConfirmDeleteMessage" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection will request confirmation from a subscriber before proceeding with a deletion of a single new or saved message. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ConfirmDeleteDeletedMessage" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection will request confirmation from a subscriber before proceeding with a deletion of a single deleted message.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ConfirmDeleteMultipleMessages" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection allows the subscriber to choose which message they want to delete or whether Cisco Unity Connection permanently deletes the specified type of messages. Changes what Cisco Unity Connection does when subscribers press 3 &gt; 2 &gt; 2 from the Main menu to permanently delete multiple deleted messages at once.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MailboxDn" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The distinguished name of the mailbox.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PabLastImported" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date and time when the personal address book was last imported from a groupware package into the personal groups for a user.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsClockMode24Hour" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The time format used for the message timestamps that the subscriber hears when they listen to their messages over the phone.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SynchScheduleObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Schedule object to use for synchronization Calendar information from groupware (such as Exchange).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="SynchScheduleURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="RouteNDRToSender" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating, for an undeliverable message, whether NDR messages will appear in the subscriber&apos;s mailbox or are deleted by the system.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsSetForVmEnrollment" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Temporary placeholder until IsVmEnrolled can be phased out. At that point, delete this column and rename tbl_UserSubscriber.IsVmEnrolled to IsSetForVmEnrollment. A flag indicating whether Cisco Unity Connection plays the enrollment conversation (record a voice name, indicate if they are listed in the directory, etc.) for the subscriber when they login.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoiceNameRequired" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a recorded voice name is required for this subscriber.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SendBroadcastMsg" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber may send broadcast messages.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UpdateBroadcastMsg" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber has the ability to update broadcast messages that are active or will be active in the future.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ConversationVui" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The VUI conversation assigned to the subscriber.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ConversationName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the conversation the subscriber uses to set up, send, and retrieve messages.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SpeechCompleteTimeout" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Specifies the required length of silence (in milliseconds) following user speech before the recognizer finalizes a result (either accepting it or throwing a nomatch event). The SpeechCompleteTimeout property is used when the speech prior to the silence matches an active grammar.  
+
+A long SpeechCompleteTimeout value delays the result completion and therefore makes the system&apos;s response slow. A short SpeechCompleteTimeout value may lead to the inappropriate break up of an utterance. Reasonable SpeechCompleteTimeout values are typically in the range of 0.3 seconds to 1.0 second. See Appendix D?Timing properties of the VoiceXML Specification for details.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SpeechIncompleteTimeout" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Specifies the required length of silence (in milliseconds) from when the speech prior to the silence matches an active grammar, but where it is possible to speak further and still match the grammar. By contrast, the SpeechCompleteTimeout property is used when the speech prior to the silence matches an active grammar and no further words can be spoken.
+
+A long SpeechIncompleteTimeout value delays the result completion and therefore makes the system&apos;s response slow. A short SpeechIncompleteTimeout value may lead to the inappropriate break up of an utterance.
+
+The SpeechIncompleteTimeout value is usually longer than the completetimeout value to allow users to pause mid-utterance (for example, to breathe). Note that values set for the completetimeout property are only supported if they are less than the incompletetimeout property. See Appendix D?Timing properties of the VoiceXML Specification for details.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseVui" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the speech recognition conversation is the default conversation for the subscriber.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkipPasswordForKnownDevice" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber will be asked for his/her PIN when attempting to sign-in from a known device.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="JumpToMessagesOnLogin" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber conversation jumps directly to the first message in the message stack after subscriber sign-in.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseDefaultTimeZone" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Indicates if the default timezone is being used.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableMessageLocator" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the message locator feature is enabled for the subscriber.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CcmId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Id of associated EndUser, ApplicationUser, or DirectoryNumber in Call Manager</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CcmIdType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Type of CCM user/object this id refers to (end user, application user, or directory number)</xs:documentation>
+						<xs:documentation>0=EndUser, 1=ApplicationUser, 2=DirectoryNumber, 3=LdapUser, 4=InactiveLdapUser</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfNameFirst" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The digits corresponding to the numeric keypad mapping on a standard touchtone phone representing the first name of the user. These digits are used for searching the user by name via the phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfNameLast" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The digits corresponding to the numeric keypad mapping on a standard touchtone phone representing the last name of the user. These digits are used for searching the user by name via the phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AssistantRowsPerPage" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This controls the number of entries to display per page for all tables in the Unity Assistant, e.g. the Private List Members table.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="InboxMessagesPerPage" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of messages Unity Inbox displays in a page.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="InboxAutoRefresh" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The rate (in minutes) at which Unity Inbox performs a refresh.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="InboxAutoResolveMessageRecipients" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection automatically resolves a recipient address entered in the To, Cc or Bcc fields to a subscriber or distribution list. Known as the &quot;AutoResolve&quot; feature.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PcaAddressBookRowsPerPage" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Controls the number of matching entries the Address Book displays per page, when a search is performed. The Address Book is used across multiple PCA applications and so this setting applies globally.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PcaHomePage" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The Home Page is the first page that is displayed after logging in to the PCA. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ReadOnly" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> If set to 1 (true) user is read-only and cannot be modified.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableTts" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether TTS is enabled for the subscriber. Only relevant if TTS enabled in User&apos;s COS also.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SmtpAddress" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>SMTP address The full SMTP address for this object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ConfirmationConfidenceThreshold" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Voice Recognition Confirmation Confidence Threshold</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AnnounceUpcomingMeetings" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount ahead of time, in minutes, that Connection will warn the subscriber of upcoming meetings when the subscriber calls into the system.  </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SpeechConfidenceThreshold" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> When the engine matches a spoken phrase, it associates a confidence level with that conclusion.  This parameter determines what confidence level should be considered a successful match.  A higher value means the engine is will report fewer successful matches, but it will be more confident in the matches that it reports.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SpeechSpeedVsAccuracy" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Tunes the engine towards Performance or Accuracy.  A higher value for this setting means faster matches that may be less accurate.  A lower value for this setting means more accurate matches along with more processing and higher CPU utilization.
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SpeechSensitivity" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A variable level of sound sensitivity that enables the speech engine to filter out background noise and not mistake it for speech.  A higher value means higher sensitivity.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableVisualMessageLocator" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the visual message locator feature is enabled for the subscriber.  The visual message locator feature presents a list of messages on the subscriber&apos;s IP phone display for the subscriber to select from visually.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ContinuousAddMode" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether when addressing, after entering one recipient name, whether the subscriber is asked to enter another name or assume the subscriber is finished adding names and is ready to move on to recording the message or applying message options.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="NameConfirmation" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates whether the voice name of the subscriber or distribution list added to an address list when a subscriber addresses a message to other subscribers is played.  The default value for this is off (no voice name played) since the voice name was just played as part of the list of matches .  To most users this sounds redundant when on, but some users prefer it.
+</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CommandDigitTimeout" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time (in milliseconds) between digits on a multiple digit menu command entry (i.e. different than the inter digit timeout that is used for strings of digits such as extensions and transfer strings).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SaveMessageOnHangup" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating when hanging up while listening to a new message, whether the message is marked new again or is marked read.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SendMessageOnHangup" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> An enum indicating  when hanging up while addressing a message that has a recording and at least one recipient, whether the message is discarded, sent or saved as a draft message if the subscriber explicitly issues the command to send the message either via DTMF or voice input.</xs:documentation>
+						<xs:documentation>0=Discard, 1=Send, 2=Save</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkipForwardTime" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates the amount of time (in milliseconds) to jump forward when skipping ahead in a voice or TTS message using either DTMF or voice commands while reviewing messages.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkipReverseTime" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates the amount of time (in milliseconds) to jump backward when skipping in reverse in a voice or TTS message using either DTMF or voice commands while reviewing messages.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseShortPollForCache" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the user&apos;s polling cycle for retrieving calendar information will be the shorter &quot;power user&quot; polling cycle.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SearchByExtensionSearchSpaceObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the SearchSpace which is used to limit the visibility to dialable/addressable objects when searching by extension (dial string).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="SearchByExtensionSearchSpaceURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="SearchByNameSearchSpaceObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the SearchSpace which is used to limit the visibility to dialable/addressable objects when searching by name (character string).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="SearchByNameSearchSpaceURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="PartitionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Partition to which the DtmfAccessId is assigned.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PartitionURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="UseDynamicNameSearchWeight" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Use dynamic name search weight. When this user addresses objects, the name search weight for those objects will automatically be incremented.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LdapCcmPkid" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The pkid of associated end user in the sleeping SeaDragon database.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LdapType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The LDAP configuration information for the user.</xs:documentation>
+						<xs:documentation>0=None, 1=Sync, 2=Authenticate, 4=Inactive</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="FaxServerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the FaxServer object for the subscriber.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="FaxServerURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="LdapCcmUserId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The userid of associated end user in the sleeping SeaDragon database.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableMessageBookmark" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Message Bookmark is enabled for the subscriber</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayTotalDraftMsg" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the total number of draft messages in the subscriber mailbox</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableSaveDraft" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the save draft message feature is enabled for the subscriber.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RetainUrgentMessageFlag" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag that indicates whether the urgent message flag on a message is retained for both reply and forward message actions. The default value is 0; the urgent message flag is NOT retained for both reply and forward message actions.
+</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayMessageLength" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection announces the length of each message during message playback.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CreateSmtpProxyFromCorp" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Flag indicating whether an SMTP proxy address matching the corporate e-mail address (column EmailAddress) should be created for this User.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AutoAdvanceMsgs" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating that the conversation will, during playback, advance to the next message in the playback stack automatically after it is done playing the after message menu.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SaySenderAfter" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This flag works exactly the same as the SaySender flag on a user, except the conversation plays the sender in the message footer.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SaySenderExtensionAfter" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This flag works exactly the same as the SaySenderExtension flag on a user, except the conversation plays the sender&apos;s extension in the message footer.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayMsgNumberAfter" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This flag works exactly the same as the SayMsgNumber flag on a user, except the conversation plays the message number in the message footer.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayAniAfter" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This flag works exactly the same as the SayAni flag on a user, except the conversation plays the ani in the message footer.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SayMessageLengthAfter" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This flag works exactly the same as the SayMessageLength flag on a user, except the conversation plays the message length in the message footer.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TenantObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Unique ObjectId of the tbl_Tenant</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+
+				<xs:element name="PhoneNumber" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A phone number.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DialablePhoneNumber" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A dialable version of the PhoneNumber column.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+
+				<xs:element name="TimeLastCall" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date and time when the subscriber last accessed their mailbox by phone (last time they were offered messages).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Inactive" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this subscriber is inactive or not.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:element name="MwisURI" type="xs:anyURI" minOccurs="0" /> 
+			<xs:element name="NotificationDevicesURI" type="xs:anyURI" minOccurs="0" /> 
+			<xs:element name="MessageHandlersURI" type="xs:anyURI" minOccurs="0" /> 
+			<xs:element name="ExternalServiceAccountsURI" type="xs:anyURI" minOccurs="0" /> 
+			<xs:element name="AlternateExtensionsURI" type="xs:anyURI" minOccurs="0" /> 
+			<xs:element name="PrivateListsURI" type="xs:anyURI" minOccurs="0" /> 
+			<xs:element name="VideoServiceAccountsURI" type="xs:anyURI" minOccurs="0" /> 
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="LocalizationKey" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Localization Key.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="UserWebPasswordURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to change the web application password.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="UserMailboxURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to change the mailbox settings.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="MailboxStoreName" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The Mailbox store name of  user.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="UserVoicePinURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to change the voice mail pin of the user.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="UserRoleURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to change the role  of the user.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="SmtpProxyAddressesURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to get the smtp proxy addresses of the user.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="AlternateNamesURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to get the alternate names of the user.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="User" type="User"/>
+	<xs:element name="Users">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="User" type="User" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

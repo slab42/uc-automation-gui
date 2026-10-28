@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="WaveFormat">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a WaveFormat object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AvgBytesPerSec" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Specifies the required average data-transfer rate (in bytes per second) for the FormatTag.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="BitsPerSample" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Bits per sample for the FormatTag.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="BlockAlign" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Block alignment, in bytes. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Channels" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Number of channels in the waveform-audio data. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="FormatName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Name reported by the OS corresponding to FormatTag.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="FormatTag" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Waveform-audio format type. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SamplesPerSec" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Specifies the required data-transfer rate (in bytes per second) for the FormatTag.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="JavaEncoding" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Corresponding value of javax.sound.sampled.AudioFormat.Encoding as string.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CodecId" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Internal Codec ID number</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="WaveFormat" type="WaveFormat"/>
+	<xs:element name="WaveFormats">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="WaveFormat" type="WaveFormat" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

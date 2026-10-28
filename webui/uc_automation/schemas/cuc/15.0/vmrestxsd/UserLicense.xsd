@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="UserLicense">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a User object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Alias" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name for either a user, distribution list, or personal group.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsTemplate" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this instance of a User object is a &quot;template&quot; for creating new users. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CosObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the COS (Class of Service) object to which this user account is associated.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="CosURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="Undeletable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this subscriber can be deleted via an administrative application such as Cisco Unity Connection Administration. It is used to prevent deletion of factory defaults.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfAccessId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The DTMF access id (i.e., extension) of the subscriber. The dialable number.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PartitionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Partition to which the DtmfAccessId is assigned.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PartitionURI" type="xs:anyURI" minOccurs="0" />
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="Messaging" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>It's value can be Basic, Enhanced or Enhanced Plus</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="SpeechView" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>It's value can be Speech View or Speech View Pro</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="TenantId" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Contains name of the tenant to which the user belongs</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="UserLicense" type="UserLicense"/>
+	<xs:element name="UserLicenses">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="UserLicense" type="UserLicense" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

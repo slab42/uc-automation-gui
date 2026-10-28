@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="CustomVariable">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Maps with the ObjectId column of table tbl_CustomVariables The primary key for this table. A globally unique, system-generated identifier for a Custom Variables object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Name" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Maps with the Name column of table tbl_CustomVariables This column stores the custom variables name.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Value" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Maps with the Description column of table tbl_CustomVariables This column stores the custom variables description.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="CustomVariable" type="CustomVariable"/>
+	<xs:element name="CustomVariables">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="CustomVariable" type="CustomVariable" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

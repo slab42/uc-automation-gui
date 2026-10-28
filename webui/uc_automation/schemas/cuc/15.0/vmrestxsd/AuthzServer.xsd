@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Mailbox attributes that are available via CUPI
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="AuthzServer">
+		<xs:sequence>
+		    <xs:element name="ObjectId" type="xs:string" minOccurs="0"/>
+		    <xs:element name="DisplayName" type="xs:string" minOccurs="0"/>
+		    <xs:element name="IgnoreCertificateError" type="xs:boolean" minOccurs="0"/>
+		    <xs:element name="ServerUsername" type="xs:string" minOccurs="0"/>
+		    <xs:element name="ServerPassword" type="xs:string" minOccurs="0"/>
+		    <xs:element name="ServerNodeAddress" type="xs:string" minOccurs="0"/>
+		    <xs:element name="Port" type="xs:int" minOccurs="0"/>
+		    <xs:element name="LastSyncStatus" type="xs:string" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="AuthzServer" type="AuthzServer"/>
+	<xs:element name="AuthzServers">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="AuthzServer" type="AuthzServer" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+	
+</xs:schema>

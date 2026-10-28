@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="ExternalService">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table.  A globally unique, system-generated identifier for an external service object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AuthenticationMode" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The method of authentication used when authenticating via HTTP with the server hosting the service.</xs:documentation>
+						<xs:documentation>0=None, 1=Basic, 2=Digest, 3=NTLM, 4=OAuth2</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A descriptive name for the external service.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsEnabled" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the external service is enabled.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SecurityTransportType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The method of encryption used for HTTP sessions to/from the external service.</xs:documentation>
+						<xs:documentation>0=None, 1=SSL</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Server" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the server which hosts the external service.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ServiceAlias" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name (i.e., logon name) to use to logon to the external service.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ServicePassword" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The password for logon to the external service.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ServerType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The type of external service.  Examples are MeetingPlace 7.0, Exchange 2003, and Exchange 2007.</xs:documentation>
+						<xs:documentation>0=MeetingPlace20, 1=MeetingPlace70, 4=Exchange, 5=HostedExchange</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SupportsCalendarCapability" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the external service supports the capabilities to access calendar information such as appointments, information for free/busy based PCTR rules, and for Exchange servers only, the capability to import a user&apos;s contacts from Exchange</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SupportsMeetingCapability" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the external service supports the capability to access meeting information from a server. For example, allowing a user to receive notification of a meeting about ready to start, providing join meeting and cancel meeting capabilities on the server, and allowing a user to schedule a meeting on the server,</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SupportsTtsOfEmailCapability" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the external service supports the capability to access an email store for the purpose of playing the email via TTS. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferExtensionDialString" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number dialed by Unity Connection to access (join) the Cisco Unified MeetingPlace
+meeting.
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ValidateServerCertificate" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether server certificates should be validated against a trust-certificate when establishing an HTTPS connection. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseServiceCredentials" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether to use service credentials rather than user credentials to logon to the external service.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SupportsMailboxSynchCapability" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the external service supports synchronizing mailbox contents between a Connection mailbox and an external, third-party mailbox.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ExchDoAutodiscover" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Flag indicating whether Connection is permitted to search the network for the URL to log in each Exchange 2007 or above mailbox. Connection may use the Exchange Autodiscovery feature (which was first available in Exchange 2007) in combination with LDAP and DNS calls to identify the URL.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ExchDoAutodiscover2003" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Flag indicating whether Connection is permitted to search the network for the URL to log in each Exchange 2003 mailbox. This emulates the Exchange Autodiscovery feature which was available beginning with Exchange 2007. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ExchOrgDomain" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Root of the domain to search for autodiscovery</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ExchSite" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Name of the Exchange site to which to confine searches for domain controllers and Autodiscover servers.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LdapSecurityTransportType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The method of encryption used for LDAP.</xs:documentation>
+						<xs:documentation>0=None, 1=SSL</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LdapValidateServerCertificate" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether server certificates should be validated against a trust-certificate when establishing an LDAPS connection. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MailboxSynchFaxAction" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Action to take for incoming FAX messages.</xs:documentation>
+						<xs:documentation>1=Deliver, 2=Relay, 3=AcceptRelay</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MailboxSynchEmailAction" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Action to take for incoming emails</xs:documentation>
+						<xs:documentation>1=Deliver, 2=Relay, 3=AcceptRelay</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ProxyServer" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> IP address or Hostname for Proxy Server</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TenantObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> TenantObjectId associated with External Service.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DirectoryID" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> azure active directory id</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ClientId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> client id from azure</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ClientSecret" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> client secret from azure</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AdAuthenticationEndpoint" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> URL to connect AD Authentication Endpoint</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ResourceURI" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Resource URI</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="isProxyAuthEnabled" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag to determine wheather proxy server needs authentication or not.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ProxyUsername" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> User name for proxy server authentication.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ProxyPassword" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Pasword for proxy server authentication.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="ExternalServiceResetURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to reset external service.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="ExternalService" type="ExternalService"/>
+	<xs:element name="ExternalServices">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ExternalService" type="ExternalService" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

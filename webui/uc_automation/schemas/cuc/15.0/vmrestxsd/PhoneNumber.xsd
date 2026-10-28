@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="PhoneNumber">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="OwnerUserObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The object to which this phone number belongs. If the phone number belongs to a User, the unique identifier of the User object to which this phone number belongs. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="OwnerUserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="PhoneType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A well-defined name for the phone number, such as &quot;Home,&quot; &quot;Business,&quot; &quot;Mobile,&quot; etc.</xs:documentation>
+						<xs:documentation>10=Assistant, 9=HomeFax, 3=HomePhone, 4=HomePhone2, 5=MobilePhone, 6=MobilePhone2, 14=Other1, 23=Other10, 24=Other11, 25=Other12, 26=Other13, 27=Other14, 28=Other15, 29=Other16, 30=Other17, 31=Other18, 32=Other19, 15=Other2, 33=Other20, 16=Other3, 17=Other4, 18=Other5, 19=Other6, 20=Other7, 21=Other8, 22=Other9, 11=TTYTDD, 7=WorkFax, 8=WorkFax2, 1=WorkPhone, 2=WorkPhone2, 34=LdapPhone, 35=LdapHomePhone, 36=LdapMobile, 37=LdapPager, 38=ImportedLdapUri</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PhoneNumber" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A phone number.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AutoLogon" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the phone number can be used for automatically logging on the caller.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The preferred text name of the phone number to be used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a PhoneNumber object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CallPickupTimeout" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of rings that Cisco Unity Connection will wait for a subscriber destination to answer before the call is forwarded to the next destination in the destination group.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransmitForcedAuthorizationCode" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether an authorization code should be transmitted to Call Manager after this number is dialed during an outbound call.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ClientMatterCode" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The client matter code to transmit to Call Manger when the phone number is dialed on an outbound call.  The CMC is entered after a phone number is dialed so that the customer can assigning account or billing codes to the call.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="OwnerContactObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The object to which this phone number belongs. If the phone number belongs to a Contact, the unique identifier of the Contact object to which this phone number belongs. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="OwnerContactURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="DialablePhoneNumber" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A dialable version of the PhoneNumber column.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SearchablePhoneNumber" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Phone number without formatting or any dial codes. A basic form suitable for searching on.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="OwnerGlobalUserObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The object to which this phone number belongs. If the phone number belongs to a User, the unique identifier of the User object to which this phone number belongs. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="OwnerGlobalUserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="PartitionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Partition to which the PhoneNumber is assigned.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PartitionURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="IsPrimaryFax" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this instance of a PhoneNumber is the primary Fax number.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="PhoneNumber" type="PhoneNumber"/>
+	<xs:element name="PhoneNumbers">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="PhoneNumber" type="PhoneNumber" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

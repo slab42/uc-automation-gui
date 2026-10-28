@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="AlternateName">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="FirstName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The first name (i.e., givenName) of this person. Not their surname nor middle name.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The last name (i.e., surname or family name) of this person, by which a person is commonly known.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ContactObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Contact to which this alternate name belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="ContactURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for an AlternateName object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DistributionListObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Distribution List to which this alternate name belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="DistributionListURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Location to which this alternate name belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="PersonalGroupObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Personal Group to which this alternate name belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="GlobalUserObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Global User to which this alternate name belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="GlobalUserURI" type="xs:anyURI" minOccurs="0" />
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="AlternateName" type="AlternateName"/>
+	<xs:element name="AlternateNames">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="AlternateName" type="AlternateName" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">                
+            <xs:complexType name="NotificationInformation">
+        <xs:sequence>
+                <xs:element name="UnreadMsgCount" type="xs:string" minOccurs="0"/>
+                <xs:element name="UnreadUrgentMsgCount" type="xs:string" minOccurs="0"/>
+                <xs:element name="Mwi" type="xs:string" minOccurs="0"/>        
+                <xs:element name="MwiImageUrl" type="xs:string" minOccurs="0"/>
+                <xs:element name="MsgState" type="xs:string" minOccurs="0"/>
+                <xs:element name="MsgStateImageUrl" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+<xs:element name="NotificationInformation" type="NotificationInformation"/>
+</xs:schema>

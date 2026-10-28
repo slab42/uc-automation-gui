@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="NotificationTemplate">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="NotificationTemplateID" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Maps with the NotificationTemplateID column of table tbl_NotificationTemplate This column acts as a primery key and value is auto-generated</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="NotificationTemplateName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Maps with the NotificationTemplateName column of table tbl_NotificationTemplate This column stores the notification template name.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Undeletable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this notification template can be deleted via an administrative application such as Cisco Unity Connection Administration. It is used to prevent deletion of factory defaults.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="NotificationTemplateType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This column stores the notification template type like whether it is for voice message  or missed call. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="Content" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The content of Notification Template</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="SubscriberListURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to get the list of the users who are using this notification template.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="NotificationTemplate" type="NotificationTemplate"/>
+	<xs:element name="NotificationTemplates">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="NotificationTemplate" type="NotificationTemplate" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

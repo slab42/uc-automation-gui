@@ -1,0 +1,71 @@
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="PortGroupCodec">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Primary key</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaPortGroupObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the MediaPortGroup object that is mapped to the specified RtpCodecDef. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PortGroupURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="RtpCodecDefObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the RtpCodecDefinition object that is mapped to the specified MediaPortGroup. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PreferredPacketSizeMs" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Specifies the default packet size (in milliseconds) when negotiating this codec for SIP. The setting is used in the following situations:
+1) No incoming SDP ptime attribute in incoming SDP offer.
+2) Cisco Unity Connection initiated SDP offer.
+If the other party in the SIP negotiation provides a ptime attribute in the SDP before Cisco Unity Connection has a chance to do it, Cisco Unity Connection honors the request and this setting does not come into play.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Preference" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Preference ranking for this codec relative to other codecs supported for the port group. Lowest value of Preference is the most preferred.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RtpCodecDefDisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Codec name displayed to end user</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="CodecsURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to get the available codecs.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="PortGroupCodec" type="PortGroupCodec"/>
+	<xs:element name="PortGroupCodecs">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="PortGroupCodec" type="PortGroupCodec" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>
+

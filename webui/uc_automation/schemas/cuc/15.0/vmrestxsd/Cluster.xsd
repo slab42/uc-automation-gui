@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">		
+	<xs:complexType name="Server">
+		<xs:sequence>
+			<xs:element name="Key" type="xs:string" minOccurs="0"/>
+			<xs:element name="DatabaseReplication" type="xs:int" minOccurs="0"/>
+			<xs:element name="HostName" type="xs:string" minOccurs="0"/>
+			<xs:element name="Ipv6Name" type="xs:string" minOccurs="0"/>
+			<xs:element name="MacAddress" type="xs:string" minOccurs="0"/>
+			<xs:element name="Description" type="xs:string" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="Server" type="Server"/>
+	<xs:element name="Cluster">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Server" type="Server" minOccurs="1" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<!-- <xs:attribute name="total" type="xs:int"/> -->
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

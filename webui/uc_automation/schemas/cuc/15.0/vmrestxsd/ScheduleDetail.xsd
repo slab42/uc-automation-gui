@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="ScheduleDetail">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a ScehduelDetail object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ScheduleObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the parent Schedule object to which this schedule detail row belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="ScheduleURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="IsActiveMonday" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this schedule is active on Monday.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsActiveTuesday" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this schedule is active on Tuesday.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsActiveWednesday" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this schedule is active on Wednesday.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsActiveThursday" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this schedule is active on this Thursday.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsActiveFriday" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this schedule is active on Friday.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsActiveSaturday" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this schedule is active on Saturday.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsActiveSunday" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this schedule is active on Sunday.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="StartTime" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The start time (in minutes) for the active day or days.  The start time is stored as the number of minutes from midnight.  So a value of 480 would mean 8:00 AM and 1020 would mean 5:00 PM.  In addition, a value of NULL for the start time indicates 12:00 AM.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EndTime" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The end time (in minutes) for the active day or days.  The end time is stored as the number of minutes from midnight. So a value of 480 would mean 8:00 AM and 1020 would mean 5:00 PM. In addition, a value of NULL means &quot;till the end of the day&quot; (e.g.  11:59:59 PM in Linux land).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="StartDate" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date when this schedule detail becomes active.  A value of NULL means the schedule is active immediately.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EndDate" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date when this schedule detail ends.  A value of NULL indicates the scheule is active indefinitely.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Subject" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The subject matter or description for this schedule detail row. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="EndOfDay" type="xs:boolean">
+				<xs:annotation>
+					<xs:documentation>Check this check box to specify that the schedule becomes inactive at midnight (the end of the day). 
+</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="ScheduleDetail" type="ScheduleDetail"/>
+	<xs:element name="ScheduleDetails">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ScheduleDetail" type="ScheduleDetail" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

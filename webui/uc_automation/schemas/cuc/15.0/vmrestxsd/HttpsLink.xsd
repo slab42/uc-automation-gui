@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="HttpsLink">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="AcceptCertificateErrors" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Controls whether or not certificate errors are allowed. Some possible errors are: mismatched hostname, expired certificate not-yet-valid certificate</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AcceptSelfSignedCertificates" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Controls whether or not self signed certificates will be accepted when connecting to a node.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="BaseFeedURL" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> URL used by Reader to fetch the Directory (and voice name)</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Display Name of the Location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastUsn" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Last USN synched</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxUsn" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Max usn recieved in feed response.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectCount" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A count of objects on the local node that originally came from the location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a Location object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Status" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates the status of the directory synchronication with this location.(Idle or synching)</xs:documentation>
+						<xs:documentation>0=Idle, 1=Syncing</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TimeOfLastFailure" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Reflects the time at which we encountered an error synchronizing with this location</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TimeOfLastSync" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Reflects the time at which we last synchronized with the this location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseSSL" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Controls whether or not SSL will be used when communicating with this location.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoiceNameSyncStatus" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates the status of voice name synchronication with this location.</xs:documentation>
+						<xs:documentation>0=Idle, 1=Syncing</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SyncDistributionLists" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Controls whether or not public distribution lists are synced from this remote network.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Deleted" type="xs:boolean" minOccurs="0">
+				</xs:element>
+				
+				<xs:element name="LocationBaseURLSub" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Feeder URL for subscriber machine used by reader to fetch the directory information.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DirectorySynchronizationRole" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> It specifies the directory synchronization mode in the cluster.</xs:documentation>
+						<xs:documentation>0=Standard, 1=Alert, 2=Surrogate</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="WarningMode" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates whether or not the synchronization from the network is in warning mode.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="RemoteServer" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The description for the RemoteServer.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="HttpsLink" type="HttpsLink"/>
+	<xs:element name="HttpsLinks">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="HttpsLink" type="HttpsLink" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="DistributionListMember">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="DistributionListObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the DistributionList object to which this distribution list member belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="DistributionListURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MemberDistributionListObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The member of this distribution list. If the member is a virtual contact, the unique identifier of the VirtualContact object that is a member of the distribution list. Otherwise, this attribute is set to NULL. The member of this distribution list. If the member is another distribution list, the unique identifier of DistributionList object that is a member of the distribution list. Otherwise, this attribute is set ot NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="MemberDistributionListURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MemberUserObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a GlobalUser object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="MemberUserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a DistributionListMember object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Alias" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Alias of user, or null if member is a distribution list. The unique text name for either a user, distribution list, or personal group.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>DisplayName of member (Subscriber or DistributionList)</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MemberContactObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The member of this distribution list. If the member is a contact, the unique identifier of the Contact object that is a member of the distribution list. Otherwise, this attribute is set to NULL. The member of this distribution list. If the member is a contact, the unique identifier of the Contact object that is a member of the distribution list. Otherwise this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="MemberContactURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="AllowForeignMessage" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Controls if we allow foreign message systems to send to this particular distribution list. Only valid if the list is for subscribers only (i.e. does not allow contacts)</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MemberGlobalUserObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The member of this distribution list. If the member is a user, the ObjectId of the global user that is a member of the distribution list. Otherwise, this attribute is set ot NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="MemberGlobalUserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MemberLocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Holds the location of the referenced member object.  Taken from one of: tbl_GlobalUser, tbl_Contact, tbl_DistributionList.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="MemberLocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MemberGlobalUserDignetObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Digital Networking ObjectD</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsUserTemplate" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Indicated whether this global user object refers to a template.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Holds the location of the referenced member object.  Taken from one of: tbl_GlobalUser, tbl_Contact, tbl_DistributionList.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="DistributionListMember" type="DistributionListMember"/>
+	<xs:element name="DistributionListMembers">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="DistributionListMember" type="DistributionListMember" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

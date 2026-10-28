@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="TenantOperator">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="AttributeType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> It holds the type of attribute which is mapped with tenant.</xs:documentation>
+						<xs:documentation>0=Partition, 1=PhoneSystem, 2=COS, 3=ScheduleSet, 4=DefaultUser, 5=SearchSpace</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AttributeObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> It keeps the ObjectID of attribute  which is mapped with tenant.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="OperatorURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>URI to get details on the operator associated with this tenant.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="OperatorObjectId" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>ObjectId of the operator to be associated with the tenant.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="TenantOperator" type="TenantOperator"/>
+	<xs:element name="TenantOperators">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="TenantOperator" type="TenantOperator" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

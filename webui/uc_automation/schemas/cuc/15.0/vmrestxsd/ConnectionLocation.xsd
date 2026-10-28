@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="ConnectionLocation">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="TransferDialString" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The phone number that a local Cisco Unity Connection VMS server dials to transfer a call to this Cisco Unity Connection VMS server. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferNumberOfRings" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of rings the local Cisco Unity Connection VMS server waits for this Cisco Unity Connection VMS server to answer. If this Cisco Unity Connection VMS server does not answer after the specified number of rings, a prompt is played that says that the Cisco Unity Connection VMS server could not be reached, and the call is transferred to the opening greeting of the local Cisco Unity Connection VMS server.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferTimeout" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time (in milliseconds) the local Cisco Unity Connection VMS server will wait for a response from this Cisco Unity Connection VMS server after this Cisco Unity Connection VMS server has answered the call. If this VMS server does not respond within the specified time period, a prompt is played that says that the Cisco Unity Connection VMS server could not be reached, and the call is transferred to the opening greeting of the local Cisco Unity Connection VMS server.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a Location object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LocalPhonePrefix" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number that is used to construct addresses for Cisco Unity Connection subscribers who send messages to individuals who use the voice messaging system that corresponds to this delivery location.
+
+On outgoing messages from Cisco Unity Connection subscribes to subscribers at this VPIM location, the prefix is added to the beginning of the sender mailbox number to form the From address. 
+
+On incoming messages to Cisco Unity Connection subscribers from subscribers at this VPIM location, the prefix is removed from the beginning of the recipient mailbox number to form the To address.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsPrimary" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this location object is the &quot;primary&quot; location, which cannot be deleted. (Used to prevent deletion of factory defaults.)</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DefaultWaveFormatObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the WaveFormat object that specifies the wave format in which recorded messages are stored if the requested format is not available on the system.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="DefaultWaveFormatURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="IncludeLocations" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether locations are included in searches. If set on the LocationVMS, the conversation will include locations in the search results.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="KeypadMapId" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The keypad map used by this location. The keypad map specifies the numeric keys to which the letters Q and Z are assigned to on the phone. This is specified during Cisco Unity Connection setup.</xs:documentation>
+						<xs:documentation>1=Map1, 2=Map2, 3=Map3</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DestinationType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For delivery locations, the destination type for that location, e.g. Connection, Unity, VPIM, Bridge.</xs:documentation>
+						<xs:documentation>7=Bridge, 1=Connection, 8=VPIM, 2=Unity, 9=Branch</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The series of digits corresponding to the numeric keypad mapping on a standard touchtone phone representing the display name of the location. These digits are used for searching the location by name via the phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SmtpDomain" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The domain portion (right-half) of an internet-addressable address (for example, london.cisco.com). This is used to form a user&apos;s, contact&apos;s, and distribution list&apos;s SMTP address (tbl_Alias.SmtpAddress).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name of this Location, e.g. &quot;Seattle Office.&quot;  Used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfAccessId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The DTMF access id for the VMS. The dialable number.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkinnyLocalCACertificate" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The X.509 certificate formatted as a PEM format string (base-64 encoded).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkinnyLocalCAPrivateKey" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The RSA private key matching the public key in SkinnyDeviceCertificate in PEM format (base-64 encoded string).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TimeZone" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The TimeZone associated with this VMS.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SkinnyLocalCACertificateFileName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The file name that should be assigned to the SkinnyLocalCACertificate to install the certificate on the Cisco Unified Communications Manager server(s). Installing the certificate on the CCM servers causes CCM to trust any Skinny device certificates signed by it, which is what we need to establish TLS Skinny connections to the CCM servers in the cluster. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DefaultLanguage" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Default language for subscribers and call handlers.</xs:documentation>
+						<xs:documentation>1078=Afrikaans, 1052=Albanian, 5121=ArabicAlgeria, 15361=ArabicBahrain, 3073=ArabicEgypt, 2049=ArabicIraq, 11265=ArabicJordan, 13313=ArabicKuwait, 12289=ArabicLebanon, 4097=ArabicLibya, 6145=ArabicMorocco, 8193=ArabicOman, 16385=ArabicQatar, 1025=ArabicSaudiArabia, 10241=ArabicSyria, 7169=ArabicTunisia, 14337=ArabicUAE, 9217=ArabicYemen, 1067=Armenian, 2092=AzeriCyrillic, 1068=AzeriLtin, 1069=Basque, 1059=Belarusian, 1026=Bulgarian, 1027=Catalan, 3076=ChineseHongKong, 5124=ChineseMacau, 2052=ChinesePRC, 4100=ChineseSingapore, 1028=ChineseTaiwan, 1050=Croatian, 1029=Czech, 1030=Danish, 1125=Divehi, 2067=DutchBelgian, 1043=DutchStandard, 3081=EnglishAustralian, 10249=EnglishBelize, 4105=EnglishCandian, 9225=EnglishCaribean, 6153=EnglishIreland, 8201=EnglishJamaica, 5129=EnglishNewZealand, 13321=EnglishPhilippines, 7177=EnglishSouthAfrica, 11273=EnglishTrinidad, 2057=EnglishUnitedKingdom, 1033=EnglishUnitedStates, 12297=EnglishZimbabwe, 1061=Estonian, 1080=Faeroese, 1065=Farsi, 1035=Finnish, 2060=FrenchBelgian, 3084=FrenchCandian, 5132=FrenchLuxembourg, 6156=FrenchMonaco, 1036=FrenchStandard, 4108=FrenchSwiss, 1084=GaelicScots, 1110=Galician, 1079=Georgian, 3079=GermanAustrian, 5127=GermanLiechtenstein, 4103=GermanLuxembourg, 1031=GermanStandard, 2055=GermanSwiss, 1032=Greek, 1095=Gujarati, 1037=Hebrew, 1081=Hindi, 1038=Hungarian, 1039=Icelandic, 1057=Indonesian, 1040=ItalianStandard, 2064=ItalianSwiss, 1041=Japanese, 1099=Kannada, 1087=Kazakh, 1111=Konkani, 1042=Korean, 1088=Kyrgyz, 1062=Latvian, 1063=Lithuanian, 1071=Macedonian, 2110=MalayBruneiDarussalam, 1086=MalayMalaysia, 1082=Maltese, 1102=Marathi, 1104=Mongolian, 2068=NoewegianNynorsk, 1044=NorwegianBokmal, 1045=Polish, 2070=PortugeseStandard, 1046=PortugueseBrazilian, 1094=Punjabi, 1047=RhaetoRomanic, 1048=Romanian, 2072=RomanianMoldavia, 1049=Russian, 2073=RussianMoldavia, 1103=Sanskrit, 3098=SerbianCyrillic, 2074=SerbianLatin, 1051=Slovak, 1060=Slovenian, 1070=Sorbian, 11274=SpanishArgentina, 16394=SpanishBolivia, 13322=SpanishChile, 9226=SpanishColumbia, 5130=SpanishCostaRica, 7178=SpanishDominicanRepublic, 12298=SpanishEcuador, 17418=SpanishElSalvador, 4106=SpanishGuatemala, 18442=SpanishHonduras, 2058=SpanishMexican, 3082=SpanishModernSort, 19466=SpanishNicaragua, 6154=SpanishPanama, 15370=SpanishParaguay, 10250=SpanishPeru, 20490=SpanishPuertoRico, 1034=SpanishTraditionalSort, 14346=SpanishUruguay, 8202=SpanishVenezuela, 1072=Sutu, 1089=Swahili, 1053=Swedish, 2077=SwedishFinland, 1114=Syriac, 1097=Tanil, 1092=Tatar, 1098=Telugu, 1054=Thai, 1073=Tsonga, 1074=Tswana, 1055=Turkish, 1058=Ukrainian, 1056=Urdu, 2115=UzbekCyrillic, 1091=UzbekLatin, 1066=Vietnamese, 1076=Xhosa, 1085=Yiddish, 1077=Zulu, 33801=ENX, 16393=EnglishIndian</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DefaultTTSLanguage" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Default language to use for TTS playback.</xs:documentation>
+						<xs:documentation>1078=Afrikaans, 1052=Albanian, 5121=ArabicAlgeria, 15361=ArabicBahrain, 3073=ArabicEgypt, 2049=ArabicIraq, 11265=ArabicJordan, 13313=ArabicKuwait, 12289=ArabicLebanon, 4097=ArabicLibya, 6145=ArabicMorocco, 8193=ArabicOman, 16385=ArabicQatar, 1025=ArabicSaudiArabia, 10241=ArabicSyria, 7169=ArabicTunisia, 14337=ArabicUAE, 9217=ArabicYemen, 1067=Armenian, 2092=AzeriCyrillic, 1068=AzeriLtin, 1069=Basque, 1059=Belarusian, 1026=Bulgarian, 1027=Catalan, 3076=ChineseHongKong, 5124=ChineseMacau, 2052=ChinesePRC, 4100=ChineseSingapore, 1028=ChineseTaiwan, 1050=Croatian, 1029=Czech, 1030=Danish, 1125=Divehi, 2067=DutchBelgian, 1043=DutchStandard, 3081=EnglishAustralian, 10249=EnglishBelize, 4105=EnglishCandian, 9225=EnglishCaribean, 6153=EnglishIreland, 8201=EnglishJamaica, 5129=EnglishNewZealand, 13321=EnglishPhilippines, 7177=EnglishSouthAfrica, 11273=EnglishTrinidad, 2057=EnglishUnitedKingdom, 1033=EnglishUnitedStates, 12297=EnglishZimbabwe, 1061=Estonian, 1080=Faeroese, 1065=Farsi, 1035=Finnish, 2060=FrenchBelgian, 3084=FrenchCandian, 5132=FrenchLuxembourg, 6156=FrenchMonaco, 1036=FrenchStandard, 4108=FrenchSwiss, 1084=GaelicScots, 1110=Galician, 1079=Georgian, 3079=GermanAustrian, 5127=GermanLiechtenstein, 4103=GermanLuxembourg, 1031=GermanStandard, 2055=GermanSwiss, 1032=Greek, 1095=Gujarati, 1037=Hebrew, 1081=Hindi, 1038=Hungarian, 1039=Icelandic, 1057=Indonesian, 1040=ItalianStandard, 2064=ItalianSwiss, 1041=Japanese, 1099=Kannada, 1087=Kazakh, 1111=Konkani, 1042=Korean, 1088=Kyrgyz, 1062=Latvian, 1063=Lithuanian, 1071=Macedonian, 2110=MalayBruneiDarussalam, 1086=MalayMalaysia, 1082=Maltese, 1102=Marathi, 1104=Mongolian, 2068=NoewegianNynorsk, 1044=NorwegianBokmal, 1045=Polish, 2070=PortugeseStandard, 1046=PortugueseBrazilian, 1094=Punjabi, 1047=RhaetoRomanic, 1048=Romanian, 2072=RomanianMoldavia, 1049=Russian, 2073=RussianMoldavia, 1103=Sanskrit, 3098=SerbianCyrillic, 2074=SerbianLatin, 1051=Slovak, 1060=Slovenian, 1070=Sorbian, 11274=SpanishArgentina, 16394=SpanishBolivia, 13322=SpanishChile, 9226=SpanishColumbia, 5130=SpanishCostaRica, 7178=SpanishDominicanRepublic, 12298=SpanishEcuador, 17418=SpanishElSalvador, 4106=SpanishGuatemala, 18442=SpanishHonduras, 2058=SpanishMexican, 3082=SpanishModernSort, 19466=SpanishNicaragua, 6154=SpanishPanama, 15370=SpanishParaguay, 10250=SpanishPeru, 20490=SpanishPuertoRico, 1034=SpanishTraditionalSort, 14346=SpanishUruguay, 8202=SpanishVenezuela, 1072=Sutu, 1089=Swahili, 1053=Swedish, 2077=SwedishFinland, 1114=Syriac, 1097=Tanil, 1092=Tatar, 1098=Telugu, 1054=Thai, 1073=Tsonga, 1074=Tswana, 1055=Turkish, 1058=Ukrainian, 1056=Urdu, 2115=UzbekCyrillic, 1091=UzbekLatin, 1066=Vietnamese, 1076=Xhosa, 1085=Yiddish, 1077=Zulu, 33801=ENX, 16393=EnglishIndian</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxGreetingLength" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum length (in seconds) allowed for recording a system greeting. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoiceName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The name of the WAV file containing the recorded voice name for the location The name of the WAV file containing the recorded audio (voice name, greeting, etc.) for the parent object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="VoiceFileURI" type="xs:anyURI" minOccurs="0" />
+				<xs:element name="VoiceNameURI" type="xs:anyURI" minOccurs="0" />					
+				
+				<xs:element name="MaxContacts" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum number of contacts that can be created for this location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SmtpSmartHost" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> IP address or host name of SMTP smart host. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AgcTargetDb" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The average decibel (dB) level that a recorded message should have after application of automatic gain control (AGC). This is the &quot;nominal gain&quot; for all recordings processed by AGC. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SynchronizationUserObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Holds the user object ID of the account used to send and receive synchronization messages between nodes in the digital network.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="SynchronizationUserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="LastUSNSent" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Keeps track of the USN of the last change sent to the node.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SystemVersion" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Tracks the version of software running on nodes in a digital network.  Used to help construct synchronization messages compatible with the software running on the remote nodes.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DefaultPartitionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the default Partition for this LocationVms.  Setup populates this value when it creates the default Partition for the system.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="DefaultPartitionURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="DefaultSearchSpaceObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the default SearchSpace for this LocationVms.  Setup populates this value when it creates the default SearchSpace for the system.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="DefaultSearchSpaceURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="SmtpUnknownRecipientAction" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Action to take for an SMTP message with an unknown recipient.</xs:documentation>
+						<xs:documentation>0=SendNonDeliveryReceipt, 1=RelayToSmtpSmartHost</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastUSNReceived" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Keeps track of the USN of the last change received from the node.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="HostAddress" type="xs:string" minOccurs="0">
+				</xs:element>
+				
+				<xs:element name="PushDirectory" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates whether we are pushing the directory of the local node to the remote node identified by this record.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PullDirectory" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates whether we are pulling the directory of the remote node identified by this record to the local node.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastDirectoryPushDate" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date at which we last pushed to this remote network node.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastDirectoryPullDate" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date at which we last pulled from this remote network node.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ReplicationSet" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Identifies the replication set we are currently sending to this remote node.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EncryptionKey" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Holds the pointer to the encryption key for this network node.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseSmartSmtpHost" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the Unity Connection SMTP server forwards messages to the SMTP Smart Host for delivery.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AllowCrossBoxLogin" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Allow cross-box login from the local server to this location.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CrossBoxDialString" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For cross-box operations, the dial string that should be used to reach this location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AllowCrossBoxTransfer" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Allow cross-box transfer from the local server to this location.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CrossBoxMaxRings" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For cross-box operations, the maximum number of rings that should be used to reach this location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CrossBoxSendDelay" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For cross-box operations, the delay in milliseconds before sending the DTMF sequence after connecting to this location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CrossBoxResponseTimeout" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For cross-box operations, the delay in seconds to wait for a response from this location after sending the DTMF sequence.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastUSNAck" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Keeps track of the USN of the last change acknowledged by this node.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ReplicationSetIncoming" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Identifies the replication set we are currently receiving from this remote node.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ReplicationSetOutgoing" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Identifies the replication set we are currently sending to this remote node.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PushState" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates the current state of push replication from the local node to the node associated with this row in the table.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PullState" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates the current state of pull replication from the remote node associated with this row in the table to the local node.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Status" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This is used to stop two processes from deleting a location at the same time.</xs:documentation>
+						<xs:documentation>0=OK, 1=Deleting</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="ConnectionLocation" type="ConnectionLocation"/>
+	<xs:element name="ConnectionLocations">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ConnectionLocation" type="ConnectionLocation" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

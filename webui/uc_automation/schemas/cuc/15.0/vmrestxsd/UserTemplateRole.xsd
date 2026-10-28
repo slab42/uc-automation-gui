@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="UserTemplateRole">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a Policy object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UserObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the User object (subject) to which this policy is assigned.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="UserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="RoleObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Role object that specifies the privileges to be granted to the subject, for the target. For example, the role could be a &quot;Technician.&quot;</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="RoleURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="RoleName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The name of the role. The given, unique text name of the user role. For example, &quot;User Administrator,&quot; &quot;Help Desk Administrator,&quot; &quot;Technician,&quot; etc.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Alias" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The alias of the user. This column shadows the object&apos;s primary alias from tbl_Alias. It was added to speed up queries.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="UserTemplateRole" type="UserTemplateRole"/>
+	<xs:element name="UserTemplateRoles">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="UserTemplateRole" type="UserTemplateRole" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="PersonalRuleSet">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a PersonalRuleSet object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Name" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name of the personal rule set to be used when displaying entries in Cisco Personal Communications Assistant.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SubscriberObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Subscriber object to which this rule set belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="UserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="IsEnabled" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this rule set is enabled.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoiceName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Voice name (stream file) for personal rule set.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="VoiceFileURI" type="xs:anyURI" minOccurs="0" />
+				<xs:element name="VoiceNameURI" type="xs:anyURI" minOccurs="0" />					
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="PersonalRuleSet" type="PersonalRuleSet"/>
+	<xs:element name="PersonalRuleSets">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="PersonalRuleSet" type="PersonalRuleSet" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

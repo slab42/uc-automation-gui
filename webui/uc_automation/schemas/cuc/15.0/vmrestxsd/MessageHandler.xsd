@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="MessageHandler">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique system-generated identifier for a MessageHandler object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SubscriberObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Subscriber object to which this message handler belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="UserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="RelayAddress" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The SMTP address to which messages should be relayed.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoicemailAction" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The action to take for voicemail messages.</xs:documentation>
+						<xs:documentation>0=Reject, 1=Deliver, 2=Relay, 3=AcceptRelay</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EmailAction" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The action to take for email messages.</xs:documentation>
+						<xs:documentation>0=Reject, 1=Deliver, 2=Relay, 3=AcceptRelay</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="FaxAction" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The action to take for fax messages.</xs:documentation>
+						<xs:documentation>0=Reject, 1=Deliver, 2=Relay, 3=AcceptRelay</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DeliveryReceiptAction" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The action to take for delivery receipt messages.</xs:documentation>
+						<xs:documentation>0=Reject, 1=Deliver, 2=Relay, 3=AcceptRelay</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="MessageHandler" type="MessageHandler"/>
+	<xs:element name="MessageHandlers">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="MessageHandler" type="MessageHandler" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="Cos">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a COS object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AccessFaxMail" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a subscriber assigned this COS is allowed to manage their fax messages over the phone or from the Cisco Unity Connection Inbox.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AccessTts" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a subscriber assigned this COS can have to their e-mail messages read to them by an e-mail reader over the phone.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CallHoldAvailable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber has the ability to change their own call holding options by using the Cisco Unity Connection Assistant. Call holding settings apply when calls are transferred from the automated attendant or a directory handler to subscriber phones. They do not apply when an outsider caller or another subscriber dials a subscriber extension directly. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CallScreenAvailable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber has the ability to change their own call screening options by using the Cisco Unity Assistant. Call screening settings apply when calls are transferred from the automated attendant or a directory handler to subscriber phones. They do not apply when an outsider caller or another subscriber dials a subscriber extension directly. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CanRecordName" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber can record their own name. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="FaxRestrictionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier for the RestrictionTable object that Cisco Unity Connection uses to limit phone numbers that the subscriber can enter in fax dialing settings.
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ListInDirectoryStatus" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether subscribers can choose to be listed or not in the phone directory. The phone directory (directory assistance) is the audio listing that subscribers and unidentified callers use to reach subscribers and to leave messages.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the LocationVMS to which this COS belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MaxGreetingLength" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum recording length (in seconds) allowed to the subscriber for recording their greeting.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxMsgLength" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum recording length (in seconds) allowed to the subscriber for recording messages and conversations.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxNameLength" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum recording length (in seconds) allowed to the subscriber for recording their voice name.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxPrivateDlists" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum number of personal voice mail lists the subscriber is allowed to create.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MovetoDeleteFolder" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection moves deleted messages for the subscriber to a Deleted Items folder or physically deletes the message.
+
+True=&apos;deletion&apos; moves messages to the DeletedItems folder, where it ages until it evaporates. False=&apos;deletion&apos; physically deletes the message</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="OutcallRestrictionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the RestrictionTable object that Cisco Unity Connection uses to limit phone numbers that the subscriber can enter in message delivery settings. The restriction table also restricts the subscriber extensions that Cisco Unity Connection dials when the phone is selected as the recording and playback device for the Media Master.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PersonalAdministrator" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection allows a subscriber to use the Cisco Unity Assistant to personalize their Cisco Unity Connection setting -- including their recorded greetings and message delivery options -- or to set up message notification devices and create private lists. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name of this COS , e.g. &quot;Default COS,&quot; &quot;Basic Voice Mail.&quot;  Used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="XferRestrictionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the RestrictionTable object that Cisco Unity Connection uses to limit phone numbers that the subscriber can enter in call transfer settings.
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Undeletable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this COS can be deleted via an administrative application such as Cisco Unity Connection Administration. It is used to prevent deletion of factory defaults.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="WarnIntervalMsgEnd" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time (in milliseconds) before the end of the maximum recording time when Cisco Unity Connection will play a warning tone or WAV file to indicate to the caller that they are almost out of recording time.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CanSendToPublicDl" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber can send messages to system (formerly called &quot;public&quot;) distribution lists.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableEnhancedSecurity" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber uses regular or enhanced phone security. Enhanced phone security adds RSA two-factor authentication to regular security.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AccessVmi" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a subscriber assigned this COS can use the Cisco Unity Connection Inbox to listen to, compose, reply to, forward, and delete voice messages. If the subscriber has &quot;AccessFaxMail&quot; set, they can also use it to manage their faxes. This is a licensed feature.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AccessLiveReply" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a subscriber assigned this COS can after listening to a message from another subscriber press 4-4, and Cisco Unity Connection will call the subscriber who left the message. Generally referred to as &quot;Live Reply.&quot;</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UaAlternateExtensionAccess" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The abilities a subscriber has to manage administer-defined alternate extensions assigned to the subscriber. Determines whether subscribers can view the administrator-defined alternate extensions, and whether subscribers can manage (add, modify, and delete) their own set of alternate extensions in the Cisco Unity Assistant. If enabled, subscribers can define up to 5 alternate extensions in addition to the 9 alternate extensions that an administrator can define for them.</xs:documentation>
+						<xs:documentation>3=CRUDAccess, 2=CUDAccess, 0=NoAccess, 1=ReadAccess</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AccessCallRoutingRules" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a subscriber assigned this COS can access personal call routing rules.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="WarnMinMsgLength" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The minimum length (in milliseconds) that the maximum recording time has to be before the record termination warning feature is active. When the record termination feature is active, Cisco Unity Connection plays a warning tone indicating to the caller that they are almost out of recording time.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SendBroadcastMessage" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber has the ability to send broadcast messages to all subscribers on the VMS.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UpdateBroadcastMessage" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber has the ability to update broadcast messages that are active or will be active in the future.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AccessVui" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a subscriber assigned this COS can use the voice driven inbox conversation.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ImapCanFetchMessageBody" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber can fetch the body of a non-private message using IMAP.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ImapCanFetchPrivateMessageBody" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the subscriber can fetch the body of a private message using IMAP.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxMembersPVL" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum number of members allowed in a personal voice mail list.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AccessIMAP" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a subscriber assigned this COS can access VM via an IMAP client.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ReadOnly" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating that this COS is read only. It cannot be modified from the SA.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AccessAdvancedUserFeatures" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether or not the subscriber has access to advanced user features. Currently, there are two advanced user features: TTS and VUI.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AccessAdvancedUser" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Duplicate of AdvnacedUserFeatures for licensing code purposes. A flag indicating whether or not the subscriber has access to advanced user features. Currently, there are two advanced user features: TTS and VUI.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AccessUnifiedClient" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a subscriber can use the unified client.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RequireSecureMessages" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Specifies when to mark message secure</xs:documentation>
+						<xs:documentation>1=ALWAYS, 2=NEVER, 3=ASK, 4=PRIVATE</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AccessOutsideLiveReply" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a subscriber, assigned this COS, can after listening to a message from outside caller issue a command to call the outside caller . When a VUI or TUI command is issued, Cisco Unity Connection will call the outside caller who left the message. Generally referred to as &quot;Return Call to Outside Caller.&quot;
+
+</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AccessSTT" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> An integer value indicating whether a subscriber assigned this COS can have to their voice messages transcribed to text.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableSTTSecureMessage" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Controls transcriptions and notification of secure messages for Speech To Text transcription feature.</xs:documentation>
+						<xs:documentation>0=NoSTTSecureMsg, 1=AllowSTTSecureMsg, 2=AllowSTTAndNotifySecureMsg</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MessagePlaybackRestriction" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Playback restrictions for GUI clients</xs:documentation>
+						<xs:documentation>0=None, 1=ComputerOnly, 2=PhoneOnly</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SttType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> An integer value indicating whether a subscriber assigned standard or PRO COS for STT.</xs:documentation>
+						<xs:documentation>1=SttStandardService, 2=SttProService</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PlaybackMessageAndGreetings" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> It will allow users to playback and record video greetings and messages.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="OutsideCallers" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> It will set the Outside Caller to allow video greetings to be played and Message to be recorded</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="Cos" type="Cos"/>
+	<xs:element name="Coses">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Cos" type="Cos" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="UserTemplatePhoneDevice">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="TransmitForcedAuthorizationCode" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether an authorization code should be transmitted to Cisco Call Manager after this number is dialed during an outbound call.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AfterDialDigits" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The extra digits (if any) that Cisco Unity Connection will dial after the phone number.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="BusyRetryInterval" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time (in minutes) Cisco Unity Connection will wait between tries if the device is busy.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Conversation" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the Conversation Cisco Unity Connection will use when calling the subscriber to notify of new messages. This maps to one of the conversations in tbl_Conversation.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DialDelay" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time (in seconds) Cisco Unity Connection will wait after detecting a successful call before dialing specified additional digits (if any). Additional digits are contained in AfterDialDigits.
+</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PhoneNumber" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The phone number to dial, including the trunk access code (if any), of the device.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RetriesOnBusy" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of times Cisco Unity Connection will retry the notification device if it is busy.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RetriesOnRna" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of times Cisco Unity Connection will retry the notification device if the device does not answer.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RingsToWait" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of rings Cisco Unity Connection will wait before hanging up if the device does not answer.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RnaRetryInterval" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time (in minutes) Cisco Unity Connection will wait between tries if the device does not answer.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="WaitConnect" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection waits until it detects a connection before dialing the digits in AfterDialDigits. 
+</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaSwitchObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the MediaSwitch object to use for notification. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PhoneSystemURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a NotificationDeviceConversation object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Active" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the device is active or inactive (enabled/disabled).</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DeviceName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The &quot;DeviceName&quot; of the notification device.</xs:documentation>
+						<xs:documentation>Home Phone=HomePhone, Pager=Pager, SMS=SMS, Work Phone=WorkPhone, Mobile Phone=MobilePhone, Spare Phone=SparePhone, Other=Other, SMTP=SMTP, HTML=HTML</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The preferred text name of the notification device to be used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration. For example, &quot;Home Phone,&quot; Pager 2,&quot; &quot;Work Phone, &quot; etc. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxBody" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum number of characters allowed in the &apos;body&apos; of a notification message.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxSubject" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum number of characters allowed in the &apos;subject&apos; of a notification message.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SubscriberObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Subscriber object to which this notification device belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="UserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="PromptForId" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether to prompt a subscriber for their Cisco Unity Connection ID, or just their password.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Undeletable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Notification device is undeletable.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DetectTransferLoop" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Unity can do a loop detect transfer to this device.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="EventList" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Comma separated list of events that trigger notification rules to be evaluated.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="ScheduleSetObjectId" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>ObjectId of the ScheduleSet for when the notification rule is active.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="InitialDelay" type="xs:int">
+				<xs:annotation>
+					<xs:documentation>The amount of time (in minutes) from the time when a message is received until message notification triggers.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="RepeatInterval" type="xs:int">
+				<xs:annotation>
+					<xs:documentation>The amount of time (in minutes) Cisco Unity Connection will wait before re-notifying a subscriber of new messages.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="RepeatNotify" type="xs:boolean">
+				<xs:annotation>
+					<xs:documentation>A flag indicating whether Cisco Unity Connection begins a notification process immediately upon the arrival of each message that matches the specified critera.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="FailDeviceObjectId" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>ObjectId of the NotificationDevice that Cisco Unity Connection will use if attempted notification to this device fails.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="UserTemplatePhoneDevice" type="UserTemplatePhoneDevice"/>
+	<xs:element name="UserTemplatePhoneDevices">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="UserTemplatePhoneDevice" type="UserTemplatePhoneDevice" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

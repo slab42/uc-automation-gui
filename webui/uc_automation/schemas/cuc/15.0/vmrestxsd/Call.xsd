@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="Call">
+		<xs:sequence>
+			<xs:element name="number" type="xs:string" minOccurs="0"/>
+			<xs:element name="id" type="xs:string" minOccurs="0"/>
+			<xs:element name="connected" type="xs:boolean" minOccurs="0"/>
+			<xs:element name="maximumRings" type="xs:int" minOccurs="0"/>
+			<xs:element name="mediaSwitchObjectId" type="xs:string" minOccurs="0"/>
+                        <xs:element name="callType" type="xs:string" minOccurs="0"/>
+			<xs:element name="nativeConnectionId" type="xs:string" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="Call" type="Call"/>
+	
+	<xs:simpleType name="resourceType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="MESSAGE"/>
+			<xs:enumeration value="STREAM"/>
+			<xs:enumeration value="HANDLER"/>
+			<xs:enumeration value="BROADCASTMESSAGE"/>
+			<xs:enumeration value="STREAM_URI"/>
+			<xs:enumeration value="VOICENAME"/>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="opType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="PLAY"/>
+			<xs:enumeration value="RECORD"/>
+			<xs:enumeration value="STOP"/>
+                        <xs:enumeration value="PAUSE"/>
+                        <xs:enumeration value="RESUME"/>  
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="folderType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="INBOX"/>
+			<xs:enumeration value="SENT"/>
+			<xs:enumeration value="DELETED"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:complexType name="CallControl">
+		<xs:sequence>
+			<xs:element name="op" type="opType" minOccurs="0"/>				
+			<xs:element name="resourceType" type="resourceType" minOccurs="0"/>				
+			<xs:element name="folderType" type="folderType" minOccurs="0"/>				
+			<xs:element name="resourceId" type="xs:string" minOccurs="0"/>
+			<xs:element name="sessionId" type="xs:string" minOccurs="0"/>				
+			<xs:element name="lastResult" type="xs:int" minOccurs="0"/>
+			<xs:element name="speed" type="xs:int" minOccurs="0"/>
+			<xs:element name="volume" type="xs:int" minOccurs="0"/>
+			<xs:element name="startPosition" type="xs:int" minOccurs="0"/>				
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="CallControl" type="CallControl"/>
+	
+</xs:schema>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="RoutingRuleCondition">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Unique identifier for this condition</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RoutingRuleObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Object Id of the routing rule to which this routing rule condition belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="RoutingRuleURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="Parameter" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Type of parameter in this condition - port, calling number, etc.</xs:documentation>
+						<xs:documentation>1=CallingNumber, 2=DialedNumber, 3=ForwardingStation, 4=Origin, 5=PortID, 6=Reason, 7=Schedule, 8=TrunkID, 9=PhoneSystem</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Operator" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Type of operator in this condition - equals, greater than, etc.</xs:documentation>
+						<xs:documentation>1=IN, 2=EQ, 3=GT, 4=LT, 5=LTE, 6=GTE</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="OperandValue" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Value of operand in condition</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaSwitchObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the phone system that can be used as a condition for a routing rule.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PhoneSystemURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MediaPortObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the media port that can be used as a condition for a routing rule.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PortURI" type="xs:anyURI" minOccurs="0" />
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="RoutingRuleCondition" type="RoutingRuleCondition"/>
+	<xs:element name="RoutingRuleConditions">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="RoutingRuleCondition" type="RoutingRuleCondition" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

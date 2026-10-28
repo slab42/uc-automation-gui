@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="Video">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="Live" type="xs:boolean" minOccurs="0">
+				</xs:element>
+				
+				<xs:element name="MediaServerObjectId" type="xs:string" minOccurs="0">
+				</xs:element>
+				
+				<xs:element name="SessionId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> MediaSense Session ID for this video referece</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VideoObjectId" type="xs:string" minOccurs="0">
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="ResourceObjectId" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Entry to get the greeting stream file objectId.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="Video" type="Video"/>
+	<xs:element name="Videos">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Video" type="Video" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>
+

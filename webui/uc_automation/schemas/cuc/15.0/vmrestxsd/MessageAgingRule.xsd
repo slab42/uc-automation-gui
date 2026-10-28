@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="MessageAgingRule">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="MessageAgingPolicyObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The objectid of the MessageAgingPolicy to which this rule belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="MessageAgingPolicyURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a MessageAgingRule object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Days" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Age message older than this number of days.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Enabled" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> If not true, then don&apos;t apply this rule as part of the message aging policy</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Secure" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Apply this rule to messages where tbl_Message.Secure is equal to this value.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AgingRuleType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Contains the type or purpose of the aging rule</xs:documentation>
+						<xs:documentation>10=MoveSeenToDeleted, 11=HardDeleteDeleted, 12=HardDeleteSecureTouched, 13=HardDeleteAllSecure, 14=MoveNewToSaved</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SendNotification" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> If True, send message owners a notification before taking action based on this rule.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="NotificationDays" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> If SendNotification is True, send the notification this many days before the rule takes place.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="RuleDescription" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The description for the rule.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="MessageAgingRule" type="MessageAgingRule"/>
+	<xs:element name="MessageAgingRules">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="MessageAgingRule" type="MessageAgingRule" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>
+

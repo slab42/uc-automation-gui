@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="TemplateGreeting">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="CallHandlerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the CallHandler object to which this greeting rule belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="CallhandlerURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="IgnoreDigits" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection takes action in response to touchtone keys pressed by callers during the greeting.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PlayWhat" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The source for the greeting when this greeting is active.</xs:documentation>
+						<xs:documentation>2=NoGreeting, 1=RecordedGreeting, 0=SystemGreeting</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RepromptDelay" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time (in seconds) that Cisco Unity Connection waits without receiving any input from a caller before Cisco Unity Connection prompts the caller again.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Reprompts" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of times to reprompt a caller. After the number of times indicated here, Cisco Unity Connection performs the after-greeting action. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TimeExpires" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date and time when the greeting rule expires. The greeting rule is considered not expired (enabled), if the value is NULL or a future date. The greeting rule is considered expired (disabled), the value is in the past.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="GreetingType" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The type of greeting, e.g. &quot;Standard,&quot; &quot;Off Hours,&quot; &quot;Busy,&quot; etc.</xs:documentation>
+						<xs:documentation>Alternate=SZAlternate, Busy=SZBusy, Error=SZError, Internal=SZInternal, Off Hours=SZOffHours, Standard=SZStandard, Holiday=SZHoliday</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AfterGreetingAction" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The type of call action to take, e.g., hang-up, goto another object, etc.</xs:documentation>
+						<xs:documentation>3=Error, 2=Goto, 1=Hangup, 0=Ignore, 5=SkipGreeting, 4=TakeMsg, 6=RestartGreeting, 7=TransferAltContact, 8=RouteFromNextRule</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AfterGreetingTargetConversation" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the conversation to which the caller is routed.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AfterGreetingTargetHandlerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the specific object to send along to the target conversation.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PlayRecordMessagePrompt" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the ?Record your message at the tone?? prompt prior to recording a message.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableTransfer" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating when an extension is dialed at the greeting and the extension is not available whether to transfer to another extension.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnablePersonalVideoRecording" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> It will Enable the Personal video Recording in CUCA.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PlayRecordVideoMessagePrompt" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the ?Record your message at the tone?? prompt prior to Video recording a message.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="Enabled" type="xs:boolean">
+				<xs:annotation>
+					<xs:documentation>If TimeExpires is set, this field is ignored.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="TemplateGreeting" type="TemplateGreeting"/>
+	<xs:element name="TemplateGreetings">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="TemplateGreeting" type="TemplateGreeting" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>
+

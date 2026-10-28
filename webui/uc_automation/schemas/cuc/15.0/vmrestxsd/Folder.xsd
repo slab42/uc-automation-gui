@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	targetNamespace="http://www.cisco.com" xmlns="http://www.cisco.com"
+	elementFormDefault="qualified">
+	
+	<xs:complexType name="Folder">
+		<xs:sequence>
+               <xs:element name="URI" type="xs:anyURI" />
+               <xs:element name="DisplayName" type="xs:string" />			
+			<xs:element name="MessageCount" type="xs:int" />
+			<xs:element name="USN" type="xs:string" />
+			<xs:element name="UIDValidity" type="xs:string" />
+		</xs:sequence>
+	</xs:complexType>
+	
+	<xs:element name="Folder" type="Folder"/>
+	<xs:element name="Folders">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Folder" type="Folder" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>	
+		
+</xs:schema>

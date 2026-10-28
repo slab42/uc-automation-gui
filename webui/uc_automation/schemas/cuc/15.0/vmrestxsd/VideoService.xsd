@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="VideoService">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="MediaServerPrimaryHostName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Hostname of the media server</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaServerType" type="xs:int" minOccurs="0">
+				</xs:element>
+				
+				<xs:element name="PrimaryMediaServerPort" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Transport layer Port to communicate with the Primary Media Server.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UserName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> User Name using which unity Connection will login into the MS Server.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Password" type="xs:string" minOccurs="0">
+				</xs:element>
+				
+				<xs:element name="ConnectorFactoryObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Unique object ID for identifying the Connector.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsConnectorEnabled" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating if the connector is enabled or not.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AllowSelfSignedCertificates" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating if Self Signed certificates are allowed while validating the MS Certificates during SSL handshake.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxConcurrentCallsAllowed" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Number of concurrent video calls allowed using this Connector.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ConnectorFactoryName" type="xs:string" minOccurs="0">
+				</xs:element>
+				
+				<xs:element name="IsAlive" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The live status of Branch is maintained in this column.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="VideoService" type="VideoService"/>
+	<xs:element name="VideoServices">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="VideoService" type="VideoService" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

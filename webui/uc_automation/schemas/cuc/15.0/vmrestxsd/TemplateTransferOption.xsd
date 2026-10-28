@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="TemplateTransferOption">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="CallHandlerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the CallHandler object to which this transfer rule belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="CallhandlerURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="TransferOptionType" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The type of transfer option, e.g. &quot;Standard,&quot; &quot;Off Hours,&quot; or &quot;Alternate.&quot;</xs:documentation>
+						<xs:documentation>Alternate=Alternate, Off Hours=OffHours, Standard=Standard</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Action" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection transfers the call to the call handler greeting or attempts to transfer the call to an extension.</xs:documentation>
+						<xs:documentation>0=PlayGreeting, 1=Transfer</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Extension" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The extension (phone number) to transfer to.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RnaAction" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The action Cisco Unity Connection takes for a &quot;Ring-No-Answer&quot; (RNA) condition. Cisco Unity Connection will either transfer the call to the appropriate greeting or releases the call to the phone system.</xs:documentation>
+						<xs:documentation>1=PlayGreeting, 0=Release</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TimeExpires" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date and time when this transfer option expires. If the transfer rule is enabled, the value is NULL or a date in the future. If the transfer rule is disable, the value is a past date.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferAnnounce" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection plays &quot;transferring call&quot; when the subscriber answers the phone. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferConfirm" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection prompts the subscriber to accept or refuse a call (&quot;Press 1 to take the call or 2 and I&apos;ll take a message&quot;). If the call is accepted, it is transferred to the subscriber phone. If the call is refused, Cisco Unity Connection plays the applicable subscriber greeting. 
+</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferDtDetect" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection will check for dialtone before attempting to transfer the call.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferHoldingMode" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The action Cisco Unity Connection will take when the extension is busy.</xs:documentation>
+						<xs:documentation>2=Ask, 0=No, 1=Yes</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferIntroduce" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection will say &quot;call for &lt;recorded name of the call handler&gt;&quot; when the subscriber answers the phone. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferRings" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of times the extension rings before Cisco Unity Connection considers it a &quot;ring no answer&quot; and plays the subscriber or handler greeting.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferScreening" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection will prompt callers to say their names. When the phone is answered, the subscriber hears &quot;Call from...&quot; before Cisco Unity Connection transfers the call.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The type of call transfer Cisco Unity Connection will perform - supervised or unsupervised (also referred to as &quot;Release to Switch&quot; transfer).</xs:documentation>
+						<xs:documentation>1=Supervised, 0=Unsupervised</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaSwitchObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the MediaSwitch object that Cisco Unity Connection uses for transferring the call to the subscriber phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PhoneSystemURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="UsePrimaryExtension" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>If extension is null this will be set to 1 (true) to indicate we are using instead the DtmfAccessId for the owning handler or subscriber.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PlayTransferPrompt" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the &quot;Wait while I transfer your call&quot; prompt should be played prior to transferring a call. 
+
+</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PersonalCallTransfer" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether or not Personal Call Transfer Rules are used for the specific Transfer Option.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="Enabled" type="xs:boolean">
+				<xs:annotation>
+					<xs:documentation>If TimeExpires is set, this field is ignored.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="TemplateTransferOption" type="TemplateTransferOption"/>
+	<xs:element name="TemplateTransferOptions">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="TemplateTransferOption" type="TemplateTransferOption" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

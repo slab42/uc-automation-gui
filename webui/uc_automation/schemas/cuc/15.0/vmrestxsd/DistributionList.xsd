@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="DistributionList">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a DistributionList object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Alias" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name for either a user, distribution list, or personal group.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CreationTime" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The date and time the system distribution list was created.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name of the system distribution list to be used when displaying entries such as in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The series of digits corresponding to the numeric keypad mapping on a standard touchtone phone representing the display name of the system distribution list. These digits are used for searching the distribution list by name via the phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsPublic" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the system distribution list is addressable by all subscribers on all VMSes throughout the Unity Organization.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Undeletable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this distribution list can be deleted via an administrative application such as Cisco Unity Connection Administration. It is used to prevent deletion of factory defaults.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoiceName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the WAV file containing the recorded audio (voice name, greeting, etc.) for the parent object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="VoiceFileURI" type="xs:anyURI" minOccurs="0" />
+				<xs:element name="VoiceNameURI" type="xs:anyURI" minOccurs="0" />					
+				
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the LocationVMS object to which this system distribution list belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="AltName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The alternate spelling of the distributionlist name in an internationally recognizable format (i.e., ASCII only characters) used for TUI client name lookup and message addressing.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfAccessId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The DTMF access id (i.e., extension) for the distribution list. This column shadows the object&apos;s optional dtmfaccessid from tbl_DtmfAccessId. It was added to speed up queries.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AllowContacts" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>A flag indicating whether contacts (system, VPIM,  virtual) are allowed to be members of this Distribution List.  Purpose of this flag is to enable administrators to create a Distribution List whose members are Unity users only. A flag indicating whether contacts (system, VPIM,  virtual) are allowed to be members of this Distribution List.  Purpose of this flag is to enable administrators to create a Distribution List whose members are Unity users only.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AllowForeignMessage" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Controls if we allow foreign message systems to send to this particular distribution list. Only valid if the list is for subscribers only (i.e. does not allow contacts)</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PartitionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Partition to which the DistributionList is assigned.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PartitionURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="TenantObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Unique key for tbl_Tenant.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:element name="DistributionListMembersURI" type="xs:anyURI" minOccurs="0" /> 
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="AlternateNamesURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to get the alternate names of the distribution list.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="DistributionList" type="DistributionList"/>
+	<xs:element name="DistributionLists">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="DistributionList" type="DistributionList" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

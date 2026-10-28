@@ -1,0 +1,45 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="BranchMessage">
+		<xs:sequence minOccurs="0">
+				<xs:element name="MessageObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Object id of the message</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UserObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>User Object id of the mailbox user</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsDeleted" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The column denotes weather the message is deleted or not</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UserType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The column denotes the user type</xs:documentation>
+						<xs:documentation>0 or blank - Voice mail user, 1 - Operator user, 2 - Undeliverable mailbox</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="BranchMessage" type="BranchMessage"/>
+	<xs:element name="BranchMessages">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="BranchMessage" type="BranchMessage" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

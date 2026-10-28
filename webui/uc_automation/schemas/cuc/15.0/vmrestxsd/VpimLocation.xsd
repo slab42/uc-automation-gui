@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="VpimLocation">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="AutoCreateDisplayNameRule" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Indicates how text names on incoming messages will be mapped to the display name for auto-created contacts.
+
+A value of NULL indicates the text name is mapped directly to the display name of the contact.
+A non-null value indicates this is a custom rule that defines the mapping of the text name to the display name. Example: &lt;FirstName&gt;, &lt;LastName&gt;</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AutoCreateExtensionRule" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> An enumeration indicating how the phone number on incoming VPIM messages should be mapped to the extension for the auto-created contact.</xs:documentation>
+						<xs:documentation>0=SameAsPhoneNumber, 1=RemoveRemotePhonePrefix, 2=AddLocDialID, 3=SwitchRemoteWithDialId</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AudioFormatIncoming" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> An enumeration indicating whether incoming VPIM messages from the remote system corresponding to this location should be converted to another audio format.</xs:documentation>
+						<xs:documentation>0=NoConversion, 1=SystemDefault</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AudioFormatOutgoing" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> An enumeration indicating whether VPIM messages from Unity to the remote system corresponding to this location should be converted to another audio format.</xs:documentation>
+						<xs:documentation>0=NoConversion, 1=SystemDefault</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DestinationType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For delivery locations, the destination type for that location, e.g. Connection, Unity, VPIM, Bridge.</xs:documentation>
+						<xs:documentation>7=Bridge, 1=Connection, 8=VPIM, 2=Unity, 9=Branch</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DtmfAccessId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The dialable number.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name of this Location, e.g. &quot;Seattle Office.&quot;  Used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SmtpDomain" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The domain portion (right-half) of an internet-addressable address (for example, london.cisco.com). This is used to form a user&apos;s, contact&apos;s, and distribution list&apos;s SMTP address (tbl_Alias.SmtpAddress).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableAutoCreateContact" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a contact is automatically created when messages are received from senders at this location.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableAutoCreateNoVoiceName" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a contact may be automatically created/updated when the incoming VPIM message does not include a recorded voice name.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableAutoDeleteContact" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a contact is automatically deleted when an NDR is received.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableAutoUpdateContact" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> An enumeration indicating whether a contact is automatically updated when messages are received from senders at this location, and if so, under what condition the contact is updated.</xs:documentation>
+						<xs:documentation>0=NoAutoUpdate, 1=AutoUpdateWhenName, 2=AutoUpdateWhenMessage</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableAutoUpdateContactDisplayName" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a contact&apos;s display name is updated when a contact is automatically updated. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a VPIM location.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RemotePhonePrefix" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number used to construct addresses for contacts who use the voice messaging system that corresponds to this location. NULL is allowed.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="VoiceName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the WAV file containing the recorded audio (voice name, greeting, etc.) for the parent object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="VoiceFileURI" type="xs:anyURI" minOccurs="0" />
+				<xs:element name="VoiceNameURI" type="xs:anyURI" minOccurs="0" />					
+				
+				<xs:element name="IncludeSenderVoiceName" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Unity adds the sender?s recorded voice name to an outgoing VPIM message.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ListContactsInDirectory" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether a contact should be listed in the phone directory for outside callers, when a contact is automatically created.  Default value is 0. 
+
+Values:
+0:  Do not list contact in directory
+1:  List contact in directory
+</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UseSmartSmtpHost" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the Unity Connection SMTP server forwards messages to the SMTP Smart Host for delivery.
+
+Values:
+0:  Do not forward to SMTP Smart Host
+1:  Forward message to SMTP Smart Host
+</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ContactTemplateObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The template upon which to base new contacts created whose destination for messages is this LocationVPIM.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LocalPhonePrefix" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number used to construct addresses for contacts who use the voice messaging system that corresponds to this location. NULL is allowed.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IpAddress" type="xs:string" minOccurs="0">
+				</xs:element>
+				
+				<xs:element name="PushDirectory" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Tells SMTP service whether or not to execute a manual directory push to this VPIM location.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastDirectoryPushDate" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The time and date of the last manual directory push to this VPIM location.
+
+NULL indicates no push has taken place.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableOutgoingPrivateMessages" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether outgoing messages can be marked &quot;Private.&quot;</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableOutgoingSecureMessages" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether outgoing messages can be marked &quot;Secure.&quot;</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnableAGC" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection should apply software-based gain control to messages received from this VPIM location.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Points to the LocationVMS record identifying where this VPIM location was created.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="SearchSpaceObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the SearchSpace that determines the Partition(s) that are searched to find the recipient of an incoming VPIM message to a user.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="SearchSpaceURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="PartitionObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Partition to which the DtmfAccessId is assigned.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PartitionURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="DtmfName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The series of digits corresponding to the numeric keypad mapping on a standard touchtone phone representing the display name of the location. These digits are used for searching the location by name via the phone.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="AllowBlindAddressing" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether messages can be addressed to this location without an existing handler or subscriber.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="AlternateNamesURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to get the alternate names of the VPIM location.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="VpimLocation" type="VpimLocation"/>
+	<xs:element name="VpimLocations">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="VpimLocation" type="VpimLocation" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

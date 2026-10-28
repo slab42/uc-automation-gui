@@ -1,0 +1,104 @@
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="PortGroupServer">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a MediaRemoteService object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaRemoteServiceEnum" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The type of IP service.</xs:documentation>
+						<xs:documentation>105=ASRMediaServer, 100=CCM, 103=CCMAXL, 101=CCMTFTP, 104=PIMG, 102=SIPPROXY, 106=TTSMediaServer</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaPortGroupObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the MediaPortGroup object to which this row corresponds.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PortGroupURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="HostOrIPAddress" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The DNS name or IP address of the computer hosting the remote service .</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Port" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The IP port at which the service is found.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TlsPort" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The IP port at which the service is found. Cisco Unity Connection must negotiate a TLS session when using this port.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Precedence" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A ranking of priority for rows in this table with identical [MediaSwitchObject, MediaPortGroupObjectId, MediaRemoteServiceEnum] in which connection is attempted to them, that is, as primary, secondary, etc.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaSwitchObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the MediaSwitch object to which this row corresponds.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PhoneSystemURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="SkinnyStateMachineEnum" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this MediaPortGroup is integrated with Cisco Unified Communications Manager or Cisco CallManager Express. This is used to switch on a special state engine in the Skinny TSP for Cisco CallManager Express.</xs:documentation>
+						<xs:documentation>10=CCM, 20=CCME</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaServerName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The preferred name of the media server, if applicable.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the service. Used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="HostOrIPAddressV6" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Server DNS name or IPv6 address for remote service. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="PortGroupServer" type="PortGroupServer"/>
+	<xs:element name="PortGroupServers">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="PortGroupServer" type="PortGroupServer" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>
+
+

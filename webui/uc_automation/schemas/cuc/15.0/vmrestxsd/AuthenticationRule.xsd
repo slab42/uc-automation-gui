@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="AuthenticationRule">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a CredentialPolicy object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="HackResetTime" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The length of time (in minutes) after which if no failed logon attempts occur, the count of failed logon attempts is cleared.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Location object to which this credential policy belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="LockoutDuration" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The length of time (in minutes) that a user who is locked out must wait until they can attempt to access the system again with this credential.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxDays" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum number of days before the credential must be changed.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MaxHacks" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The maximum number of failed logon attempts (hacks) before action is taken.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MinLength" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The minimum number of characters or digits (PIN) required for the credential.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PrevCredCount" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of credentials to store. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TrivialCredChecking" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection should check against trivial credentials for extra security. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name (e.g., &quot;Administrator Password Policy&quot;) of the credential policy to be used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MinDuration" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The minimum number of minutes that must pass from the time of the last change before the credential can be changed.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ExpiryWarningDays" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of days prior to the expiration of a credential when Cisco Unity Connection begins prompting a user to change their credential upon logon, until the change is made.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MinCharsToChange" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> To hold the count of the minimum number of characters that must change between new and old password, during a password change.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="AuthenticationRule" type="AuthenticationRule"/>
+	<xs:element name="AuthenticationRules">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="AuthenticationRule" type="AuthenticationRule" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

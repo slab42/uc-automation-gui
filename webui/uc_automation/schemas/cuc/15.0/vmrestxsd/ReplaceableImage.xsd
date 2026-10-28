@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="ReplaceableImage">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This column stores the replaceable image display name.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ImageName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This column stores the replaceable  image name.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ImageSize" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> This column stores the image size.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a Replaceable Image object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="ImagePreviewURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI will display the admin replaceable image</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="ReplaceableImage" type="ReplaceableImage"/>
+	<xs:element name="ReplaceableImages">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ReplaceableImage" type="ReplaceableImage" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

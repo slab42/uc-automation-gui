@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="Alias">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="LocationObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the LocationVMS object to which this alias belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="LocationURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="Alias" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name for either a user, distribution list, or personal group.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IsPrimary" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this is a primary alias. Typically used for a user.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="SmtpAddress" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The full SMTP address for this object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectUserObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The object to which this alias pertains. If the alias is for a user, the unique identifier of the User object to which this alias refers. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="ObjectUserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectDistributionListObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The object to which this alias pertains. If the alias is for a distribution list, the unique identifier of the DistributionList object to which this alias refers. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="ObjectDistributionListURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectPersonalGroupObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The object to which this alias pertains. If the alias is for a personal group, the unique identifier of the PersonalGroup object to which this alias refers. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectContactObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The object to which this alias pertains. If the alias is for a Contact, the unique identifier of the Contact object to which this alias refers. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="ObjectContactURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for an Alias object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectGlobalUserObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The object to which this alias pertains. If the alias is for a user, the unique identifier of the User object to which this alias refers. Otherwise, this attribute is set to NULL.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="ObjectGlobalUserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="IsAddressable" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the entity to which the alias belongs is addressable. By default all distribution lists are addressable. All subscribers (users with a voice mailbox, except UnityCinnection Messaging System user) are addressable. All contacts that are associated with a delivery location are addressable.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="Alias" type="Alias"/>
+	<xs:element name="Aliases">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Alias" type="Alias" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

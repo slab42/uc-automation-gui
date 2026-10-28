@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="MenuEntry">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="CallHandlerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the CallHandler object to which this menu entry belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="CallhandlerURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="TouchtoneKey" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The character on the touch-tone keypad that this menu entry corresponds to (*, #, 0,1...9).</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Locked" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection ignores additional input after callers press this key.
+
+Values:
+0: Additional input accepted
+1: Additional input ignored; Cisco Unity Connection performs the action assigned to the key. 
+</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Action" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The type of call action to take, e.g., hang-up, goto another object, etc.</xs:documentation>
+						<xs:documentation>3=Error, 2=Goto, 1=Hangup, 0=Ignore, 5=SkipGreeting, 4=TakeMsg, 6=RestartGreeting, 7=TransferAltContact, 8=RouteFromNextRule</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TargetConversation" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the conversation to which the caller is routed.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TargetHandlerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the specific object to send along to the target conversation.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a MenuEntry object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+
+				<xs:element name="TransferNumber" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The phone number associated with the alternate contact</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The display name associated with the alternate contact number.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The type of call transfer Cisco Unity Connection will perform - supervised or unsupervised (also referred to as &quot;Release to Switch&quot; transfer).</xs:documentation>
+						<xs:documentation>1=Supervised, 0=Unsupervised</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TransferRings" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The number of times the extension rings before Cisco Unity Connection considers it a &quot;ring no answer&quot; and plays the subscriber or handler greeting.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="MenuEntry" type="MenuEntry"/>
+	<xs:element name="MenuEntries">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="MenuEntry" type="MenuEntry" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

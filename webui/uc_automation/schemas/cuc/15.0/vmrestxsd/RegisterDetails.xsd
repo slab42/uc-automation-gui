@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+         Mailbox attributes that are available via CUPI
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+    <xs:complexType name="RegisterDetails">
+        <xs:sequence>
+            <xs:element name="token" type="xs:string" minOccurs="0"/>
+            <xs:element name="force" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="RegisterDetails" type="RegisterDetails"/>
+</xs:schema>

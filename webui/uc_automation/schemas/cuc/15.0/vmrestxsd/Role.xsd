@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+	<xs:complexType name="Role">
+		<xs:sequence minOccurs="0">
+		
+			<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+		
+			<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a Role object.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			
+			<xs:element name="RoleName" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation> The given, unique text name of the user role. For example, &quot;User Administrator,&quot; &quot;Help Desk Administrator,&quot; &quot;Technician,&quot; etc.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			
+			<xs:element name="RoleDescription" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation> A description of the purpose of this role and its assigned capabilities.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			
+			<xs:element name="IsEnabled" type="xs:boolean" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation> A flag indicating whether the role is enabled and is available in the SA.</xs:documentation>
+					<xs:documentation>0=False, 1=True</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			
+			<xs:element name="ReadOnly" type="xs:boolean" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation> Is role read-only?</xs:documentation>
+					<xs:documentation>0=False, 1=True</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			
+			<xs:element name="InheritedObjectId" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>It displays the inherited System Role object id It displays the inherited System Role object id</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+				
+			<xs:element name="AssignPrivileges">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="PrivilegeObjectId" type="xs:string" maxOccurs="unbounded" />
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		
+			<xs:element name="RemovePrivileges">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="PrivilegeObjectId" type="xs:string" maxOccurs="unbounded" />
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+
+		</xs:sequence>
+	</xs:complexType>	
+
+	<xs:element name="Role" type="Role"/>
+
+	<xs:element name="Roles">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Role" type="Role" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+
+</xs:schema>

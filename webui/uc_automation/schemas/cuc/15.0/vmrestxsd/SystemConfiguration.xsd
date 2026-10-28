@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="SystemConfiguration">
+		<xs:sequence>
+			<xs:element name="SecureMessageHeaders" type="xs:boolean" minOccurs="1"/>
+			<xs:element name="SecureMessageAttachmentDownload" type="xs:boolean" minOccurs="1"/>
+			<xs:element name="RecordingMaxLength" type="xs:int" minOccurs="1"/>
+			<xs:element name="DisableCopyVoiceMessage" type="xs:boolean" minOccurs="1"/>
+			<xs:element name="ConfirmDeleteMessage" type="xs:int" minOccurs="1"/>
+			<xs:element name="PCASessionTimeout" type="xs:int" minOccurs="1"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="SystemConfiguration" type="SystemConfiguration"/>
+</xs:schema>
+

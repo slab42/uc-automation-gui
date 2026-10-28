@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="SubscriberDependency">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="DependencyType" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>Type of dependency (e.g., After Greeting, After Mesage, Routing Rule, etc.)</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DependentEntityObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The unique identifier of the entity that is dependent on the user.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DependentEntityObjectType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The type of object that is dependent on the user.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DependentEntityOwner" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The unique identifier of the entity that owns the object which is dependent on the user. For example, a user&apos;s call handler may be the dependent entity, but the call handler is owned by another user.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DependencyDestinationType" type="xs:int" minOccurs="0">
+				</xs:element>
+				
+				<xs:element name="SubscriberObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The unique identifier of the user which this object references. The primary key for this table. A globally unique, system-generated identifier for a UserSubscriber object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="UserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="DependentEntityOwnerType" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The entity owner type of object (e.g., User, Call Handler Template)</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="SubscriberDependency" type="SubscriberDependency"/>
+	<xs:element name="SubscriberDependencies">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="SubscriberDependency" type="SubscriberDependency" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

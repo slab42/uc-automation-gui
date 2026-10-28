@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="CallhandlerOwner">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="DistributionListObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the DistributionList object to which this distribution list member belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="DistributionListURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a Call handler owner object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="TargetHandlerObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Call Handler  object for which this distribution list is the owner.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UserObjectId" type="xs:string" minOccurs="0">
+				</xs:element>
+				<xs:element name="UserURI" type="xs:anyURI" minOccurs="0" />
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="CallhandlerOwner" type="CallhandlerOwner"/>
+	<xs:element name="CallhandlerOwners">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="CallhandlerOwner" type="CallhandlerOwner" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+This xsd creates two POJO classes.
+1)When xjc is run, corresponding 2 classes AuditLog.java and AuditLogs.java are created
+2)This xsd is created corresponding to table tbl_auditlog
+3)Each column of table is defined as an element in the xsd
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+ElementFormDefault="qualified">
+<xs:complexType name="CallTransfer">
+    <xs:sequence>
+      <xs:element name="ServerName"  type="xs:string"/>
+      <xs:element name="CreatedDateTime"  type="xs:string"/>
+      <xs:element name="BillingId"  type="xs:string"/>
+      <xs:element name="dtmfAccessid"  type="xs:string"/>
+      <xs:element name="Alias"  type="xs:string"/>
+      <xs:element name="ObjectType"  type="xs:int"/>
+      <xs:element name="DialedNumber"  type="xs:string"/>
+      <xs:element name="TransferType"  type="xs:int"/>
+      <xs:element name="TransferDateTime"  type="xs:string"/>
+      <xs:element name="TransferResult" type="xs:int"/>
+      <xs:element name="CallHandlerObjectId"  type="xs:string"/>
+    </xs:sequence>
+</xs:complexType>
+<xs:element name="CallTransfer" type="CallTransfer"/>
+
+<xs:element name="CallTransfers" type="CallTransfer">
+	<xs:complexType>
+		<xs:sequence>
+			<xs:element name="CallTransfer" type="CallTransfer" minOccurs="0" maxOccurs="unbounded" />
+		</xs:sequence>
+		<xs:attribute name="total" type="xs:integer"/>
+	</xs:complexType>
+</xs:element>
+
+</xs:schema>
+

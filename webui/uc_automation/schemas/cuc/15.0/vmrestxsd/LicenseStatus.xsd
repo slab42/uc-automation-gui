@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="LicenseStatusCount">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="TagName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The tag or feature name.  TagName + VmsServerObjectId is unique, and a CK on this table.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a LicenseStatus object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Count" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The number of licensed items being used or NULL if not applicable</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="featureName" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Feature name for the license</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="description" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The description for the License feature for the tag.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="LicenseStatusCount" type="LicenseStatusCount"/>
+	<xs:element name="LicenseStatusCounts">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="LicenseStatusCount" type="LicenseStatusCount" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

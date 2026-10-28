@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">	
+	<xs:simpleType name="ErrorCode">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="COPY_PROPERTIES"/>
+			<xs:enumeration value="DATA_EXCEPTION"/>
+			<xs:enumeration value="NOT_FOUND"/>
+			<xs:enumeration value="BAD_RESULT_SET"/>
+			<xs:enumeration value="IMS_ERROR"/>
+			<xs:enumeration value="INVALID_PARAMETER"/>
+			<xs:enumeration value="DUMMY"/>
+			<xs:enumeration value="NOT_AUTHORIZED"/>
+			<xs:enumeration value="CALL_CONTROL_ERROR"/>
+			<xs:enumeration value="MESSAGE_ERROR"/>
+			<xs:enumeration value="INTERNAL_SERVER_ERROR"/>
+			<xs:enumeration value="FORBIDDEN" />
+      
+            <xs:enumeration value="MAILBOX_SEND_QUOTA_EXCEEDED"/>            
+            <xs:enumeration value="MAILBOX_SEND_RECEIVE_QUOTA_EXCEEDED"/>            
+            <xs:enumeration value="UNMAPPED_MESSAGE_EXCEPTION"/>            
+            <xs:enumeration value="CALL_DISCONNECTED"/>            
+            <xs:enumeration value="UNRECOGNIZED_CALL_OPERATION"/>            
+            <xs:enumeration value="UNRECOGNIZED_RESOURCE_TYPE"/>   
+            <xs:enumeration value="MESSAGE_HAS_NO_AUDIO"/>                        
+            <xs:enumeration value="INVALID_CALL_NUMBER"/>        
+            <xs:enumeration value="PHONE_SYSTEM_NOT_FOUND"/>                                                    
+            <xs:enumeration value="NO_CALL_CONNECTION"/>                                                    
+            <xs:enumeration value="INVALID_RESOURCE_ID"/>                                                    
+            <xs:enumeration value="TOO_MANY_RESULTS"/>                                                    
+            <xs:enumeration value="SPEECH_SEARCH_ERROR"/>                                                    
+            <xs:enumeration value="UNRECOGNIZED_ATTACHMENT_TYPE"/>
+            <xs:enumeration value="METHOD_NOT_ALLOWED"/>    
+            <xs:enumeration value="UNSUPPORTED_AUDIO_FORMAT"/>                                                                            
+            <xs:enumeration value="AUDIO_TRANSCODE_FAILURE"/>                                                                            
+            <xs:enumeration value="LDAP_DIRECTORY_SYNCH_NOT_ACTIVATED"/>
+            <xs:enumeration value="LDAP_SYNC_IN_PROGRESS"/>                                                                            
+	    <xs:enumeration value="LDAP_SYNC_NOT_ENABLED"/>
+	    <xs:enumeration value="LDAP_DIRECTORY_CONFIGURED"/>
+            <xs:enumeration value="MESSAGE_ATTACHMENT_SIZE_EXCEEDED"/>      
+            <xs:enumeration value="EXTRA_MESSAGE_ATTACHMENTS_NOT_ALLOWED"/>      			                                                                      
+            <xs:enumeration value="MAILBOX_COMMAND_FAILED"/>      			                                                                      
+            <xs:enumeration value="ALREADY_EXISTS"/>
+			<xs:enumeration value="PASSWORD_MUST_CHANGE"/>
+			<xs:enumeration value="PASSWORD_EXPIRED"/>
+			<xs:enumeration value="PASSWORD_LOCKED"/>
+			<xs:enumeration value="SYSTEM_DISK_CAPACITY_EXCEEDED"/>
+			<xs:enumeration value="PROVISIONING_ERROR"/>
+			<xs:enumeration value="MAX_CUSTOM_VARIABLES_CREATED"/>
+            <xs:enumeration value="PASSWORD_WILL_EXPIRE"/>
+            <xs:enumeration value="MAX_LENGTH_EXCEEDED"/>
+            <xs:enumeration value="MIN_LENGTH_FAILED"/>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:complexType name="ErrorDetails">
+		<xs:sequence>
+			<xs:element name="errors" maxOccurs="unbounded">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="code" type="ErrorCode"/>
+						<xs:element name="message" type="xs:string"/>
+						<xs:element name="DetailCode" type="xs:string"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="ErrorDetails" type="ErrorDetails"/>
+</xs:schema>
+
+<!--
+RestError
+	error 
+		code="VMWS_SEND_FAILED"
+		message
+	error
+		code="DataError"
+		message="bad alias"
+-->

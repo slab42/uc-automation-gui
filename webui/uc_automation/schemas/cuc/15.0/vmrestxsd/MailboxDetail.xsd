@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="MailboxDetail">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="MailboxStoreObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the MailboxStore object to which this mailbox belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UserObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the User account object to which this mailbox belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="UserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="IsPrimary" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether this mailbox is the primary mailbox of the user.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MailboxId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The identifier of a single mailbox on the specified mailbox store. </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MailboxPassword" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> For non-UMSS mailbox stores, the password for conversations to use to logon and retrieve messages.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastGuiAccessTime" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The last time the user accessed their this mailbox through the GUI.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastTuiAccessTime" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The last time the user accessed their this mailbox through the TUI.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MailboxLoginType" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Type of login to use - user alias, login as guest, or login using MailboxId (or part of it)</xs:documentation>
+						<xs:documentation>0=Alias, 1=Guest, 2=Mailboxd</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="LastError" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Last error result from a mailstore maintenance action (a mailbox store move)</xs:documentation>
+						<xs:documentation>0=OK, 11=RemoteServerOffline, 2=DuplicateDisplayName, 3=InternalNameError, 4=DatabaseError, 5=InsufficientDiskSpace, 6=MailstoreNotEmpty, 7=MailstoreStillReferenced, 8=MailstoreOverMaxSize, 9=MailstoreNotFound, 10=MailstoreUndeletable, 1=UnknownError, 12=MailstoreNotMounted, 13=InvalidRequest, 14=MailboxNotMounted, 15=MustRunOnPublisher</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Status" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Current status of the mailbox with regards to mailstore maintenance.  Will usually be OK.  Used by CUSA to show admins.</xs:documentation>
+						<xs:documentation>0=OK, 1=Moving, 2=MoveFailed, 3=MoveRequested</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="MailboxDetail" type="MailboxDetail"/>
+	<xs:element name="MailboxDetails">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="MailboxDetail" type="MailboxDetail" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>
+

@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="PhoneSystem">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a MediaSwitch object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name (e.g., &quot;Unified Communications Manager Cluster - Seattle&quot;) of the media switch to be used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MwiAlwaysUpdate" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Cisco Unity Connection will always send a &quot;set MWI&quot; message to the switch whenever the mailbox contents change, even if the Cisco Unity Connection database record indicates the MWI is already in the correct state.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MwiPortMemory" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the switch requires that Cisco Unity Connection send MWI &quot;off&quot; requests to the same PBX port as the MWI &quot;on&quot; requests. </xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CcmAXLUser" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The user name used to connect to AXL Web service on a Cisco Call Manager cluster.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CcmAXLPassword" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The password (encrypted) for the CcmAXLUser used to connect to a AXL Web service on a Cisco Call Manager cluster.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CallLoopSupervisedTransferDetect" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Supervised Transfer Call Loop Detection is enabled.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CallLoopForwardNotificationDetect" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether Reject Forwarded Notification is enabled.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CallLoopDTMF" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The name of the 4th Column DTMF tone used for Reject Forward Notification and Supervised Call Loop Detection.</xs:documentation>
+						<xs:documentation>A=A, B=B, C=C, D=D</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CallLoopGuardTimeMs" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The amount of time (in milliseconds) i.e. &quot;guard time&quot; used for Rejecting Forwarded Notifications and Supervised Transfer Call Loop Detection.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CcmVersion" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The product version of the Cisco Unified Communications Manager switch.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="PortCount" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The total number of ports belonging to the switch.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CcmCtiUser" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The user name for a Call Manager user that is assigned CTI access to one or more CCM devices.  Unity Connection uses the CTI user/password pair to gain access to the phones for the Unity Connection &quot;Phone Apps&quot; features which, display and gather info (e.g., list of your voice messages) via the phone display.  For example, the Visual Message Locator feature is one of the Phone Apps features..  </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CcmCtiPassword" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The password (encrypted) for the CcmCtiUser.  Unity Connection uses the CTI user/password pair to gain access to the phones for the Unity Connection &quot;Phone Apps&quot; features which, display and gather info (e.g., list of your voice messages) via the phone display.  For example, the Visual Message Locator feature is one of the Phone Apps features..  </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="EnablePhoneApplications" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether IP phone applications are enabled for this phone system.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DefaultTRaPSwitch" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Use this as default TRaP switch for administrators?</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MwiForceOff" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag that indicates whether all User MWI devices falling on this phone system should be unconditionally off.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RestrictDialUnconditional" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Prohibit all outgoing calls and MWI requests on ports belonging to the phone system</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RestrictDialScheduled" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Prohibit all outgoing calls and MWI requests on ports belonging to the phone system within the specified time period</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RestrictDialStartTime" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Time of day to start outgoing call prohibition. The time is stored as minutes past midnight, where 0 = midnight.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="RestrictDialEndTime" type="xs:int" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Time of day to end outgoing call prohibition. The time is stored as minutes past midnight, where 0 = midnight.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="CallLoopExtensionDetect" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether extension-based call-loop detection is enabled.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="AXLServerURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to get the AXL servers.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="PhoneSystemAssociationURI" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>The URI to get the PhoneSystem Associations.</xs:documentation>
+				</xs:annotation>
+			</xs:element>	
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="PhoneSystem" type="PhoneSystem"/>
+	<xs:element name="PhoneSystems">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="PhoneSystem" type="PhoneSystem" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

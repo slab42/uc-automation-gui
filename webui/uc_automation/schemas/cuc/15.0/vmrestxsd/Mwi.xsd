@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="Mwi">
+		<xs:sequence minOccurs="0">
+
+				<xs:element name="URI" type="xs:anyURI" minOccurs="0" />			
+				<xs:element name="SubscriberObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the Subscriber object to which this MWI belongs.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="UserURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="ObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The primary key for this table. A globally unique, system-generated identifier for a NotificationMwi object.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="DisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique text name of this notification MWI to be used when displaying entries in the administrative console, e.g. Cisco Unity Connection Administration. For example, &quot;Office Phone&quot; or &quot; Lab Phone.&quot; </xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MwiExtension" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The phone number (extension) of the MWI to activate.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MwiOn" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the MWI is on or off. This is the state of the MWI from the perspective of Cisco Unity Connection.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaPortObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the MediaPort object Cisco Unity Connection uses to set MWI.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PortURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="MediaSwitchObjectId" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> The unique identifier of the MediaSwitch object to use for activating/deactivating the MWI.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="PhoneSystemURI" type="xs:anyURI" minOccurs="0" />
+				
+				<xs:element name="IncludeTextMessages" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the MWI should be set for a text message.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IncludeVoiceMessages" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the MWI should be set for a voice message.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="IncludeFaxMessages" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> A flag indicating whether the MWI should be set for a FAX message.</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="Active" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation> Is this active?</xs:documentation>
+						<xs:documentation>0=False, 1=True</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="UsePrimaryExtension" type="xs:boolean" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>If set to true (1), the subscriber&apos;s primary extension is used (and will be the value contained in MwiExtension)</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+				<xs:element name="MediaSwitchDisplayName" type="xs:string" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>The text name of the Media Switch.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				
+			<xs:any minOccurs="0" maxOccurs="unbounded" namespace="##other" processContents="lax" />
+			<xs:element name="NullFields"> 
+				<xs:simpleType>  
+					<xs:list itemType="xs:string"/> 
+				</xs:simpleType> 
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>	
+	<xs:element name="Mwi" type="Mwi"/>
+	<xs:element name="Mwis">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Mwi" type="Mwi" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+</xs:schema>

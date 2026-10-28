@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+This xsd creates two POJO classes.
+1)When xjc is run, corresponding 2 classes AuditLog.java and AuditLogs.java are created
+2)This xsd is created corresponding to table tbl_auditlog
+3)Each column of table is defined as an element in the xsd
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+ElementFormDefault="qualified">
+<xs:complexType name="PhoneInterfaceSignInFailure">
+    <xs:sequence>
+      <xs:element name="ServerName"  type="xs:string"/>
+      <xs:element name="CreatedDateTime"  type="xs:string"/>
+      <xs:element name="Alias"  type="xs:string"/>
+      <xs:element name="dtmfAccessid"  type="xs:string"/>
+      <xs:element name="CallerId"  type="xs:string"/>
+      <xs:element name="EventDateTime"  type="xs:string"/>
+      <xs:element name="MaxFailureExceeded"  type="xs:string"/>
+      <xs:element name="Source"  type="xs:int"/>
+    </xs:sequence>
+</xs:complexType>
+<xs:element name="PhoneInterfaceSignInFailure" type="PhoneInterfaceSignInFailure"/>
+
+<xs:element name="PhoneInterfaceSignInFailures" type="PhoneInterfaceSignInFailure">
+	<xs:complexType>
+		<xs:sequence>
+			<xs:element name="PhoneInterfaceSignInFailure" type="PhoneInterfaceSignInFailure" minOccurs="0" maxOccurs="unbounded" />
+		</xs:sequence>
+		<xs:attribute name="total" type="xs:integer"/>
+	</xs:complexType>
+</xs:element>
+
+</xs:schema>
+

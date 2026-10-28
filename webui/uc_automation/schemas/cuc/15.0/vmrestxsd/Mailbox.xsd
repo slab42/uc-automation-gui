@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:complexType name="Mailbox">
+		<xs:sequence>
+		    <xs:element name="DisplayName" type="xs:string" />
+		    <xs:element name="CurrentSizeInBytes" type="xs:long" />
+		    <xs:element name="IsPrimary" type="xs:boolean" />
+		    <xs:element name="IsStoreMounted" type="xs:boolean" />
+		    <xs:element name="IsStoreOverFlowed" type="xs:boolean" />
+		    <xs:element name="IsMailboxMounted" type="xs:boolean" />
+		    <xs:element name="IsWarningQuotaExceeded" type="xs:boolean" />
+		    <xs:element name="IsReceiveQuotaExceeded" type="xs:boolean" />
+		    <xs:element name="IsSendQuotaExceeded" type="xs:boolean" />
+		    <xs:element name="WarningQuota" type="xs:long" />
+		    <xs:element name="ReceiveQuota" type="xs:long" />
+		    <xs:element name="SendQuota" type="xs:long" />
+		    <xs:element name="IsDeletedFolderEnabled" type="xs:boolean" />		
+		    <xs:element name="FoldersURI" type="xs:anyURI" />
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="Mailbox" type="Mailbox"/>
+	<xs:element name="Mailboxes">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Mailbox" type="Mailbox" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="total" type="xs:integer"/>
+		</xs:complexType>
+	</xs:element>	
+	
+</xs:schema>

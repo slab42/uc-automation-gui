@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mailbox attributes that are available via CUPI
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+    <xs:complexType name="SmtpServerConfiguration">
+        <xs:sequence>
+            <xs:element name="Port" type="xs:int" minOccurs="0"/>
+            <xs:element name="domainName" type="xs:string" minOccurs="0"/>
+            <xs:element name="maxNumberConnections" type="xs:int" minOccurs="0"/>
+            <xs:element name="smtpClientThreads" type="xs:int" minOccurs="0"/>
+            <xs:element name="maxMessageSizeKb" type="xs:int" minOccurs="0"/>
+            <xs:element name="maxNumberMessagesSession" type="xs:int" minOccurs="0"/>
+            <xs:element name="maxNumberRecipients" type="xs:int" minOccurs="0"/>
+            <xs:element name="retryDeliveryTimeoutMin" type="xs:int" minOccurs="0"/>
+            <xs:element name="allowConnectionsFromUntrustedIpAddresses" type="xs:boolean" minOccurs="0"/>
+            <xs:element name="requireAuthenticationFromUntrustedIpAddresses" type="xs:boolean" minOccurs="0"/>
+            <xs:element name="requireTlsFromUntrustedIpAddresses" type="xs:int" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="SmtpServerConfiguration" type="SmtpServerConfiguration"/>
+</xs:schema>
