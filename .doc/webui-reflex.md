@@ -167,7 +167,7 @@ Webex has no username/password token API, so login is the OAuth authorization co
 - Create CSVs are header based (`name,location,firstName,lastName,phoneNumber,extension,policy,destination,agent1,agent2,...`),
   unlike the scripts' fixed column positions. The queue create no longer sends the script's hardcoded org-specific announcement
   file id: all greetings are DEFAULT.
-- **Users** (Delete Users, Reset PIN), **Reports** (Voicemail: `/webex/voicemail`, one email or every Calling user of a location via the Add Numbers style location datalist; reads `GET /people/{id}/features/voicemail`, shows internal/external and, for external, the destination email; internal message counts are not available to an admin login), **Workspaces** (Add Device, Migrate), **Locations** (Schedules) and **E911** are menu groups
+- **Users** (Delete Users, Reset PIN), **Reports** (Voicemail: `/webex/voicemail`, one email or every Calling user of a location via the Add Numbers style location datalist; reads `GET /people/{id}/features/voicemail`, shows internal/external and, for external, the destination email; internal message counts are not available to an admin login), **Workspaces** (Add Device, Migrate), **Locations** (Schedules, E911) are menu groups
   in `webex_nav.GROUPS`. Destructive actions (delete users, migrate, copy/update/remove schedule events, RedSky opt-out) go
   through `tool_widgets.confirm_dialog` (`S.confirm_open`). Delete Users and Migrate are two-step: load/review a plan first,
   then confirm.

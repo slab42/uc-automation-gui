@@ -42,8 +42,6 @@ GROUPS = [
     ("Locations", [
         ("Schedules", SCHEDULES, "calendar-days",
          "Export, update, copy and clean up location holiday schedules."),
-    ]),
-    ("E911", [
         ("E911", E911, "siren", "RedSky E911 status of every location, and opt-out."),
     ]),
     ("Tools", [
