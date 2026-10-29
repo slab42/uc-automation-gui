@@ -29,9 +29,11 @@ backend/cucm_tools.py        tools: EM bulk login/logout/check, phone count by d
 backend/keys.py              composite row keys (pattern + partition) shared by backend and state
 backend/cucm_devices.py      phones, CTI route points (delete cleans up orphaned DNs), softkey templates, common device configs, button templates, MPP workflows
 backend/cucm_connections.py  saved CUCM connections ([CUCM:<name>] in .env/credentials.env)
+backend/webex_auth.py        Webex OAuth login, token storage/refresh ([WEBEX:default]); `ensure_token()` for API code
 backend/applog.py            operation logs: OpLog writer, plus list/read/export helpers for the Logs page
 backend/ini_store.py         comment-preserving credentials.env editor (copied from gui/backend/ini_editor.py)
 state/logs.py                LogsState: Logs page (search, read, export; no delete or import)
+state/webex.py               WebexState: Webex tab on the credentials page and the /webex/callback page
 state/cucm.py                CucmState: connection list, active connection, credentials form, Test button
 state/crud.py                CrudMixin + ResourceSpec: the shared list/search/select/add/import/export/delete logic
 state/<resource>.py          one tiny class per resource: `class XState(CucmState, CrudMixin)` + a spec
@@ -67,6 +69,21 @@ uc_automation.py             app + every add_page()
   closest installed schema (`webui/uc_automation/schemas/cucm/<version>/`, exact match else nearest older), and saves both.
 - Schemas are tracked in git under `webui/uc_automation/schemas/<platform>/<version>/` (`cucm`, `cuc`); a new platform gets its own folder and a constant in `backend/paths.py`.
 - The webui keeps its own copy of the schemas; it does not read the CLI's `cucm/schema/` or `cuc/schema/`.
+
+### Webex login
+
+Webex has no username/password token API, so login is the OAuth authorization code flow with a Webex Integration
+(created once at developer.webex.com/my-apps; Redirect URI `http://localhost:3000/webex/callback`).
+
+- Credentials > Webex: save Client ID, Client Secret and scopes, then "Log in with Webex". The browser goes to Webex's
+  login page and returns to `/webex/callback`, which verifies the one-time `state`, exchanges the code and stores
+  `access_token` (about 14 days) and `refresh_token` (about 90 days) in `[WEBEX:default]`.
+- Tokens, the client secret and the refresh token are in `ini_store.SECRET_KEYS`: never sent to the browser.
+- `webex_auth.ensure_token()` is what every Webex feature must call before an API request. It checks expiry, confirms the
+  token live with `GET /v1/people/me`, and silently refreshes when needed. It raises `WebexAuthError` (message is
+  user-ready) when a new login is required. The Credentials page runs the same check on every load.
+- Changing the Client ID drops the stored login. The redirect URI assumes the frontend runs on port 3000.
+- Not tested against a real Webex org.
 
 ## Adding a new CRUD resource (the normal case)
 
@@ -231,5 +248,5 @@ None of this proves the behavior on a real cluster. Say so when reporting, and t
 - **Template CSVs are embedded in code**, not stored in `_DATA/examples/` as the CLI rule requires.
 - Phone delete does not clean up orphaned directory numbers (the CLI script does).
 - Phone button template list cannot show the base template (AXL does not return it).
-- Only CUCM is ported. CUC, CUBE, Webex and RedSky have placeholder pages and credential tabs.
+- Only CUCM is ported. CUC, CUBE and RedSky have placeholder pages and credential tabs. Webex has login only, no features yet.
 - `gui/` (old FastAPI/React wrapper) still exists and is unchanged.

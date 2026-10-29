@@ -16,7 +16,7 @@ import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-SECRET_KEYS = {"password", "api_token", "token", "secret"}
+SECRET_KEYS = {"password", "api_token", "token", "secret", "client_secret", "access_token", "refresh_token"}
 SERVICES = ("CUCM", "CUC", "CUBE", "WEBEX", "REDSKY")
 
 _SECTION_RE = re.compile(r'^\s*\[([^\]]+)\]\s*$')

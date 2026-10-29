@@ -3,7 +3,7 @@ import reflex as rx
 from .config import APP_NAME, PLATFORMS
 from .pages.advertised_patterns import advertised_patterns
 from .pages.css import css
-from .pages.credentials import credentials
+from .pages.credentials import credentials, webex_callback
 from .pages.cucm_home import cucm_home
 from .pages.dn import alternate_numbers, move_partition, orphans
 from .pages.devices import (
@@ -38,6 +38,7 @@ from .state.devices import (
     SoftkeyTemplatesState,
 )
 from .state.logs import LogsState
+from .state.webex import WebexState
 from .state.hunt_groups import HuntGroupsState
 from .state.partitions import PartitionsState
 from .state.tools import EmBulkState, PhoneCountState, SetPinState
@@ -65,7 +66,14 @@ app.add_page(
     title=f"Advertised Patterns | {APP_NAME}",
     on_load=AdvertisedPatternsState.on_page_load,
 )
-app.add_page(credentials, route="/credentials", title=f"Credentials | {APP_NAME}", on_load=CucmState.load_connections)
+app.add_page(
+    credentials,
+    route="/credentials",
+    title=f"Credentials | {APP_NAME}",
+    on_load=[CucmState.load_connections, WebexState.on_page_load],
+)
+app.add_page(webex_callback, route="/webex/callback", title=f"Webex login | {APP_NAME}",
+             on_load=WebexState.handle_callback)
 app.add_page(
     partitions,
     route="/cucm/partitions",
