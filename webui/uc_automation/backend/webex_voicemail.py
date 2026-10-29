@@ -24,8 +24,8 @@ def find_person(c: WebexClient, email: str) -> dict[str, str]:
 
 
 def list_location_people(c: WebexClient, location_id: str) -> list[dict[str, str]]:
-    """Every Calling user of a location, sorted by name."""
-    licenses = calling_license_ids(c)
+    """Every user of a location, sorted by name. The list API returns no licenses, so users without Calling
+    are not filtered here; their voicemail read fails and shows as an error row."""
     people: list[dict] = []
     start = 0
     while True:
@@ -35,8 +35,7 @@ def list_location_people(c: WebexClient, location_id: str) -> list[dict[str, str
         if len(page) < PAGE:
             break
         start += PAGE
-    rows = [_person_row(p) for p in people if licenses is None or licenses & set(p.get("licenses") or [])]
-    return sorted(rows, key=lambda r: r["name"].lower())
+    return sorted((_person_row(p) for p in people), key=lambda r: r["name"].lower())
 
 
 def voicemail_info(c: WebexClient, person_id: str) -> dict[str, str]:

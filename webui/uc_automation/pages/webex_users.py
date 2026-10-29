@@ -267,9 +267,17 @@ def voicemail() -> rx.Component:
                 rx.vstack(
                     rx.heading("Every user in a location", size="4"),
                     field("Location name", rx.fragment(
-                        rx.input(value=S.form_location, on_change=S.set_form_location, width="100%",
-                                 list="voicemail-locations", placeholder="Start typing to search",
-                                 auto_complete="off"),
+                        rx.input(
+                            rx.input.slot(
+                                rx.cond(S.form_location != "",
+                                        rx.icon("x", size=16, cursor="pointer", aria_label="Clear location",
+                                                on_click=S.set_form_location("")),
+                                        rx.fragment()),
+                                side="right",
+                            ),
+                            value=S.form_location, on_change=S.set_form_location, width="100%",
+                            list="voicemail-locations", placeholder="Start typing to search",
+                            auto_complete="off"),
                         rx.el.datalist(rx.foreach(S.location_names, lambda n: rx.el.option(value=n)),
                                        id="voicemail-locations"),
                     ), "Click the field to see every location, or type to narrow the list."),

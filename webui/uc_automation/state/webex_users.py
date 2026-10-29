@@ -439,7 +439,7 @@ class VoicemailState(WebexSession, RunMixin):
                 return
             log.info(f"Location {name}: {len(people)} user(s)")
             if not people:
-                yield rx.toast.error("No Calling users were found in that location.")
+                yield rx.toast.error("No users were found in that location.")
                 return
             self.report_title = name
             async for ev in self._report(client, people, log):
