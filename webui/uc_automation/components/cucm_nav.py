@@ -57,7 +57,7 @@ GROUPS = [
     ]),
     ("Tools", [
         ("EM Bulk Login", EM_BULK, "log-in", "Log Extension Mobility users in or out, or check sessions, from a CSV."),
-        ("Phone Count by DP", PHONE_COUNT, "chart-column", "Count phones per device pool and export the result."),
+        ("Phone Count By DP", PHONE_COUNT, "chart-column", "Count phones per device pool and export the result."),
         ("Set User PIN", SET_PIN, "key-round", "Set Extension Mobility PINs for one user or from a CSV."),
     ]),
 ]

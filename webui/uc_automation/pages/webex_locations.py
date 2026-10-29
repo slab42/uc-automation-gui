@@ -101,8 +101,8 @@ def _copy_panel(S) -> rx.Component:
             _schedule_select(S),
             rx.hstack(
                 rx.segmented_control.root(
-                    rx.segmented_control.item("All other locations", value="all"),
-                    rx.segmented_control.item("One location", value="one"),
+                    rx.segmented_control.item("All Other Locations", value="all"),
+                    rx.segmented_control.item("One Location", value="one"),
                     value=S.copy_scope, on_change=S.set_copy_scope,
                 ),
                 rx.cond(S.copy_scope == "one",
@@ -136,8 +136,8 @@ def _remove_panel(S) -> rx.Component:
                 rx.text("Finds one-time holiday events that ended before today. Recurring events and business "
                         "hours schedules are never listed.", size="2", color="var(--gray-11)"),
                 rx.segmented_control.root(
-                    rx.segmented_control.item("All locations", value="all"),
-                    rx.segmented_control.item("One location", value="one"),
+                    rx.segmented_control.item("All Locations", value="all"),
+                    rx.segmented_control.item("One Location", value="one"),
                     value=S.remove_scope, on_change=S.set_remove_scope,
                 ),
                 rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("search", size=16)), "Find past events",
@@ -189,9 +189,9 @@ def schedules() -> rx.Component:
         need_login(rx.vstack(
             rx.segmented_control.root(
                 rx.segmented_control.item("Export", value="export"),
-                rx.segmented_control.item("Update from CSV", value="update"),
+                rx.segmented_control.item("Update From CSV", value="update"),
                 rx.segmented_control.item("Copy", value="copy"),
-                rx.segmented_control.item("Remove past events", value="remove"),
+                rx.segmented_control.item("Remove Past Events", value="remove"),
                 value=S.mode, on_change=S.set_mode,
             ),
             rx.cond(

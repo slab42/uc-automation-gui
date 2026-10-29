@@ -3,6 +3,7 @@ import reflex as rx
 from ..components.layout import page
 from ..backend.webex_auth import REDIRECT_URI
 from ..state.cucm import CucmState
+from ..state.cuc import CucState
 from ..state.webex import WebexState
 
 
@@ -17,7 +18,7 @@ def _field(label: str, control: rx.Component, hint: str = "") -> rx.Component:
     )
 
 
-def _saved_row(c) -> rx.Component:
+def _saved_row(c, S) -> rx.Component:
     return rx.hstack(
         rx.vstack(
             rx.hstack(
@@ -35,10 +36,10 @@ def _saved_row(c) -> rx.Component:
             align="start",
         ),
         rx.spacer(),
-        rx.icon_button(rx.icon("pencil", size=15), variant="ghost", on_click=CucmState.edit_connection(c["name"])),
+        rx.icon_button(rx.icon("pencil", size=15), variant="ghost", on_click=S.edit_connection(c["name"])),
         rx.icon_button(
             rx.icon("trash-2", size=15), variant="ghost", color_scheme="red",
-            on_click=CucmState.delete_connection(c["name"]),
+            on_click=S.delete_connection(c["name"]),
         ),
         align="center",
         width="100%",
@@ -48,31 +49,31 @@ def _saved_row(c) -> rx.Component:
     )
 
 
-def _form() -> rx.Component:
+def _form(S, placeholder: str, server_hint: str) -> rx.Component:
     return rx.card(
         rx.vstack(
             rx.heading("Connection", size="4"),
             _field(
                 "Name",
                 rx.input(
-                    value=CucmState.form_name, placeholder="e.g. lab-cucm",
-                    on_change=lambda v: CucmState.set_form("name", v), width="100%",
+                    value=S.form_name, placeholder=placeholder,
+                    on_change=lambda v: S.set_form("name", v), width="100%",
                 ),
                 "A label for this cluster. Saving under an existing name updates it.",
             ),
             _field(
                 "IP address or hostname",
                 rx.input(
-                    value=CucmState.form_server, placeholder="10.0.0.10",
-                    on_change=lambda v: CucmState.set_form("server", v), width="100%",
+                    value=S.form_server, placeholder="10.0.0.10",
+                    on_change=lambda v: S.set_form("server", v), width="100%",
                 ),
-                "The publisher. AXL is reached on port 8443.",
+                server_hint,
             ),
             _field(
                 "Username",
                 rx.input(
-                    value=CucmState.form_username, placeholder="axl_user",
-                    on_change=lambda v: CucmState.set_form("username", v), width="100%",
+                    value=S.form_username, placeholder="username",
+                    on_change=lambda v: S.set_form("username", v), width="100%",
                     auto_complete="off",
                 ),
             ),
@@ -80,9 +81,9 @@ def _form() -> rx.Component:
                 "Password",
                 rx.input(
                     type="password",
-                    key=CucmState.password_key.to_string(),
-                    placeholder=rx.cond(CucmState.form_has_password, "Stored. Leave blank to keep it.", ""),
-                    on_change=CucmState.set_password,
+                    key=S.password_key.to_string(),
+                    placeholder=rx.cond(S.form_has_password, "Stored. Leave blank to keep it.", ""),
+                    on_change=S.set_password,
                     auto_complete="new-password",
                     width="100%",
                 ),
@@ -90,21 +91,21 @@ def _form() -> rx.Component:
             ),
             rx.hstack(
                 rx.button(
-                    rx.cond(CucmState.testing, rx.spinner(size="2"), rx.icon("plug-zap", size=16)),
+                    rx.cond(S.testing, rx.spinner(size="2"), rx.icon("plug-zap", size=16)),
                     "Test connection",
-                    on_click=CucmState.test_connection,
-                    disabled=CucmState.testing,
+                    on_click=S.test_connection,
+                    disabled=S.testing,
                 ),
-                rx.button("Save", variant="soft", on_click=CucmState.save_connection, disabled=CucmState.testing),
-                rx.button("Clear", variant="ghost", color_scheme="gray", on_click=CucmState.new_connection),
+                rx.button("Save", variant="soft", on_click=S.save_connection, disabled=S.testing),
+                rx.button("Clear", variant="ghost", color_scheme="gray", on_click=S.new_connection),
                 spacing="3",
             ),
             rx.cond(
-                CucmState.test_message != "",
+                S.test_message != "",
                 rx.callout(
-                    CucmState.test_message,
-                    icon=rx.cond(CucmState.test_ok, "circle-check", "triangle-alert"),
-                    color_scheme=rx.cond(CucmState.test_ok, "green", "red"),
+                    S.test_message,
+                    icon=rx.cond(S.test_ok, "circle-check", "triangle-alert"),
+                    color_scheme=rx.cond(S.test_ok, "green", "red"),
                     width="100%",
                 ),
                 rx.fragment(),
@@ -118,14 +119,14 @@ def _form() -> rx.Component:
     )
 
 
-def _cucm_tab() -> rx.Component:
+def _conn_tab(S, placeholder: str, server_hint: str) -> rx.Component:
     return rx.grid(
-        _form(),
+        _form(S, placeholder, server_hint),
         rx.vstack(
             rx.heading("Saved connections", size="4"),
             rx.cond(
-                CucmState.connections.length() > 0,
-                rx.vstack(rx.foreach(CucmState.connections, _saved_row), spacing="2", width="100%"),
+                S.connections.length() > 0,
+                rx.vstack(rx.foreach(S.connections, lambda c: _saved_row(c, S)), spacing="2", width="100%"),
                 rx.text("None yet. Fill in the form and test the connection to save one.",
                         color="var(--gray-11)", size="2"),
             ),
@@ -137,6 +138,14 @@ def _cucm_tab() -> rx.Component:
         spacing="5",
         width="100%",
     )
+
+
+def _cucm_tab() -> rx.Component:
+    return _conn_tab(CucmState, "e.g. lab-cucm", "The publisher. AXL is reached on port 8443.")
+
+
+def _cuc_tab() -> rx.Component:
+    return _conn_tab(CucState, "e.g. lab-cuc", "The Unity Connection server. The REST API is reached on port 443.")
 
 
 def _soon(name: str) -> rx.Component:
@@ -328,7 +337,7 @@ def _webex_tab() -> rx.Component:
         _webex_org(),
         rx.segmented_control.root(
             rx.segmented_control.item("Bearer Token", value="token"),
-            rx.segmented_control.item("Log in with Webex (OAuth)", value="oauth"),
+            rx.segmented_control.item("Log In With Webex (OAuth)", value="oauth"),
             value=WebexState.mode,
             on_change=WebexState.set_mode,
         ),
@@ -368,7 +377,7 @@ def credentials() -> rx.Component:
                 rx.tabs.trigger("RedSky", value="redsky"),
             ),
             rx.tabs.content(rx.box(_cucm_tab(), padding_top="1rem"), value="cucm"),
-            rx.tabs.content(rx.box(_soon("CUC"), padding_top="1rem"), value="cuc"),
+            rx.tabs.content(rx.box(_cuc_tab(), padding_top="1rem"), value="cuc"),
             rx.tabs.content(rx.box(_soon("CUBE"), padding_top="1rem"), value="cube"),
             rx.tabs.content(rx.box(_webex_tab(), padding_top="1rem"), value="webex"),
             rx.tabs.content(rx.box(_soon("RedSky"), padding_top="1rem"), value="redsky"),

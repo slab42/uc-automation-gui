@@ -29,6 +29,10 @@ backend/cucm_tools.py        tools: EM bulk login/logout/check, phone count by d
 backend/keys.py              composite row keys (pattern + partition) shared by backend and state
 backend/cucm_devices.py      phones, CTI route points (delete cleans up orphaned DNs), softkey templates, common device configs, button templates, MPP workflows
 backend/cucm_connections.py  saved CUCM connections ([CUCM:<name>] in .env/credentials.env)
+backend/cuc_connections.py   saved CUC connections ([CUC:<name>]), same shape as CUCM
+backend/cuc_api.py           CUC REST plumbing: CucError, schema pick, `detect_version` (GET /vmrest/version), CucClient (paged GET, DELETE, users/mailboxes, call handlers, menu entries)
+backend/cuc_users.py         CUC users: extension list parsing, status/usage rows and CSV
+backend/cuc_handlers.py      CUC call handlers: classify, menu entries, CSV in/out, call tree workbook (openpyxl)
 backend/errors.py            UserError: base of AxlError, WebexError, WebexAuthError (run loops catch it)
 backend/webex_api.py         WebexClient: one per operation, token checked once, `orgId` added to every call, 429 retry
 backend/paste.py              PastedFile: pasted text as a stand-in for an uploaded CSV (delimiter detection, optional header)
@@ -52,6 +56,11 @@ state/webex_groups.py        PickerMixin (searchable list + selection) and the C
 state/webex_routing.py       WebexSession (login status in the menu bar, checked on page load) + Add Numbers / Call Forward states
 state/webex.py               WebexState: Webex tab on the credentials page and the /webex/callback page
 state/cucm.py                CucmState: connection list, active connection, credentials form, Test button
+state/cuc.py                 CucState: same for CUC; plus CucRun (RunMixin + failed_results)
+state/cuc_users.py           Status Check, Usage Check, Remove Empty states
+state/cuc_handlers.py        List, Map, Delete states
+components/cuc_nav.py        CUC top menu bar (GROUPS: Users, Call Handlers), connection picker, cuc_page(), need_connection()
+components/cuc_widgets.py    failures table (only failed rows), data_table, list_input (paste | CSV)
 state/crud.py                CrudMixin + ResourceSpec: the shared list/search/select/add/import/export/delete logic
 state/<resource>.py          one tiny class per resource: `class XState(CucmState, CrudMixin)` + a spec
 components/crud_page.py      build_crud_page(): the shared page (toolbar, table, all dialogs)
@@ -88,6 +97,36 @@ uc_automation.py             app + every add_page()
   closest installed schema (`webui/uc_automation/schemas/cucm/<version>/`, exact match else nearest older), and saves both.
 - Schemas are tracked in git under `webui/uc_automation/schemas/<platform>/<version>/` (`cucm`, `cuc`); a new platform gets its own folder and a constant in `backend/paths.py`.
 - The webui keeps its own copy of the schemas; it does not read the CLI's `cucm/schema/` or `cuc/schema/`.
+
+### CUC credentials
+
+- Credentials > CUC works like CUCM: `[CUC:<name>]` with `server`, `username`, `password`, `version`, `schema_version`.
+  The page builders in `pages/credentials.py` (`_conn_tab`) are shared and take the state class.
+- Test calls `GET https://<server>/vmrest/version`, takes the major release, picks the closest schema folder under
+  `schemas/cuc/<version>/` (only 15.0 today) and saves both. Port 443, basic auth, TLS not verified.
+- Not tested against a real CUC (the version call was checked against a local fake server only).
+
+### CUC features
+
+- Menu (`components/cuc_nav.GROUPS`, also the `/cuc` home cards): **Users** (first) = Status Check, Usage Check, Remove Empty;
+  **Call Handlers** = Map, List, Delete. Same single active connection as CUCM; no multi-cluster mode.
+- Port of `cuc/check_userMailbox.py`, `check_userMailboxUsage.py`, `cleanup_emptyMailboxes.py`, `build_call_trees.py`,
+  `list_CallHandlers.py`, `list_NonSubscriber_CallHandlers_WithMenuEntries.py`, `delete_CallHandlers.py` (reference only).
+  CSV layouts match the scripts, so files move between the CLI and the web app.
+- Extensions come from a pasted list or a CSV (first column, header optional). Exports are browser downloads, not files in `_DATA/`.
+- **Status Check, Usage Check and Remove Empty** share one layout (`_three_tabs` in `pages/cuc_users.py`, state mixin `_AllUsers`): tabs
+  All users (first), Paste text and CSV. All users loads automatically when the page opens (10 parallel requests; Reload re-reads) and has a
+  search on extension, alias and display name (Contains | Begins with), a checkbox per row and a header checkbox that selects every user the
+  search shows. Paste text and CSV look up the extensions you give (first column, header optional) and show their results under the input.
+- Status Check and Usage Check: Export selected writes the ticked rows to CSV (status columns, or dtmfAccessID/alias/mailboxSize).
+- **Remove Empty** deletes the whole user account (CUC cannot remove only a mailbox). Its All users tab lists only mailboxes with no data;
+  Delete selected asks for confirmation, and deletes only ticked users whose mailbox is still empty in the loaded list, then reloads. Paste text and
+  CSV keep the scan, review, confirm flow (and Export mailboxes with data, the CLI's "remaining" CSV).
+- **List** has two modes: call handlers (system and subscriber handlers left out) and non-subscriber handlers with all menu entries
+  (parallel fetch, 10 workers, optional name filter, errors CSV). **Map** builds the call tree xlsx from the live connection or
+  from the two List CSVs. **Delete** takes ObjectIds (paste) or a List CSV, shows the list, confirms, then deletes.
+- Tool states are `class X(CucState, CucRun)`; per-row results are shown as failures only (`components/cuc_widgets.failures`).
+- Not tested against a real CUC. The backend and the state handlers were run against a local fake vmrest server only.
 
 ### Webex login
 
@@ -312,7 +351,7 @@ None of this proves the behavior on a real cluster. Say so when reporting, and t
 - **Template CSVs are embedded in code**, not stored in `_DATA/examples/` as the CLI rule requires.
 - Phone delete does not clean up orphaned directory numbers (the CLI script does).
 - Phone button template list cannot show the base template (AXL does not return it).
-- Only CUCM is ported. CUC, CUBE and RedSky have placeholder pages and credential tabs. Webex has login, Call Routing, Users, Workspaces and Locations pages.
+- Only CUCM, CUC (users and call handlers) and Webex are ported; CUBE and RedSky have placeholder pages and credential tabs. Webex has login, Call Routing, Users, Workspaces and Locations pages.
 - `gui/` (old FastAPI/React wrapper) still exists and is unchanged.
 
 ## Paste text input

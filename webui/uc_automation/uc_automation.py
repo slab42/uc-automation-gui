@@ -4,6 +4,9 @@ from .config import APP_NAME, PLATFORMS
 from .pages.advertised_patterns import advertised_patterns
 from .pages.css import css
 from .pages.credentials import credentials, webex_callback
+from .pages.cuc_handlers import call_map, delete_handlers, list_handlers
+from .pages.cuc_home import cuc_home
+from .pages.cuc_users import remove_empty, status_check, usage_check
 from .pages.cucm_home import cucm_home
 from .pages.dn import alternate_numbers, move_partition, orphans
 from .pages.devices import (
@@ -32,6 +35,8 @@ from .pages.settings import settings
 from .state.advertised_patterns import AdvertisedPatternsState
 from .state.css import CssState
 from .state.cucm import CucmState
+from .state.cuc import CucState
+from .state.cuc_users import RemoveEmptyState, StatusCheckState, UsageCheckState
 from .state.dn import AlternateNumbersState, MoveDnState, OrphansState
 from .state.devices import (
     CtiRoutePointsState,
@@ -62,7 +67,7 @@ app = rx.App(
 
 app.add_page(home, route="/", title=APP_NAME)
 for _p in PLATFORMS:
-    if _p.slug in ("cucm", "webex"):
+    if _p.slug in ("cucm", "cuc", "webex"):
         continue
     app.add_page(platform_page(_p), route=f"/{_p.slug}", title=f"{_p.label} | {APP_NAME}")
 app.add_page(webex_home, route="/webex", title=f"Webex | {APP_NAME}", on_load=WebexSession.on_page_load)
@@ -91,6 +96,20 @@ for _route, _title, _page, _state in [
 app.add_page(logs, route="/logs", title=f"Logs | {APP_NAME}", on_load=LogsState.on_page_load)
 app.add_page(settings, route="/settings", title=f"Settings | {APP_NAME}")
 
+app.add_page(cuc_home, route="/cuc", title=f"CUC | {APP_NAME}", on_load=CucState.load_connections)
+for _route, _title, _page in [
+    ("/cuc/map", "Map", call_map),
+    ("/cuc/list-handlers", "List", list_handlers),
+    ("/cuc/delete-handlers", "Delete", delete_handlers),
+]:
+    app.add_page(_page, route=_route, title=f"CUC {_title} | {APP_NAME}", on_load=CucState.load_connections)
+for _route, _title, _page, _state in [
+    ("/cuc/status-check", "Status Check", status_check, StatusCheckState),
+    ("/cuc/usage-check", "Usage Check", usage_check, UsageCheckState),
+    ("/cuc/remove-empty", "Remove Empty", remove_empty, RemoveEmptyState),
+]:
+    app.add_page(_page, route=_route, title=f"CUC {_title} | {APP_NAME}",
+                 on_load=[CucState.load_connections, _state.auto_load])
 app.add_page(cucm_home, route="/cucm", title=f"CUCM | {APP_NAME}", on_load=CucmState.load_connections)
 app.add_page(
     advertised_patterns,
@@ -102,7 +121,7 @@ app.add_page(
     credentials,
     route="/credentials",
     title=f"Credentials | {APP_NAME}",
-    on_load=[CucmState.load_connections, WebexState.on_page_load],
+    on_load=[CucmState.load_connections, CucState.load_connections, WebexState.on_page_load],
 )
 app.add_page(webex_callback, route="/webex/callback", title=f"Webex login | {APP_NAME}",
              on_load=WebexState.handle_callback)
@@ -152,5 +171,5 @@ for _route, _title, _page, _state in [
 ]:
     app.add_page(_page, route=_route, title=f"{_title} | {APP_NAME}", on_load=_state.load_connections)
 
-app.add_page(phone_count, route="/cucm/phone-count-by-dp", title=f"Phone Count by DP | {APP_NAME}",
+app.add_page(phone_count, route="/cucm/phone-count-by-dp", title=f"Phone Count By DP | {APP_NAME}",
              on_load=PhoneCountState.on_page_load)

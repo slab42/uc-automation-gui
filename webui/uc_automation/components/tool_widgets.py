@@ -37,7 +37,7 @@ def paste_csv_tabs(paste_value, on_paste_change, paste_help: str, placeholder: s
     """Paste text (default) and CSV file tabs for a bulk input. csv_content is the existing CSV card body."""
     return rx.tabs.root(
         rx.tabs.list(
-            rx.tabs.trigger("Paste text", value="text"),
+            rx.tabs.trigger("Paste Text", value="text"),
             rx.tabs.trigger("CSV", value="csv"),
         ),
         rx.tabs.content(
@@ -108,17 +108,20 @@ def run_results(S, item_header: str) -> rx.Component:
     )
 
 
-def confirm_dialog(S, title: str, description, action: str, on_confirm) -> rx.Component:
-    """Red confirm dialog driven by S.confirm_open / S.set_confirm_open. `description` may be a Var."""
+def confirm_dialog(S, title: str, description, action: str, on_confirm, open_var=None, set_open=None) -> rx.Component:
+    """Red confirm dialog driven by S.confirm_open / S.set_confirm_open (or open_var / set_open for a second one
+    on the same page). `description` may be a Var."""
+    open_var = S.confirm_open if open_var is None else open_var
+    set_open = S.set_confirm_open if set_open is None else set_open
     return rx.alert_dialog.root(
         rx.alert_dialog.content(
             rx.alert_dialog.title(title),
             rx.alert_dialog.description(description),
             rx.hstack(
-                rx.button("Cancel", variant="soft", color_scheme="gray", on_click=S.set_confirm_open(False)),
+                rx.button("Cancel", variant="soft", color_scheme="gray", on_click=set_open(False)),
                 rx.button(action, color_scheme="red", on_click=on_confirm),
                 spacing="3", justify="end", margin_top="1rem",
             ),
         ),
-        open=S.confirm_open,
+        open=open_var,
     )

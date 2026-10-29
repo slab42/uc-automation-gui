@@ -102,7 +102,7 @@ def add_numbers() -> rx.Component:
                     rx.heading("Multiple numbers", size="4"),
                     rx.tabs.root(
                         rx.tabs.list(
-                            rx.tabs.trigger("Paste text", value="text"),
+                            rx.tabs.trigger("Paste Text", value="text"),
                             rx.tabs.trigger("CSV", value="csv"),
                         ),
                         rx.tabs.content(
@@ -261,8 +261,8 @@ def _agents_card(S, noun: str, upload_id: str, agent_help: str) -> rx.Component:
         rx.vstack(
             rx.heading(f"Update {noun} agents", size="4"),
             rx.segmented_control.root(
-                rx.segmented_control.item("Add agents", value="add"),
-                rx.segmented_control.item("Replace all agents", value="replace"),
+                rx.segmented_control.item("Add Agents", value="add"),
+                rx.segmented_control.item("Replace All Agents", value="replace"),
                 value=S.agent_mode, on_change=S.set_agent_mode,
             ),
             rx.text(
@@ -304,7 +304,7 @@ def call_queues() -> rx.Component:
         need_login(rx.vstack(
             rx.segmented_control.root(
                 rx.segmented_control.item("Create", value="create"),
-                rx.segmented_control.item("Update agents", value="agents"),
+                rx.segmented_control.item("Update Agents", value="agents"),
                 value=S.mode, on_change=S.set_mode,
             ),
             rx.cond(
@@ -381,8 +381,8 @@ def hunt_groups() -> rx.Component:
         need_login(rx.vstack(
             rx.segmented_control.root(
                 rx.segmented_control.item("Create", value="create"),
-                rx.segmented_control.item("Update agents", value="agents"),
-                rx.segmented_control.item("Migrate to Call Queue", value="migrate"),
+                rx.segmented_control.item("Update Agents", value="agents"),
+                rx.segmented_control.item("Migrate To Call Queue", value="migrate"),
                 value=S.mode, on_change=S.set_mode,
             ),
             rx.cond(

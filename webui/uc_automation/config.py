@@ -17,7 +17,7 @@ class Platform:
 
 PLATFORMS = [
     Platform("cucm", "CUCM", "Cisco Unified Communications Manager", "phone", available=True),
-    Platform("cuc", "CUC", "Cisco Unity Connection", "voicemail"),
+    Platform("cuc", "CUC", "Cisco Unity Connection", "voicemail", available=True),
     Platform("cube", "CUBE", "Cisco Unified Border Element", "router"),
     Platform("webex", "Webex", "Webex Calling / Control Hub", "message-square", available=True),
     Platform("redsky", "RedSky", "RedSky E911 location management", "map-pin"),

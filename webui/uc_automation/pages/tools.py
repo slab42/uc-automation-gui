@@ -75,7 +75,7 @@ def phone_count() -> rx.Component:
         padding="0", width="100%",
     )
     return cucm_page(
-        "Phone Count by DP",
+        "Phone Count By DP",
         _need_connection(S, rx.vstack(
             rx.hstack(
                 rx.input(rx.input.slot(rx.icon("search", size=16)), placeholder="Search device pools",

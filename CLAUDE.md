@@ -183,6 +183,8 @@ structural change. The rules:
 - A new CUCM list/add/modify/delete resource is: backend functions + a `ResourceSpec` + `class XState(CucmState, CrudMixin)`
   + a `build_crud_page(...)` config + one `add_page` + one entry in `GROUPS` (`components/cucm_nav.py`). Do not copy the page code.
 - Custom behavior goes through `CrudPageConfig.extra_toolbar` / `extra_dialogs`, not a forked page.
+- Menu, sub-menu, tab and segmented-control labels use Title Case: every word starts with a capital letter, including small words
+  ("Phone Count By DP", "Paste Text", "Non-Subscriber With Menu Entries"). Acronyms stay upper case.
 - Passwords stay in backend (`_`-prefixed) vars and `.env/credentials.env`; never send one to the browser.
 - Check AXL request shapes against `cucm/schema/current/AXLSoap.xsd` with zeep `create_message`, and compile with
   `reflex export --frontend-only --no-zip`. Say plainly that nothing was tested against a real CUCM.
