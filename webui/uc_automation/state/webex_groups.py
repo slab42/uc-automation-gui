@@ -190,6 +190,11 @@ class _GroupsBase(PasteMixin, mixin=True):
 
 class CallQueuesState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
     mode: str = "create"
+    plan_lines: list[str] = []
+    plan_notes: list[str] = []
+    plan_for: str = ""
+    confirm_open: bool = False
+    _plan_q: dict = {}
 
     def _kind(self) -> str:
         return "queue"
@@ -204,6 +209,114 @@ class CallQueuesState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
     def set_mode(self, value: str | list[str]):
         self.mode = _one(value)
         self.results = []
+
+    @rx.event
+    def select_row(self, row_id: str):
+        self.selected_id = row_id
+        self.plan_for = ""
+        self.plan_lines, self.plan_notes = [], []
+
+    @rx.event
+    def set_confirm_open(self, value: bool):
+        self.confirm_open = value
+
+    @rx.event
+    async def review_migration(self):
+        """Read the selected call queue and show what the migration will do."""
+        group = self.selected_row
+        if not group:
+            yield rx.toast.error("Select a call queue first.")
+            return
+        self.busy = True
+        yield
+        log = self._webex_log("Review call queue migration", "webex-migrate-queue-review")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            try:
+                q = await asyncio.to_thread(g.read_queue, client, group)
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            agents = q.get("agents") or []
+            body = g.hunt_group_body_from_queue(q)
+            self._plan_q = q
+            self.plan_for = group["id"]
+            self.plan_lines = [
+                f"Location: {group['location']}",
+                f"Number: {q.get('phoneNumber', '')}   Extension: {q.get('extension', '')}",
+                f"Policy: {body['callPolicies']['policy']}",
+                f"Agents ({len(agents)}): "
+                + ", ".join(f"{a.get('firstName', '')} {a.get('lastName', '')}".strip() for a in agents),
+            ]
+            self.plan_notes = g.queue_unmapped_notes(q)
+            log.info(f"Reviewed {q['name']}: {len(agents)} agent(s), {len(self.plan_notes)} unmapped setting(s)")
+            for n in self.plan_notes:
+                log.warning(f"Not migrated: {n}")
+        finally:
+            log.close()
+            self.busy = False
+
+    @rx.event
+    async def run_migration(self):
+        self.confirm_open = False
+        group, q = self.selected_row, self._plan_q
+        if not group or not q or self.plan_for != group["id"]:
+            yield rx.toast.error("Review the call queue first.")
+            return
+        log = self._webex_log("Migrate call queue to hunt group", "webex-migrate-queue")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            LOG_DIR.mkdir(parents=True, exist_ok=True)
+            safe = re.sub(r"[^A-Za-z0-9._-]+", "_", q["name"])
+            backup = LOG_DIR / f"{datetime.now():%Y-%m-%d_%H-%M-%S}-call_queue_backup-{safe}.json"
+            backup_json = json.dumps(g.backup_document(group, q), indent=2)
+            backup.write_text(backup_json, encoding="utf-8")
+            log.info(f"Call queue settings saved to {backup}")
+            yield rx.download(data=backup_json, filename=backup.name)
+            items = [(group["name"], lambda: g.migrate_queue(client, group, q, str(backup), log.info))]
+            async for ev in self._run_items(items, "Migrating", log):
+                yield ev
+            if self.result_fail_count == 0:
+                self.plan_for = ""
+                self.plan_lines, self.plan_notes = [], []
+                self._plan_q = {}
+                self.selected_id = ""
+                async for ev in self._load_rows():
+                    yield ev
+        finally:
+            log.close()
+
+    @rx.event
+    async def restore_from_json(self, files: list[rx.UploadFile]):
+        if not files:
+            yield rx.toast.error("Choose a JSON backup first.")
+            return
+        try:
+            doc = json.loads((await files[0].read()).decode("utf-8-sig"))
+        except ValueError:
+            yield rx.toast.error("That file is not valid JSON.")
+            return
+        log = self._webex_log("Restore call queue from JSON", "webex-restore-queue")
+        try:
+            log.info(f"JSON file: {files[0].filename}")
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            name = doc.get("name", "(no name)") if isinstance(doc, dict) else "(invalid)"
+            items = [(name, lambda: g.restore_queue(client, doc, {}))]
+            async for ev in self._run_items(items, "Restoring", log):
+                yield ev
+            yield rx.clear_selected_files("queue_restore_upload")
+        finally:
+            log.close()
 
     @rx.event
     async def create_from_csv(self, files: list[rx.UploadFile]):
@@ -233,6 +346,7 @@ class HuntGroupsState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
     plan_for: str = ""
     confirm_open: bool = False
     _plan_hg: dict = {}
+    last_backup: str = ""
 
     def _kind(self) -> str:
         return "hunt"
@@ -267,6 +381,31 @@ class HuntGroupsState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
     async def update_agents(self, files: list[rx.UploadFile]):
         async for ev in self._update_agents(files, "hunt_agents_upload"):
             yield ev
+
+    @rx.event
+    async def restore_from_json(self, files: list[rx.UploadFile]):
+        if not files:
+            yield rx.toast.error("Choose a JSON backup first.")
+            return
+        try:
+            doc = json.loads((await files[0].read()).decode("utf-8-sig"))
+        except ValueError:
+            yield rx.toast.error("That file is not valid JSON.")
+            return
+        log = self._webex_log("Restore hunt group from JSON", "webex-restore-huntgroup")
+        try:
+            log.info(f"JSON file: {files[0].filename}")
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            name = doc.get("name", "(no name)") if isinstance(doc, dict) else "(invalid)"
+            items = [(name, lambda: g.restore_hunt_group(client, doc, {}))]
+            async for ev in self._run_items(items, "Restoring", log):
+                yield ev
+            yield rx.clear_selected_files("hunt_restore_upload")
+        finally:
+            log.close()
 
     @rx.event
     async def create_from_text(self):
@@ -334,8 +473,11 @@ class HuntGroupsState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
             LOG_DIR.mkdir(parents=True, exist_ok=True)
             safe = re.sub(r"[^A-Za-z0-9._-]+", "_", hg["name"])
             backup = LOG_DIR / f"{datetime.now():%Y-%m-%d_%H-%M-%S}-hunt_group_backup-{safe}.json"
-            backup.write_text(json.dumps(hg, indent=2), encoding="utf-8")
+            backup_json = json.dumps(g.backup_document(group, hg), indent=2)
+            backup.write_text(backup_json, encoding="utf-8")
             log.info(f"Hunt group settings saved to {backup}")
+            self.last_backup = str(backup)
+            yield rx.download(data=backup_json, filename=backup.name)
             items = [(group["name"], lambda: g.migrate_hunt_group(client, group, hg, str(backup), log.info))]
             async for ev in self._run_items(items, "Migrating", log):
                 yield ev

@@ -85,8 +85,9 @@ class DeleteUsersState(WebexSession, RunMixin, PasteMixin):
             log.close()
 
 
-class ResetPinState(WebexSession, RunMixin):
+class ResetPinState(WebexSession, RunMixin, PasteMixin):
     email: str = ""
+    paste_pin: str = ""
 
     @rx.event
     def set_email(self, value: str):
@@ -117,6 +118,16 @@ class ResetPinState(WebexSession, RunMixin):
 
     @rx.event
     async def reset_from_csv(self, files: list[rx.UploadFile]):
+        async for ev in self._reset_from_csv(files):
+            yield ev
+
+    @rx.event
+    async def reset_from_text(self):
+        async for ev in self._from_paste(self._reset_from_csv, "pin", columns=("email",), flatten=True,
+                                         header_if=no_at):
+            yield ev
+
+    async def _reset_from_csv(self, files: list[rx.UploadFile]):
         if not files:
             yield rx.toast.error("Choose a CSV file first.")
             return
@@ -439,7 +450,7 @@ class VoicemailState(WebexSession, RunMixin):
                 return
             log.info(f"Location {name}: {len(people)} user(s)")
             if not people:
-                yield rx.toast.error("No Calling users were found in that location.")
+                yield rx.toast.error("No users were found in that location.")
                 return
             self.report_title = name
             async for ev in self._report(client, people, log):

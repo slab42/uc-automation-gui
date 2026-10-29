@@ -299,30 +299,159 @@ def _agents_card(S, noun: str, upload_id: str, agent_help: str) -> rx.Component:
 def call_queues() -> rx.Component:
     S = CallQueuesState
     creating = S.mode == "create"
+    plan = rx.card(
+        rx.vstack(
+            rx.hstack(rx.heading("Migrate to a hunt group", size="4"),
+                      _migration_info(_QUEUE_MIGRATION_MAP, "Call queue to hunt group mappings"),
+                      align="center", spacing="2"),
+            rx.text("Reads the selected call queue, saves a JSON backup (also downloaded by your browser), deletes "
+                    "the call queue (this frees its name, number and extension) and creates a hunt group with the "
+                    "same agents.", size="2", color="var(--gray-11)"),
+            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("search", size=16)), "Review",
+                      on_click=S.review_migration, disabled=S.busy | ~S.has_selection),
+            rx.cond(
+                S.plan_for == S.selected_id,
+                rx.vstack(
+                    rx.foreach(S.plan_lines, lambda t: rx.text(t, size="2")),
+                    rx.cond(
+                        S.plan_notes.length() > 0,
+                        rx.callout.root(
+                            rx.callout.icon(rx.icon("triangle-alert")),
+                            rx.callout.text(
+                                rx.text("Not migrated (no hunt group equivalent):", weight="bold"),
+                                rx.foreach(S.plan_notes, lambda t: rx.text("- " + t, size="2")),
+                            ),
+                            color_scheme="amber", width="100%",
+                        ),
+                        rx.fragment(),
+                    ),
+                    rx.button(rx.icon("arrow-right-left", size=16), "Migrate...", color_scheme="red",
+                              on_click=S.set_confirm_open(True), disabled=S.busy),
+                    spacing="3", align="start", width="100%",
+                ),
+                rx.fragment(),
+            ),
+            spacing="3", align="start", width="100%",
+        ),
+        size="3", width="100%",
+    )
+    confirm = rx.alert_dialog.root(
+        rx.alert_dialog.content(
+            rx.alert_dialog.title("Delete the call queue and create the hunt group?"),
+            rx.alert_dialog.description(
+                "The call queue " + S.selected_label + " is deleted first. If creating the hunt group then fails, "
+                "the call queue is gone. Its settings are in the JSON backup saved in webui/logs and downloaded to "
+                "your browser. Use Create > Restore a call queue from JSON."),
+            rx.hstack(
+                rx.button("Cancel", variant="soft", color_scheme="gray", on_click=S.set_confirm_open(False)),
+                rx.button("Delete and migrate", color_scheme="red", on_click=S.run_migration),
+                spacing="3", justify="end", margin_top="1rem",
+            ),
+        ),
+        open=S.confirm_open,
+    )
     return webex_page(
         "Call Queues",
         need_login(rx.vstack(
             rx.segmented_control.root(
                 rx.segmented_control.item("Create", value="create"),
                 rx.segmented_control.item("Update Agents", value="agents"),
+                rx.segmented_control.item("Migrate To Hunt Group", value="migrate"),
                 value=S.mode, on_change=S.set_mode,
             ),
             rx.cond(
                 creating,
-                _create_card(S, "call queue", "queue_create_upload",
-                             "Support,Dallas,Support,Queue,12704435531,5000,CIRCULAR,12704439999,"
-                             "jsmith@example.com,12704435532\n",
-                             "An agent is an email address, or the phone number of a virtual line. Agents that "
-                             "cannot be found are skipped and listed in the result."),
+                rx.vstack(
+                    _create_card(S, "call queue", "queue_create_upload",
+                                 "Support,Dallas,Support,Queue,12704435531,5000,CIRCULAR,12704439999,"
+                                 "jsmith@example.com,12704435532\n",
+                                 "An agent is an email address, or the phone number of a virtual line. Agents that "
+                                 "cannot be found are skipped and listed in the result."),
+                    _restore_card(S, "call queue", "queue_restore_upload", "Migrate to Hunt Group"),
+                    spacing="4", width="100%",
+                ),
                 rx.vstack(
                     picker(S, "Call queues"),
-                    _agents_card(S, "call queue", "queue_agents_upload", "Agents must be email addresses."),
+                    rx.cond(
+                        S.mode == "agents",
+                        _agents_card(S, "call queue", "queue_agents_upload", "Agents must be email addresses."),
+                        plan,
+                    ),
                     spacing="4", width="100%",
                 ),
             ),
             run_results(S, "Call queue"),
+            confirm,
             spacing="4", align="start", width="100%",
         )),
+    )
+
+
+_MIGRATION_MAP = [
+    ("Name, number, extension, first/last name", "Same values (hunt group is deleted first to free them)"),
+    ("Language, time zone, enabled", "Same values"),
+    ("Policy (circular, regular, simultaneous, uniform, weighted)", "Same policy"),
+    ("Agents", "Same agents, all joined"),
+    ("Distinctive ring", "Same settings"),
+    ("Next agent after N rings", "Call bounce, same ring count"),
+    ("No-answer forward after N rings to a number", "Overflow: transfer to the number after N x 6 seconds"),
+    ("Busy redirect", "Not migrated"),
+    ("Business continuity", "Not migrated"),
+    ("Alternate numbers", "Not migrated"),
+    ("(none)", "Queue size 10, busy treatment on full, routing type priority based"),
+]
+
+
+_QUEUE_MIGRATION_MAP = [
+    ("Name, number, extension, first/last name", "Same values (queue is deleted first to free them)"),
+    ("Language, time zone, enabled", "Same values"),
+    ("Policy (circular, regular, simultaneous, uniform, weighted)", "Same policy"),
+    ("Agents", "Same agents"),
+    ("Call bounce after N rings", "Next agent after N rings (2 to 20)"),
+    ("Overflow: transfer to a number after a wait", "No-answer forward to the number after wait / 6 rings (2 to 20)"),
+    ("Queue size, other overflow actions", "Not migrated"),
+    ("Welcome, wait, comfort, whisper messages, music on hold", "Not migrated"),
+    ("Skill based routing, agent skill levels", "Not migrated"),
+    ("Alternate numbers", "Not migrated"),
+]
+
+
+def _migration_info(rows: list | None = None, title: str = "Hunt group to call queue mappings") -> rx.Component:
+    return rx.popover.root(
+        rx.popover.trigger(rx.icon_button(rx.icon("info", size=16), variant="ghost", size="1",
+                                          aria_label="Migration mappings")),
+        rx.popover.content(
+            rx.vstack(
+                rx.text(title, weight="bold", size="2"),
+                rx.table.root(
+                    rx.table.header(rx.table.row(rx.table.column_header_cell("Hunt group"),
+                                                 rx.table.column_header_cell("Call queue"))),
+                    rx.table.body(*[rx.table.row(rx.table.cell(a), rx.table.cell(b)) for a, b in (rows or _MIGRATION_MAP)]),
+                    size="1",
+                ),
+                spacing="2",
+            ),
+            max_width="38rem",
+        ),
+    )
+
+
+def _restore_card(S, noun: str, upload_id: str, migrate_name: str) -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.heading(f"Restore a {noun} from JSON", size="4"),
+            rx.text(f"Upload a backup written by {migrate_name} (saved in webui/logs and also downloaded by "
+                    f"your browser). The {noun} is re-created in its original location with the same name, "
+                    "number, extension, settings and agents. The number and extension must be free.",
+                    size="2", color="var(--gray-11)"),
+            file_dropzone(upload_id, {"application/json": [".json"]},
+                          "Drop a JSON backup here or click to choose"),
+            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("history", size=16)), f"Restore {noun}",
+                      on_click=S.restore_from_json(rx.upload_files(upload_id=upload_id)),
+                      disabled=S.busy),
+            spacing="3", align="start", width="100%",
+        ),
+        size="3", width="100%",
     )
 
 
@@ -330,7 +459,7 @@ def hunt_groups() -> rx.Component:
     S = HuntGroupsState
     plan = rx.card(
         rx.vstack(
-            rx.heading("Migrate to a call queue", size="4"),
+            rx.hstack(rx.heading("Migrate to a call queue", size="4"), _migration_info(), align="center", spacing="2"),
             rx.text("Reads the selected hunt group, saves a JSON backup, deletes the hunt group (this frees its "
                     "name, number and extension), creates a call queue with the same settings and joins the "
                     "agents.", size="2", color="var(--gray-11)"),
@@ -367,7 +496,7 @@ def hunt_groups() -> rx.Component:
             rx.alert_dialog.title("Delete the hunt group and create the call queue?"),
             rx.alert_dialog.description(
                 "The hunt group " + S.selected_label + " is deleted first. If creating the queue then fails, the "
-                "hunt group is gone and has to be re-created from the JSON backup saved in webui/logs."),
+                "hunt group is gone and has to be re-created from the JSON backup saved in webui/logs (also downloaded to your browser). Use Create > Restore a hunt group from JSON."),
             rx.hstack(
                 rx.button("Cancel", variant="soft", color_scheme="gray", on_click=S.set_confirm_open(False)),
                 rx.button("Delete and migrate", color_scheme="red", on_click=S.run_migration),
@@ -387,11 +516,15 @@ def hunt_groups() -> rx.Component:
             ),
             rx.cond(
                 S.mode == "create",
-                _create_card(S, "hunt group", "hunt_create_upload",
-                             "Sales,Dallas,Sales,Group,12704435541,6000,CIRCULAR,12704439999,"
-                             "jsmith@example.com,6001\n",
-                             "An agent is an email address, or an extension. Agents that cannot be found are "
-                             "skipped and listed in the result."),
+                rx.vstack(
+                    _create_card(S, "hunt group", "hunt_create_upload",
+                                 "Sales,Dallas,Sales,Group,12704435541,6000,CIRCULAR,12704439999,"
+                                 "jsmith@example.com,6001\n",
+                                 "An agent is an email address, or an extension. Agents that cannot be found are "
+                                 "skipped and listed in the result."),
+                    _restore_card(S, "hunt group", "hunt_restore_upload", "Migrate to Call Queue"),
+                    spacing="4", width="100%",
+                ),
                 rx.vstack(
                     picker(S, "Hunt groups"),
                     rx.cond(

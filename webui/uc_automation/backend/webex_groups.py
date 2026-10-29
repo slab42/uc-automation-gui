@@ -255,13 +255,24 @@ def create_group(c: WebexClient, kind: str, row: dict, cache: dict[str, str]) ->
 
 # --- Migrate hunt group to call queue ---
 
+SECONDS_PER_RING = 6  # Webex rings for about 6 seconds
+
+
+def overflow_from_no_answer(na: dict) -> dict:
+    """Queue overflow that approximates a hunt group no-answer forward: after rings x 6 s waiting, transfer."""
+    overflow = {"action": "PERFORM_BUSY_TREATMENT"}
+    if na.get("forwardEnabled") and na.get("destination"):
+        overflow = {"action": "TRANSFER_TO_PHONE_NUMBER", "transferNumber": na["destination"],
+                    "overflowAfterWaitEnabled": True,
+                    "overflowAfterWaitTime": max(1, int(na.get("numberOfRings") or 15)) * SECONDS_PER_RING}
+    return overflow
+
+
 # Hunt group settings with no Call Queue create equivalent
 def unmapped_notes(hg: dict) -> list[str]:
     policies = hg.get("callPolicies") or {}
     na = policies.get("noAnswer") or {}
     notes = []
-    if na.get("forwardEnabled"):
-        notes.append(f"No-answer forward after {na.get('numberOfRings')} rings to {na.get('destination')}")
     for key, label in (("busyRedirect", "Busy redirect"), ("businessContinuityRedirect", "Business continuity")):
         if (policies.get(key) or {}).get("enabled"):
             notes.append(f"{label}: {json.dumps(policies[key])}")
@@ -282,7 +293,7 @@ def queue_body_from_hunt_group(hg: dict) -> dict:
         call_policies["distinctiveRing"] = hg["distinctiveRing"]
     body = {
         "name": hg["name"], "callPolicies": call_policies,
-        "queueSettings": {"queueSize": 10, "overflow": {"action": "PERFORM_BUSY_TREATMENT"}},
+        "queueSettings": {"queueSize": 10, "overflow": overflow_from_no_answer(na)},
         "allowAgentJoinEnabled": True, "phoneNumberForOutgoingCallsEnabled": True,
         "agents": [{"id": a["id"]} for a in hg.get("agents") or []],
     }
@@ -290,6 +301,149 @@ def queue_body_from_hunt_group(hg: dict) -> dict:
         if hg.get(key) not in (None, ""):
             body[key] = hg[key]
     return body
+
+
+# --- Migrate call queue to hunt group ---
+
+HG_MIN_RINGS, HG_MAX_RINGS = 2, 20
+
+
+def queue_unmapped_notes(q: dict) -> list[str]:
+    """Queue settings a hunt group cannot hold."""
+    notes = []
+    settings = q.get("queueSettings") or {}
+    overflow = settings.get("overflow") or {}
+    if overflow.get("action") and overflow["action"] != "PERFORM_BUSY_TREATMENT" and not _overflow_transfer(q):
+        notes.append(f"Overflow action {overflow['action']}")
+    wait = _overflow_transfer(q)
+    if wait:
+        rings = round(wait[1] / SECONDS_PER_RING)
+        if not HG_MIN_RINGS <= rings <= HG_MAX_RINGS:
+            notes.append(f"Overflow wait of {wait[1]} s is about {rings} rings; hunt groups allow "
+                         f"{HG_MIN_RINGS} to {HG_MAX_RINGS}, so it is set to {_clamp_rings(rings)}")
+    if settings.get("queueSize"):
+        notes.append(f"Queue size {settings['queueSize']} (a hunt group has no waiting queue)")
+    for key, label in (("welcomeMessage", "Welcome message"), ("waitMessage", "Wait message"),
+                       ("comfortMessage", "Comfort message"), ("mohMessage", "Music on hold"),
+                       ("whisperMessage", "Whisper message"), ("comfortMessageBypass", "Comfort message bypass")):
+        if (settings.get(key) or {}).get("enabled") or (settings.get(key) or {}).get("normalSource", {}).get("enabled"):
+            notes.append(label)
+    if (q.get("callPolicies") or {}).get("routingType") == "SKILL_BASED":
+        notes.append("Skill based routing and agent skill levels")
+    if any(a.get("skillLevel", 1) != 1 for a in q.get("agents") or []):
+        notes.append("Agent skill levels")
+    if (q.get("alternateNumberSettings") or {}).get("alternateNumbers"):
+        notes.append(f"Alternate numbers: {json.dumps(q['alternateNumberSettings'])}")
+    return notes
+
+
+def _overflow_transfer(q: dict) -> tuple[str, int] | None:
+    """(number, wait seconds) when the queue transfers to a number after waiting, else None."""
+    ov = (q.get("queueSettings") or {}).get("overflow") or {}
+    if ov.get("action") == "TRANSFER_TO_PHONE_NUMBER" and ov.get("transferNumber") and ov.get("overflowAfterWaitEnabled"):
+        return ov["transferNumber"], int(ov.get("overflowAfterWaitTime") or 0)
+    return None
+
+
+def _clamp_rings(rings: int) -> int:
+    return max(HG_MIN_RINGS, min(HG_MAX_RINGS, rings))
+
+
+def hunt_group_body_from_queue(q: dict) -> dict:
+    policies = q.get("callPolicies") or {}
+    bounce = policies.get("callBounce") or {}
+    no_answer = {"nextAgentEnabled": bool(bounce.get("callBounceEnabled", False)),
+                 "nextAgentRings": _clamp_rings(int(bounce.get("callBounceMaxRings") or 3)),
+                 "forwardEnabled": False}
+    transfer = _overflow_transfer(q)
+    if transfer:
+        no_answer.update(forwardEnabled=True, destination=transfer[0],
+                         numberOfRings=_clamp_rings(round(transfer[1] / SECONDS_PER_RING)),
+                         destinationVoicemailEnabled=False)
+    call_policies = {"policy": policies.get("policy", "CIRCULAR"), "waitingEnabled": False, "noAnswer": no_answer}
+    body = {"name": q["name"], "callPolicies": call_policies,
+            "agents": [{"id": a["id"]} for a in q.get("agents") or []]}
+    for key in ("phoneNumber", "extension", "firstName", "lastName", "languageCode", "timeZone", "enabled"):
+        if q.get(key) not in (None, ""):
+            body[key] = q[key]
+    return body
+
+
+def read_queue(c: WebexClient, group: dict[str, str]) -> dict:
+    q = c.call("GET", f"{location_path(group['locationId'])}/queues/{group['id']}")
+    q.setdefault("name", group["name"])
+    return q
+
+
+def migrate_queue(c: WebexClient, group: dict[str, str], q: dict, backup_path: str,
+                  note: Callable[[str], None]) -> str:
+    """Delete the call queue (frees its number and extension), then create the hunt group with the same agents.
+
+    The caller writes the backup JSON first. If the hunt group create fails the queue is already gone.
+    """
+    loc = location_path(group["locationId"])
+    c.call("DELETE", f"{loc}/queues/{group['id']}")
+    note(f"Call queue deleted: {q['name']}")
+    try:
+        result = c.call("POST", f"{loc}/huntGroups", body=hunt_group_body_from_queue(q))
+    except WebexError as e:
+        raise WebexError(f"Hunt group creation failed ({e}). The call queue is already deleted; "
+                         f"the settings are in the backup {backup_path}") from e
+    note(f"Hunt group created: {q['name']} ({result.get('id', '')})")
+    return f"Call queue replaced by a hunt group with {len(q.get('agents') or [])} agent(s)."
+
+
+# Read-only keys in a hunt group GET that the create call does not accept
+_HG_READ_ONLY = {"id", "location", "locationId", "locationName", "toPhoneNumber"}
+
+
+def backup_document(group: dict[str, str], hg: dict) -> dict:
+    """Hunt group settings plus where it lived, so the JSON can be restored on its own."""
+    return {**hg, "location": group["location"], "locationId": group["locationId"]}
+
+
+def hunt_group_body_from_backup(doc: dict) -> dict:
+    body = {k: v for k, v in doc.items() if k not in _HG_READ_ONLY and v not in (None, "")}
+    body["agents"] = [{"id": a["id"]} for a in doc.get("agents") or [] if a.get("id")]
+    return body
+
+
+def restore_hunt_group(c: WebexClient, doc: dict, cache: dict[str, str]) -> str:
+    """Re-create a hunt group from a JSON backup written by the migration."""
+    if not isinstance(doc, dict) or not doc.get("name"):
+        raise WebexError("This is not a hunt group backup (no name).")
+    if "queueSettings" in doc:
+        raise WebexError("This is a call queue backup. Restore it on the Call Queues page.")
+    location_id = doc.get("locationId") or (
+        _location_id(c, doc["location"], cache) if doc.get("location") else "")
+    if not location_id:
+        raise WebexError("The backup has no location.")
+    result = c.call("POST", f"{location_path(location_id)}/huntGroups", body=hunt_group_body_from_backup(doc))
+    return f"Restored in {doc.get('location', location_id)} with {len(doc.get('agents') or [])} agent(s) " \
+           f"({result.get('id', '')[-12:]})."
+
+
+def queue_body_from_backup(doc: dict) -> dict:
+    body = {k: v for k, v in doc.items() if k not in _HG_READ_ONLY and v not in (None, "")}
+    body["agents"] = [{k: a[k] for k in ("id", "skillLevel", "joinEnabled") if k in a}
+                      for a in doc.get("agents") or [] if a.get("id")]
+    return body
+
+
+def restore_queue(c: WebexClient, doc: dict, cache: dict[str, str]) -> str:
+    """Re-create a call queue from a JSON backup written by the migration to a hunt group."""
+    if not isinstance(doc, dict) or not doc.get("name"):
+        raise WebexError("This is not a call queue backup (no name).")
+    if "queueSettings" not in doc:
+        raise WebexError("This is not a call queue backup (no queue settings). Hunt group backups are restored "
+                         "on the Hunt Groups page.")
+    location_id = doc.get("locationId") or (
+        _location_id(c, doc["location"], cache) if doc.get("location") else "")
+    if not location_id:
+        raise WebexError("The backup has no location.")
+    result = c.call("POST", f"{location_path(location_id)}/queues", body=queue_body_from_backup(doc))
+    return (f"Restored in {doc.get('location', location_id)} with {len(doc.get('agents') or [])} agent(s) "
+            f"({result.get('id', '')[-12:]}).")
 
 
 def read_hunt_group(c: WebexClient, group: dict[str, str]) -> dict:
