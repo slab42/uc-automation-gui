@@ -19,7 +19,7 @@ PLATFORMS = [
     Platform("cucm", "CUCM", "Cisco Unified Communications Manager", "phone", available=True),
     Platform("cuc", "CUC", "Cisco Unity Connection", "voicemail"),
     Platform("cube", "CUBE", "Cisco Unified Border Element", "router"),
-    Platform("webex", "Webex", "Webex Calling / Control Hub", "message-square"),
+    Platform("webex", "Webex", "Webex Calling / Control Hub", "message-square", available=True),
     Platform("redsky", "RedSky", "RedSky E911 location management", "map-pin"),
     Platform("tools", "Tools", "Utilities (log search, etc.)", "wrench"),
 ]

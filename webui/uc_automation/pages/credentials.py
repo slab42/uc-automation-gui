@@ -164,8 +164,17 @@ def _webex_status() -> rx.Component:
                         align="center",
                         spacing="2",
                     ),
-                    rx.text("Access token expires " + WebexState.expires_text, size="2", color="var(--gray-11)"),
-                    rx.text("Renewable until " + WebexState.refresh_expires_text, size="2", color="var(--gray-11)"),
+                    rx.cond(
+                        WebexState.info["auth_mode"] == "token",
+                        rx.text("Pasted token. Expiry is unknown, so it is checked with Webex on each use.",
+                                size="2", color="var(--gray-11)"),
+                        rx.fragment(
+                            rx.text("Access token expires " + WebexState.expires_text, size="2",
+                                    color="var(--gray-11)"),
+                            rx.text("Renewable until " + WebexState.refresh_expires_text, size="2",
+                                    color="var(--gray-11)"),
+                        ),
+                    ),
                     rx.cond(
                         WebexState.message != "",
                         rx.text(WebexState.message, size="2", color="var(--gray-11)"),
@@ -180,6 +189,7 @@ def _webex_status() -> rx.Component:
                 rx.button(
                     rx.icon("log-in", size=16), "Log in with Webex",
                     on_click=WebexState.login, disabled=~WebexState.has_client,
+                    display=rx.cond(WebexState.mode == "oauth", "inline-flex", "none"),
                 ),
                 rx.cond(
                     WebexState.info["has_token"] == "yes",
@@ -257,19 +267,87 @@ def _webex_form() -> rx.Component:
     )
 
 
+def _webex_org() -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.heading("Customer", size="4"),
+            _field(
+                "Org ID",
+                rx.hstack(
+                    rx.input(value=WebexState.form_org_id, on_change=WebexState.set_form_org_id, width="100%",
+                             placeholder="Webex organization ID of the customer"),
+                    rx.button("Save", variant="soft", on_click=WebexState.save_org),
+                    width="100%",
+                ),
+                "Used with either sign-in method. Find it in Control Hub under Account.",
+            ),
+            spacing="3",
+            align="start",
+            width="100%",
+        ),
+        size="3",
+        width="100%",
+    )
+
+
+def _webex_token_form() -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.heading("Bearer token", size="4"),
+            rx.text(
+                "Copy your personal access token from developer.webex.com/docs/getting-started. "
+                "It expires after about 12 hours and cannot be renewed here.",
+                size="2", color="var(--gray-11)",
+            ),
+            _field(
+                "Token",
+                rx.input(
+                    type="password",
+                    key=WebexState.token_key.to_string(),
+                    on_change=WebexState.set_pasted_token,
+                    auto_complete="new-password",
+                    width="100%",
+                ),
+                "Checked with Webex, stored in .env/credentials.env and never shown again.",
+            ),
+            rx.button(
+                rx.cond(WebexState.checking, rx.spinner(size="2"), rx.icon("key-round", size=16)),
+                "Use token", on_click=WebexState.use_token, disabled=WebexState.checking,
+            ),
+            spacing="4",
+            align="start",
+            width="100%",
+        ),
+        size="3",
+        width="100%",
+    )
+
+
 def _webex_tab() -> rx.Component:
-    return rx.grid(
-        _webex_form(),
-        _webex_status(),
-        columns=rx.breakpoints(initial="1", lg="2"),
+    return rx.vstack(
+        _webex_org(),
+        rx.segmented_control.root(
+            rx.segmented_control.item("Bearer Token", value="token"),
+            rx.segmented_control.item("Log in with Webex (OAuth)", value="oauth"),
+            value=WebexState.mode,
+            on_change=WebexState.set_mode,
+        ),
+        rx.grid(
+            rx.cond(WebexState.mode == "token", _webex_token_form(), _webex_form()),
+            _webex_status(),
+            columns=rx.breakpoints(initial="1", lg="2"),
+            spacing="5",
+            width="100%",
+        ),
         spacing="5",
+        align="start",
         width="100%",
     )
 
 
 def webex_callback() -> rx.Component:
     return page(
-        "Webex login",
+        "Webex - Login",
         rx.vstack(
             rx.text(WebexState.callback_message),
             rx.link("Back to Credentials", href="/credentials"),

@@ -26,6 +26,11 @@ class WebexState(rx.State):
     _client_secret: str = ""
     secret_key: int = 0
 
+    form_org_id: str = ""
+    mode: str = "token"
+    _pasted_token: str = ""
+    token_key: int = 0
+
     checking: bool = False
     logged_in: bool = False
     message: str = ""
@@ -56,6 +61,18 @@ class WebexState(rx.State):
         self.form_client_id = value.strip()
 
     @rx.event
+    def set_form_org_id(self, value: str):
+        self.form_org_id = value.strip()
+
+    @rx.event
+    def set_mode(self, value: str | list[str]):
+        self.mode = value if isinstance(value, str) else value[0]
+
+    @rx.event
+    def set_pasted_token(self, value: str):
+        self._pasted_token = value
+
+    @rx.event
     def set_form_scopes(self, value: str):
         self.form_scopes = value
 
@@ -63,11 +80,13 @@ class WebexState(rx.State):
         self.info = webex_auth.public_status()
         self.form_client_id = self.info["client_id"]
         self.form_scopes = self.info["scopes"]
+        self.form_org_id = self.info["org_id"]
 
     @rx.event
     async def on_page_load(self):
         """Credentials page: load saved settings, then check the token (renewing it if needed)."""
         self._reload()
+        self.mode = self.info["auth_mode"] if self.info["has_token"] == "yes" else "token"
         if self.info["has_token"] == "yes":
             async for ev in self.check_token():
                 yield ev
@@ -103,6 +122,41 @@ class WebexState(rx.State):
         self.secret_key += 1
         self._reload()
         return rx.toast.success("Saved")
+
+    @rx.event
+    def save_org(self):
+        log = OpLog("Save Webex org", "webex-org")
+        try:
+            log.info(f"Saving Webex org id {self.form_org_id}")
+            webex_auth.save_org(self.form_org_id)
+        finally:
+            log.close()
+        self._reload()
+        return rx.toast.success("Org ID saved" if self.form_org_id else "Org ID cleared")
+
+    @rx.event
+    async def use_token(self):
+        self.checking = True
+        yield
+        log = OpLog("Save Webex bearer token", "webex-token")
+        try:
+            try:
+                user = await asyncio.to_thread(webex_auth.save_pasted_token, self._pasted_token)
+            except WebexAuthError as e:
+                log.error(str(e))
+                self.checking = False
+                yield rx.toast.error(str(e))
+                return
+            log.info(f"Bearer token accepted for {user}")
+        finally:
+            log.close()
+        self._pasted_token = ""
+        self.token_key += 1
+        self._reload()
+        self.logged_in = True
+        self.message = "Token is valid."
+        self.checking = False
+        yield rx.toast.success(f"Token accepted for {user}")
 
     @rx.event
     def login(self):

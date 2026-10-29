@@ -107,4 +107,5 @@ def menubar(on_connection_change=None) -> rx.Component:
 
 
 def cucm_page(title: str, *children: rx.Component, on_connection_change=None) -> rx.Component:
-    return page(title, *children, subnav=menubar(on_connection_change))
+    heading = title if title == "CUCM" else f"CUCM - {title}"
+    return page(heading, *children, subnav=menubar(on_connection_change))

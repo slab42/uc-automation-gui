@@ -1,0 +1,2 @@
+name,location,firstName,lastName,phoneNumber,extension,policy,destination,agent1,agent2,agent3
+Sales,Dallas,Sales,Group,12704435541,6000,CIRCULAR,12704439999,jsmith@example.com,6001,adoe@example.com

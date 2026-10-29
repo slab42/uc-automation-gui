@@ -1,0 +1,3 @@
+locationId,phoneNumber,numberType,numberUsageType,state
+Location1,12704435531,DID,NONE,ACTIVE
+Location2,12704435532,DID,NONE,ACTIVE

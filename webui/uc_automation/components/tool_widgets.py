@@ -12,20 +12,24 @@ def field(label: str, control: rx.Component, hint: str = "") -> rx.Component:
     )
 
 
-def csv_dropzone(upload_id: str) -> rx.Component:
+def file_dropzone(upload_id: str, accept: dict, label: str) -> rx.Component:
     return rx.vstack(
         rx.upload(
             rx.vstack(
                 rx.icon("upload", size=22, color="var(--gray-10)"),
-                rx.text("Drop a CSV here or click to choose", size="2"),
+                rx.text(label, size="2"),
                 align="center", spacing="1",
             ),
-            id=upload_id, accept={"text/csv": [".csv"]}, max_files=1, multiple=False,
+            id=upload_id, accept=accept, max_files=1, multiple=False,
             padding="1.25rem", border="1px dashed var(--gray-7)", border_radius="var(--radius-3)", width="100%",
         ),
         rx.foreach(rx.selected_files(upload_id), lambda f: rx.badge(f, variant="soft")),
         spacing="2", align="start", width="100%",
     )
+
+
+def csv_dropzone(upload_id: str) -> rx.Component:
+    return file_dropzone(upload_id, {"text/csv": [".csv"]}, "Drop a CSV here or click to choose")
 
 
 def code_block(text: str) -> rx.Component:
@@ -75,4 +79,20 @@ def run_results(S, item_header: str) -> rx.Component:
             rx.fragment(),
         ),
         spacing="3", align="start", width="100%",
+    )
+
+
+def confirm_dialog(S, title: str, description, action: str, on_confirm) -> rx.Component:
+    """Red confirm dialog driven by S.confirm_open / S.set_confirm_open. `description` may be a Var."""
+    return rx.alert_dialog.root(
+        rx.alert_dialog.content(
+            rx.alert_dialog.title(title),
+            rx.alert_dialog.description(description),
+            rx.hstack(
+                rx.button("Cancel", variant="soft", color_scheme="gray", on_click=S.set_confirm_open(False)),
+                rx.button(action, color_scheme="red", on_click=on_confirm),
+                spacing="3", justify="end", margin_top="1rem",
+            ),
+        ),
+        open=S.confirm_open,
     )

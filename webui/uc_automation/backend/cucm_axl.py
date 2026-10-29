@@ -14,6 +14,7 @@ import urllib3
 from requests.auth import HTTPBasicAuth
 
 from .cucm_connections import CucmConnection
+from .errors import UserError
 from .paths import CUCM_SCHEMA_DIR
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -21,7 +22,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 _VERSION_RE = re.compile(r"^(\d+)\.(\d+)")
 
 
-class AxlError(Exception):
+class AxlError(UserError):
     pass
 
 

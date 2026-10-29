@@ -7,7 +7,8 @@ exchanged for an access token (about 14 days) and a refresh token (about 90 days
 token renews the access token without another login.
 
 Keys: client_id, client_secret, scopes, access_token, refresh_token, expires_at, refresh_expires_at
-(epoch seconds), user. Secrets never leave the backend: `public_status` only reports whether they are set.
+(epoch seconds), user, org_id (the customer's Webex org id, shared by both modes), auth_mode ("oauth", or "token"
+when a bearer token was pasted from developer.webex.com; those have no refresh token and no known expiry). Secrets never leave the backend: `public_status` only reports whether they are set.
 """
 
 import secrets
@@ -18,6 +19,7 @@ from urllib.parse import urlencode
 import requests
 
 from . import ini_store
+from .errors import UserError
 from .paths import CREDENTIALS_PATH
 
 SECTION = "WEBEX:default"
@@ -29,7 +31,7 @@ DEFAULT_SCOPES = (
     "spark-admin:people_read spark-admin:people_write "
     "spark-admin:telephony_config_read spark-admin:telephony_config_write "
     "spark-admin:workspaces_read spark-admin:workspaces_write "
-    "spark-admin:devices_read spark-admin:devices_write"
+    "spark-admin:devices_read spark-admin:devices_write spark-admin:licenses_read identity:groups_rw"
 )
 EXPIRY_MARGIN = 120  # renew when fewer than this many seconds remain
 TIMEOUT = 20
@@ -39,7 +41,7 @@ _state_lock = threading.Lock()
 _STATE_TTL = 600
 
 
-class WebexAuthError(Exception):
+class WebexAuthError(UserError):
     """A problem the user can act on. The message is shown as is."""
 
 
@@ -134,6 +136,40 @@ def complete_login(code: str, state: str) -> str:
     tok = _token_request({"grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT_URI})
     user = _whoami(tok["access_token"])
     _store_tokens(tok, user)
+    ini_store.upsert_section(CREDENTIALS_PATH, SECTION, {"auth_mode": "oauth"})
+    return user
+
+
+def save_org(org_id: str) -> None:
+    ini_store.upsert_section(CREDENTIALS_PATH, SECTION, {"org_id": org_id.strip()})
+
+
+def get_org_id() -> str:
+    """The customer org id to use in API calls. Raises WebexAuthError when none is saved."""
+    org = _config().get("org_id", "")
+    if not org:
+        raise WebexAuthError("No Webex Org ID saved. Use Credentials > Webex.")
+    return org
+
+
+def saved_org_id() -> str:
+    """The saved customer org id, or '' when none (calls then go to the token owner's own org)."""
+    return _config().get("org_id", "")
+
+
+def save_pasted_token(token: str) -> str:
+    """Store a bearer token copied from developer.webex.com. Returns the token owner."""
+    token = token.strip().removeprefix("Bearer ").strip()
+    if not token:
+        raise WebexAuthError("Paste a bearer token first.")
+    try:
+        user = _whoami(token)
+    except _Invalid:
+        raise WebexAuthError("Webex rejected that token. Copy a fresh one.") from None
+    ini_store.upsert_section(CREDENTIALS_PATH, SECTION, {
+        "auth_mode": "token", "access_token": token, "refresh_token": "", "expires_at": "",
+        "refresh_expires_at": "", "user": user,
+    })
     return user
 
 
@@ -174,12 +210,16 @@ def ensure_token() -> str:
     cfg = _config()
     if not cfg.get("access_token"):
         raise WebexAuthError("Not logged in to Webex. Use Credentials > Webex.")
-    if _int(cfg.get("expires_at", "")) - time.time() > EXPIRY_MARGIN:
+    pasted = cfg.get("auth_mode") == "token"
+    exp = _int(cfg.get("expires_at", ""))
+    if pasted or not exp or exp - time.time() > EXPIRY_MARGIN:
         try:
             _whoami(cfg["access_token"])
             return cfg["access_token"]
         except _Invalid:
-            pass  # revoked or otherwise dead: fall through to a refresh
+            if pasted:
+                raise WebexAuthError("The pasted token is no longer valid. Paste a new one.") from None
+            # revoked or otherwise dead: fall through to a refresh
     _refresh()
     token = _config()["access_token"]
     _whoami(token)
@@ -214,6 +254,8 @@ def public_status() -> dict[str, str]:
         "has_secret": "yes" if c.get("client_secret") else "no",
         "has_token": "yes" if c.get("access_token") else "no",
         "user": c.get("user", ""),
+        "org_id": c.get("org_id", ""),
+        "auth_mode": c.get("auth_mode", "oauth"),
         "expires_at": c.get("expires_at", ""),
         "refresh_expires_at": c.get("refresh_expires_at", ""),
     }
