@@ -23,10 +23,11 @@ GROUPS = [
          "Find mailboxes with no data and delete their user accounts after review."),
     ]),
     ("Call Handlers", [
-        ("Map", MAP, "network", "Build a call tree workbook (Excel) from the live system or from the List CSVs."),
-        ("List", LIST_HANDLERS, "list",
-         "Export call handlers, or non-subscriber handlers with every menu entry, to CSV."),
-        ("Delete", DELETE_HANDLERS, "trash-2", "Delete call handlers listed in a CSV, after review."),
+        ("Map", MAP, "network", "Build a call tree workbook (Excel) from the live system or from the Search CSVs."),
+        ("Search", LIST_HANDLERS, "search",
+         "Search call handlers, delete them, or export them and their menu entries to CSV."),
+        ("Bulk Delete", DELETE_HANDLERS, "trash-2",
+         "Delete call handlers listed in a pasted list or CSV, after review."),
     ]),
 ]
 

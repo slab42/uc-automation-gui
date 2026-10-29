@@ -75,13 +75,14 @@ def all_status(client: CucClient) -> tuple[list[dict[str, str]], list[str]]:
     return rows, [e for _, e in fetched if e]
 
 
-def filter_rows(rows: list[dict[str, str]], text: str, begins: bool) -> list[dict[str, str]]:
-    """Rows whose extension, alias or display name begins with / contains the text, case-insensitive."""
+def filter_rows(rows: list[dict[str, str]], text: str, begins: bool,
+                fields: tuple[str, ...] = ("dtmfAccessId", "alias", "displayName")) -> list[dict[str, str]]:
+    """Rows where one of `fields` begins with / contains the text, case-insensitive."""
     needle = text.strip().casefold()
     if not needle:
         return rows
     match = (lambda v: v.casefold().startswith(needle)) if begins else (lambda v: needle in v.casefold())
-    return [r for r in rows if any(match(r[k]) for k in ("dtmfAccessId", "alias", "displayName"))]
+    return [r for r in rows if any(match(r[k]) for k in fields)]
 
 
 def usage_row(usage: dict) -> dict[str, str]:

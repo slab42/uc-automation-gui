@@ -7,6 +7,7 @@ import reflex as rx
 
 from ..backend import cuc_api, cuc_handlers as h
 from .cuc import CucRun, CucState
+from .cuc_users import AllRows
 from .webex_routing import PasteMixin
 
 PREVIEW_LIMIT = 300
@@ -16,99 +17,101 @@ def _stamp() -> str:
     return datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
 
 
-class ListHandlersState(CucState):
-    """List non-subscriber call handlers, optionally with every menu entry."""
+class ListHandlersState(CucState, AllRows):
+    """Every call handler (system and subscriber handlers left out), searchable, with Export Selected."""
 
-    mode: str = "handlers"          # handlers | menu
-    search: str = ""
-    loading: bool = False
-    error: str = ""
-    handlers: list[dict[str, str]] = []
-    menu_rows: list[dict[str, str]] = []
+    menu_busy: bool = False
     menu_errors: list[dict[str, str]] = []
-    listed_menu: bool = False
-    listed_for: str = ""
-
-    @rx.var
-    def shown_handlers(self) -> list[dict[str, str]]:
-        return self.handlers[:PREVIEW_LIMIT]
-
-    @rx.var
-    def handlers_hidden(self) -> int:
-        return max(0, len(self.handlers) - PREVIEW_LIMIT)
-
-    @rx.var
-    def shown_menu(self) -> list[dict[str, str]]:
-        return self.menu_rows[:PREVIEW_LIMIT]
-
-    @rx.var
-    def menu_hidden(self) -> int:
-        return max(0, len(self.menu_rows) - PREVIEW_LIMIT)
+    confirm_open: bool = False
 
     @rx.event
-    def set_mode(self, value: str | list[str]):
-        self.mode = value if isinstance(value, str) else value[0]
+    def set_confirm_open(self, value: bool):
+        self.confirm_open = value
 
     @rx.event
-    def set_search(self, value: str):
-        self.search = value
-
-    @rx.event
-    async def run_list(self):
+    async def delete_selected(self):
+        """Delete the ticked call handlers, then reload the list."""
+        self.confirm_open = False
         conn = self._conn()
-        if conn is None:
-            yield rx.toast.error("Add a CUC connection first.")
+        rows = self._selected_rows()
+        if conn is None or not rows:
             return
-        menu = self.mode == "menu"
-        search = self.search.strip()
-        self.loading, self.error = True, ""
+        log = self._tool_log("Delete call handlers", "cuc-delete-handlers", conn)
+        try:
+            log.info(f"{len(rows)} call handler(s) ticked in the list")
+            client = cuc_api.CucClient(conn)
+            items = [(r["displayName"] or r["objectId"],
+                      lambda r=r: client.delete_call_handler(r["objectId"]) or "Deleted") for r in rows]
+            async for ev in self._run_items(items, "Deleting", log):
+                yield ev
+        finally:
+            log.close()
+        async for ev in self._load_all():
+            yield ev
+
+    def _read_all(self, client):
+        handlers, _ = h.list_handlers(client)
+        return handlers, []
+
+    def _load_label(self):
+        return "List call handlers", "cuc-list-handlers"
+
+    def _search_fields(self):
+        return ("displayName", "extension")
+
+    @rx.event
+    async def auto_load(self):
+        """Page load: read all call handlers, quietly skipping when there is no connection yet."""
+        if self._conn() is not None and not self.all_loading:
+            async for ev in self._load_all():
+                yield ev
+
+    @rx.event
+    def export_selected(self):
+        rows = self._selected_rows()
+        if not rows:
+            return rx.toast.error("Tick the call handlers to export first.")
+        return rx.download(data=h.to_csv(rows, h.HANDLER_FIELDS),
+                           filename=f"callhandlers-{self.all_for}-{_stamp()}.csv")
+
+    @rx.event
+    async def export_menu_entries(self):
+        """Read the menu entries of the ticked call handlers from CUC and download them as the Map input CSV."""
+        conn = self._conn()
+        rows = self._selected_rows()
+        if conn is None or not rows:
+            yield rx.toast.error("Tick the call handlers first.")
+            return
+        self.menu_busy, self.menu_errors = True, []
         yield
-        log = self._tool_log("List non-subscriber call handlers" if menu else "List call handlers",
-                             "cuc-list-handlers-menu" if menu else "cuc-list-handlers", conn)
+        log = self._tool_log("List menu entries of call handlers", "cuc-list-menu-entries", conn)
         try:
             client = cuc_api.CucClient(conn)
             try:
-                handlers, by_id = await asyncio.to_thread(h.list_handlers, client, search if menu else "")
-                log.info(f"{len(handlers)} call handler(s)" + (f" matching '{search}'" if menu and search else ""))
-                rows, errors = [], []
-                if menu:
-                    rows, errors = await asyncio.to_thread(h.collect_menu_entries, client, handlers, by_id)
-                    log.info(f"{len(rows)} menu entrie(s), {len(errors)} handler(s) failed")
-                    for e in errors:
-                        log.error(f"Menu entries failed for {e['sourceHandler']}: {e['error']}")
+                _, by_id = await asyncio.to_thread(h.list_handlers, client)
+                entries, errors = await asyncio.to_thread(h.collect_menu_entries, client, rows, by_id)
             except cuc_api.CucError as e:
-                self.error = str(e)
-                log.error(f"List failed: {e}")
+                log.error(f"Menu entries failed: {e}")
+                yield rx.toast.error(str(e))
                 return
             except Exception as e:
-                self.error = f"Unexpected error: {e}"
-                log.error(f"List failed unexpectedly: {e!r}")
+                log.error(f"Menu entries failed unexpectedly: {e!r}")
+                yield rx.toast.error(f"Unexpected error: {e}")
                 return
-            self.handlers, self.menu_rows, self.menu_errors = handlers, rows, errors
-            self.listed_menu, self.listed_for = menu, conn.name
+            log.info(f"{len(rows)} call handler(s): {len(entries)} menu entrie(s), {len(errors)} handler(s) failed")
+            for e in errors:
+                log.error(f"Menu entries failed for {e['sourceHandler']}: {e['error']}")
+            self.menu_errors = errors
+            yield rx.download(data=h.to_csv(entries, h.MENU_FIELDS),
+                              filename=f"menuentries-{self.all_for}-{_stamp()}.csv")
         finally:
             log.close()
-            self.loading = False
-
-    @rx.event
-    def download_handlers(self):
-        if not self.handlers:
-            return rx.toast.error("Nothing to export.")
-        fields = h.HANDLER_FIELDS if self.listed_menu else ["displayName", "extension", "objectId"]
-        name = "non_subscriber_callhandlers" if self.listed_menu else "callhandlers"
-        return rx.download(data=h.to_csv(self.handlers, fields), filename=f"{name}-{self.listed_for}-{_stamp()}.csv")
-
-    @rx.event
-    def download_menu(self):
-        if not self.menu_rows:
-            return rx.toast.error("No menu entries to export.")
-        return rx.download(data=h.to_csv(self.menu_rows, h.MENU_FIELDS),
-                           filename=f"menuentries-{self.listed_for}-{_stamp()}.csv")
+            self.menu_busy = False
 
     @rx.event
     def download_errors(self):
         return rx.download(data=h.to_csv(self.menu_errors, h.ERROR_FIELDS),
-                           filename=f"menuentries_errors-{self.listed_for}-{_stamp()}.csv")
+                           filename=f"menuentries_errors-{self.all_for}-{_stamp()}.csv")
 
 
 class MapState(CucState):

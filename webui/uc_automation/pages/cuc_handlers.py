@@ -1,7 +1,7 @@
 import reflex as rx
 
 from ..components.cuc_nav import cuc_page, need_connection
-from ..components.cuc_widgets import data_table, failures, hidden_note, list_input
+from ..components.cuc_widgets import all_rows_view, data_table, failures, hidden_note, list_input
 from ..components.tool_widgets import confirm_dialog, csv_dropzone, field
 from ..state.cuc_handlers import DeleteHandlersState, ListHandlersState, MapState
 
@@ -24,82 +24,35 @@ def _spin(on, label: str, icon: str):
 def list_handlers() -> rx.Component:
     S = ListHandlersState
     return cuc_page(
-        "List",
-        need_connection(rx.vstack(
-            rx.card(
-                rx.vstack(
-                    rx.segmented_control.root(
-                        rx.segmented_control.item("Call Handlers", value="handlers"),
-                        rx.segmented_control.item("Non-Subscriber With Menu Entries", value="menu"),
-                        value=S.mode, on_change=S.set_mode,
-                    ),
-                    rx.cond(
-                        S.mode == "menu",
-                        rx.vstack(
-                            rx.text("Non-subscriber call handlers (system handlers left out) and every menu entry "
-                                    "attached to them. Both CSVs feed the Map page.", size="2",
-                                    color="var(--gray-11)"),
-                            field("Display name contains", rx.input(
-                                value=S.search, on_change=S.set_search, width="100%",
-                                placeholder="Optional, case-insensitive. Blank lists all."),
-                                "Only handlers whose name contains this text are listed."),
-                            spacing="3", align="start", width="100%",
-                        ),
-                        rx.text("Every call handler except the built-in system handlers and subscriber (user) "
-                                "handlers. The CSV can be loaded on the Delete page.", size="2",
-                                color="var(--gray-11)"),
-                    ),
-                    rx.button(*_spin(S.loading, "List", "list"), on_click=S.run_list, disabled=S.loading),
-                    spacing="3", align="start", width="100%",
-                ),
-                size="3", width="100%",
+        "Search",
+        need_connection(rx.fragment(all_rows_view(
+            S, _HANDLER_COLUMNS,
+            "Every call handler except the built-in system handlers and subscriber (user) handlers, read from the "
+            "active connection. Tick the ones to export or delete. Export Selected gives the CSV for Delete and Map; "
+            "Export Menu Entries reads their menu entries from CUC (the second CSV Map needs).",
+            rx.hstack(
+                rx.button(rx.icon("download", size=16), "Export Selected", variant="soft", on_click=S.export_selected,
+                          disabled=S.selected_count == 0),
+                rx.button(rx.cond(S.menu_busy, rx.spinner(size="2"), rx.icon("download", size=16)),
+                          "Export Menu Entries", variant="soft", on_click=S.export_menu_entries,
+                          disabled=(S.selected_count == 0) | S.menu_busy),
+                rx.cond(S.menu_errors.length() > 0,
+                        rx.button(rx.icon("triangle-alert", size=16),
+                                  S.menu_errors.length().to_string() + " Failed: Export Errors", variant="soft",
+                                  color_scheme="red", on_click=S.download_errors),
+                        rx.fragment()),
+                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("trash-2", size=16)), "Delete Selected...",
+                          color_scheme="red", on_click=S.set_confirm_open(True),
+                          disabled=(S.selected_count == 0) | S.busy),
+                spacing="2", wrap="wrap",
             ),
-            _error(S.error),
-            rx.cond(
-                S.loading,
-                rx.hstack(rx.spinner(size="2"), rx.text("Reading from CUC. Menu entries take a while on large "
-                                                       "systems...", size="2"), align="center", spacing="2"),
-                rx.fragment(),
-            ),
-            rx.cond(
-                S.listed_for != "",
-                rx.vstack(
-                    rx.hstack(
-                        rx.heading(S.handlers.length().to_string() + " call handler(s)", size="4"),
-                        rx.spacer(),
-                        rx.button(rx.icon("download", size=16), "Export handlers", variant="soft",
-                                  on_click=S.download_handlers, disabled=S.handlers.length() == 0),
-                        align="center", width="100%",
-                    ),
-                    data_table(S.shown_handlers, _HANDLER_COLUMNS),
-                    hidden_note(S.handlers_hidden),
-                    rx.cond(
-                        S.listed_menu,
-                        rx.vstack(
-                            rx.hstack(
-                                rx.heading(S.menu_rows.length().to_string() + " menu entrie(s)", size="4"),
-                                rx.spacer(),
-                                rx.cond(S.menu_errors.length() > 0,
-                                        rx.button(rx.icon("download", size=16),
-                                                  S.menu_errors.length().to_string() + " failed: export errors",
-                                                  variant="soft", color_scheme="red", on_click=S.download_errors),
-                                        rx.fragment()),
-                                rx.button(rx.icon("download", size=16), "Export menu entries", variant="soft",
-                                          on_click=S.download_menu, disabled=S.menu_rows.length() == 0),
-                                align="center", width="100%", wrap="wrap",
-                            ),
-                            data_table(S.shown_menu, _MENU_COLUMNS),
-                            hidden_note(S.menu_hidden),
-                            spacing="3", align="start", width="100%",
-                        ),
-                        rx.fragment(),
-                    ),
-                    spacing="3", align="start", width="100%",
-                ),
-                rx.fragment(),
-            ),
-            spacing="4", align="start", width="100%",
-        )),
+            noun="call handlers", placeholder="Name or extension", item_header="Call Handler",
+        ), confirm_dialog(
+            S, "Delete Call Handlers?",
+            "Delete " + S.selected_count.to_string() + " selected call handler(s) on " + S.all_for
+            + "? This cannot be undone.",
+            "Delete", S.delete_selected,
+        ))),
     )
 
 
@@ -152,7 +105,7 @@ def call_map() -> rx.Component:
                             spacing="3", align="start", width="100%",
                         )),
                         rx.vstack(
-                            rx.text("Load the two CSVs exported on the List page (non-subscriber with menu entries). "
+                            rx.text("Load the two CSVs exported on the Search page (Export Selected and Export Menu Entries). "
                                     "No connection is needed.", size="2", color="var(--gray-11)"),
                             _csv_loader("map_handlers_upload", "Call handler CSV", S.load_handlers_csv,
                                         S.handlers_file),
@@ -202,7 +155,7 @@ def call_map() -> rx.Component:
 def delete_handlers() -> rx.Component:
     S = DeleteHandlersState
     return cuc_page(
-        "Delete",
+        "Bulk Delete",
         need_connection(rx.vstack(
             rx.callout(
                 "Deleting a call handler is permanent. ObjectIds belong to one CUC system: load a list exported "
@@ -217,7 +170,7 @@ def delete_handlers() -> rx.Component:
                         "Paste one ObjectId per line, or a list with a header row (displayName, extension, "
                         "objectId). The list is shown for review before anything is deleted.",
                         "ca8cdbd5-9b1b-4893-9237-171d78b5c6a2",
-                        "Upload the CSV exported on the List page, and remove every row for a handler that should "
+                        "Upload the CSV exported on the Search page, and remove every row for a handler that should "
                         "NOT be deleted. It needs an objectId column.", "Load list"),
                     spacing="3", align="start", width="100%",
                 ),

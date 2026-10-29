@@ -60,7 +60,7 @@ state/cuc.py                 CucState: same for CUC; plus CucRun (RunMixin + fai
 state/cuc_users.py           Status Check, Usage Check, Remove Empty states
 state/cuc_handlers.py        List, Map, Delete states
 components/cuc_nav.py        CUC top menu bar (GROUPS: Users, Call Handlers), connection picker, cuc_page(), need_connection()
-components/cuc_widgets.py    failures table (only failed rows), data_table, list_input (paste | CSV)
+components/cuc_widgets.py    failures table (only failed rows), data_table, list_input (paste | CSV), all_rows_view (searchable checkbox list)
 state/crud.py                CrudMixin + ResourceSpec: the shared list/search/select/add/import/export/delete logic
 state/<resource>.py          one tiny class per resource: `class XState(CucmState, CrudMixin)` + a spec
 components/crud_page.py      build_crud_page(): the shared page (toolbar, table, all dialogs)
@@ -109,12 +109,12 @@ uc_automation.py             app + every add_page()
 ### CUC features
 
 - Menu (`components/cuc_nav.GROUPS`, also the `/cuc` home cards): **Users** (first) = Status Check, Usage Check, Remove Empty;
-  **Call Handlers** = Map, List, Delete. Same single active connection as CUCM; no multi-cluster mode.
+  **Call Handlers** = Map, Search, Bulk Delete. Same single active connection as CUCM; no multi-cluster mode.
 - Port of `cuc/check_userMailbox.py`, `check_userMailboxUsage.py`, `cleanup_emptyMailboxes.py`, `build_call_trees.py`,
   `list_CallHandlers.py`, `list_NonSubscriber_CallHandlers_WithMenuEntries.py`, `delete_CallHandlers.py` (reference only).
   CSV layouts match the scripts, so files move between the CLI and the web app.
 - Extensions come from a pasted list or a CSV (first column, header optional). Exports are browser downloads, not files in `_DATA/`.
-- **Status Check, Usage Check and Remove Empty** share one layout (`_three_tabs` in `pages/cuc_users.py`, state mixin `_AllUsers`): tabs
+- **Status Check, Usage Check and Remove Empty** share one layout (`_three_tabs` in `pages/cuc_users.py`, state mixin `AllRows`): tabs
   All users (first), Paste text and CSV. All users loads automatically when the page opens (10 parallel requests; Reload re-reads) and has a
   search on extension, alias and display name (Contains | Begins with), a checkbox per row and a header checkbox that selects every user the
   search shows. Paste text and CSV look up the extensions you give (first column, header optional) and show their results under the input.
@@ -122,9 +122,10 @@ uc_automation.py             app + every add_page()
 - **Remove Empty** deletes the whole user account (CUC cannot remove only a mailbox). Its All users tab lists only mailboxes with no data;
   Delete selected asks for confirmation, and deletes only ticked users whose mailbox is still empty in the loaded list, then reloads. Paste text and
   CSV keep the scan, review, confirm flow (and Export mailboxes with data, the CLI's "remaining" CSV).
-- **List** has two modes: call handlers (system and subscriber handlers left out) and non-subscriber handlers with all menu entries
-  (parallel fetch, 10 workers, optional name filter, errors CSV). **Map** builds the call tree xlsx from the live connection or
-  from the two List CSVs. **Delete** takes ObjectIds (paste) or a List CSV, shows the list, confirms, then deletes.
+- **Search** loads every call handler (system and subscriber handlers left out) when the page opens, with the same search, checkboxes and Reload as the
+  user pages (state mixin `AllRows`, view `cuc_widgets.all_rows_view`). Export Selected writes the Delete/Map CSV; Export Menu Entries reads the menu
+  entries of the ticked handlers (parallel fetch, 10 workers) and writes the second Map CSV, with an errors CSV when some handlers fail. Delete Selected... confirms, deletes the ticked handlers and reloads the list. **Map** builds the call tree xlsx from the live connection or
+  from the two Search CSVs. **Bulk Delete** takes ObjectIds (paste) or a List CSV, shows the list, confirms, then deletes (Search also has Delete Selected).
 - Tool states are `class X(CucState, CucRun)`; per-row results are shown as failures only (`components/cuc_widgets.failures`).
 - Not tested against a real CUC. The backend and the state handlers were run against a local fake vmrest server only.
 

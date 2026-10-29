@@ -69,8 +69,10 @@ class _Lookup(CucRun, PasteMixin, mixin=True):
             log.close()
 
 
-class _AllUsers(CucRun, mixin=True):
-    """The "All users" tab: every user and mailbox read once, then searched, ticked and exported or acted on."""
+class AllRows(CucRun, mixin=True):
+    """The "All" tab of a CUC page: every row read once, then searched, ticked and exported or acted on.
+
+    Rows need an objectId. Users are the default; override _read_all, _load_label and _search_fields for other lists."""
 
     all_rows: list[dict[str, str]] = []
     all_loading: bool = False
@@ -81,13 +83,25 @@ class _AllUsers(CucRun, mixin=True):
     search_mode: str = "Contains"
     selected: list[str] = []
 
+    def _read_all(self, client) -> tuple[list[dict[str, str]], list[str]]:
+        """(rows, failure messages). Runs in a thread, so it must not touch state."""
+        return u.all_status(client)
+
+    def _load_label(self) -> tuple[str, str]:
+        """(log title, log slug) of the load."""
+        return "Read all users and mailboxes", "cuc-users-all"
+
+    def _search_fields(self) -> tuple[str, ...]:
+        return ("dtmfAccessId", "alias", "displayName")
+
     def _base_rows(self, rows: list[dict[str, str]]) -> list[dict[str, str]]:
         """The rows the tab lists before searching. Override to show only some users."""
         return rows
 
     @rx.var
     def filtered(self) -> list[dict[str, str]]:
-        return u.filter_rows(self._base_rows(self.all_rows), self.search, self.search_mode == "Begins With")
+        return u.filter_rows(self._base_rows(self.all_rows), self.search, self.search_mode == "Begins With",
+                             self._search_fields())
 
     @rx.var
     def filtered_shown(self) -> list[dict[str, str]]:
@@ -150,11 +164,11 @@ class _AllUsers(CucRun, mixin=True):
             return
         self.all_loading, self.all_error = True, ""
         yield
-        log = self._tool_log("Read all users and mailboxes", "cuc-users-all", conn)
+        log = self._tool_log(*self._load_label(), conn)
         try:
             client = cuc_api.CucClient(conn)
             try:
-                rows, errors = await asyncio.to_thread(u.all_status, client)
+                rows, errors = await asyncio.to_thread(self._read_all, client)
             except cuc_api.CucError as e:
                 self.all_error = str(e)
                 log.error(f"Load failed: {e}")
@@ -165,7 +179,7 @@ class _AllUsers(CucRun, mixin=True):
                 return
             self.all_rows, self.all_failed, self.all_for = rows, len(errors), conn.name
             self.selected = []
-            log.info(f"{len(rows)} user(s) read, {len(errors)} failed")
+            log.info(f"{len(rows)} row(s) read, {len(errors)} failed")
             for e in errors:
                 log.error(e)
         finally:
@@ -177,7 +191,7 @@ class _AllUsers(CucRun, mixin=True):
         return [r for r in self.all_rows if r["objectId"] in keys]
 
 
-class StatusCheckState(CucState, _Lookup, _AllUsers):
+class StatusCheckState(CucState, _Lookup, AllRows):
     @rx.event
     def export_selected(self):
         rows = self._selected_rows()
@@ -207,7 +221,7 @@ class StatusCheckState(CucState, _Lookup, _AllUsers):
         return rx.download(data=u.status_csv(self.rows), filename=f"mailbox-status-{_stamp()}.csv")
 
 
-class UsageCheckState(CucState, _Lookup, _AllUsers):
+class UsageCheckState(CucState, _Lookup, AllRows):
     @rx.event
     def export_selected(self):
         rows = self._selected_rows()
@@ -237,7 +251,7 @@ class UsageCheckState(CucState, _Lookup, _AllUsers):
         return rx.download(data=u.usage_csv(self.rows), filename=f"mailbox-usage-{_stamp()}.csv")
 
 
-class RemoveEmptyState(CucState, PasteMixin, _AllUsers):
+class RemoveEmptyState(CucState, PasteMixin, AllRows):
     """Two steps: scan the extensions (read only), then delete the user accounts whose mailbox is empty."""
 
     paste_ext: str = ""
