@@ -10,14 +10,14 @@ from ..backend import webex_locations as L
 from ..backend.errors import UserError
 from .run_mixin import RunMixin
 from .webex_groups import PickerMixin
-from .webex_routing import WebexSession, _one
+from .webex_routing import PasteMixin, WebexSession, _one
 
 
 def _safe(text: str) -> str:
     return re.sub(r"[^A-Za-z0-9]+", "_", text).strip("_")
 
 
-class SchedulesState(WebexSession, RunMixin, PickerMixin):
+class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
     mode: str = "export"          # export | update | copy | remove
     schedules: list[dict[str, str]] = []
     schedule_label: str = ""
@@ -37,6 +37,7 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin):
     past_rows: list[dict[str, str]] = []
     past_selected: list[str] = []
     searched: bool = False
+    paste_schedule: str = ""
 
     def _fetch_rows(self, client):
         return L.list_locations(client)
@@ -158,6 +159,16 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin):
 
     @rx.event
     async def review_update(self, files: list[rx.UploadFile]):
+        async for ev in self._review_update(files):
+            yield ev
+
+    @rx.event
+    async def review_update_text(self):
+        async for ev in self._from_paste(self._review_update, "schedule", columns=L.CSV_HEADER,
+                                         markers=("event action", "event name")):
+            yield ev
+
+    async def _review_update(self, files: list[rx.UploadFile]):
         loc = self.selected_row
         if not loc:
             yield rx.toast.error("Select the location first.")
@@ -335,7 +346,7 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin):
             log.close()
 
 
-class E911State(WebexSession, RunMixin):
+class E911State(WebexSession, RunMixin, PasteMixin):
     rows: list[dict[str, str]] = []
     selected: list[str] = []
     search: str = ""
@@ -343,6 +354,7 @@ class E911State(WebexSession, RunMixin):
     load_error: str = ""
     confirm_open: bool = False
     csv_note: str = ""
+    paste_redsky: str = ""
 
     @rx.var
     def shown(self) -> list[dict[str, str]]:
@@ -413,6 +425,16 @@ class E911State(WebexSession, RunMixin):
 
     @rx.event
     async def select_from_csv(self, files: list[rx.UploadFile]):
+        async for ev in self._select_from_csv(files):
+            yield ev
+
+    @rx.event
+    async def select_from_text(self):
+        async for ev in self._from_paste(self._select_from_csv, "redsky", columns=("Location",), flatten=True,
+                                         item_split=r"\t", markers=("location", "name", "locationname")):
+            yield ev
+
+    async def _select_from_csv(self, files: list[rx.UploadFile]):
         """Tick the locations whose names are listed in the CSV (first column, header row skipped)."""
         if not files:
             yield rx.toast.error("Choose a CSV file first.")

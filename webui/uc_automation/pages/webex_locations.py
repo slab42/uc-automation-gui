@@ -1,6 +1,6 @@
 import reflex as rx
 
-from ..components.tool_widgets import code_block, confirm_dialog, csv_dropzone, run_results
+from ..components.tool_widgets import code_block, confirm_dialog, csv_dropzone, paste_csv_tabs, run_results
 from ..components.webex_nav import webex_page
 from ..components.webex_picker import picker
 from ..state.webex_locations import E911State, SchedulesState
@@ -42,13 +42,24 @@ def _update_panel(S) -> rx.Component:
                         "exists and created if not (REMOVE rows are then skipped). Events already in the schedule "
                         "are not added twice. Events are all-day. Dates are M/D/YY or YYYY-MM-DD.",
                         size="2", color="var(--gray-11)"),
-                code_block("Name,Event action,Event name,Event start date,Event end date\n"
-                           "State Holidays,ADD,Labor Day 2026,9/7/26,9/7/26\n"
-                           "State Holidays,REMOVE,Labor Day 2025,9/1/25,9/1/25\n"),
-                csv_dropzone("schedule_upload"),
-                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("search", size=16)), "Review",
-                          on_click=S.review_update(rx.upload_files(upload_id="schedule_upload")),
-                          disabled=S.busy | ~S.has_selection),
+                paste_csv_tabs(
+                    S.paste_schedule, lambda v: S.set_paste("schedule", v),
+                    "One event per line, columns separated by tabs (straight from Excel), pipes or semicolons. "
+                    "Commas work too unless a date has one. The header row is optional; without it the order is "
+                    "Name, Event action, Event name, Event start date, Event end date.",
+                    "State Holidays\tADD\tLabor Day 2026\t9/7/26\t9/7/26",
+                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("search", size=16)), "Review",
+                              on_click=S.review_update_text, disabled=S.busy | ~S.has_selection),
+                    [
+                        code_block("Name,Event action,Event name,Event start date,Event end date\n"
+                                   "State Holidays,ADD,Labor Day 2026,9/7/26,9/7/26\n"
+                                   "State Holidays,REMOVE,Labor Day 2025,9/1/25,9/1/25\n"),
+                        csv_dropzone("schedule_upload"),
+                        rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("search", size=16)), "Review",
+                                  on_click=S.review_update(rx.upload_files(upload_id="schedule_upload")),
+                                  disabled=S.busy | ~S.has_selection),
+                    ],
+                ),
                 spacing="3", align="start", width="100%",
             ),
             size="3", width="100%",
@@ -269,15 +280,25 @@ def e911() -> rx.Component:
             rx.card(
                 rx.vstack(
                     rx.heading("Opt out of RedSky Emergency Calling", size="4"),
-                    rx.text("Tick locations in the table, or tick the ones named in a CSV (first column, header row "
-                            "skipped, names matched case-insensitively), then opt them out.",
+                    rx.text("Tick locations in the table, or tick the ones named in pasted text or a CSV "
+                            "(names matched case-insensitively), then opt them out.",
                             size="2", color="var(--gray-11)"),
-                    code_block("Location\nSFO Office\nNYC Office\n"),
-                    csv_dropzone("redsky_upload"),
+                    paste_csv_tabs(
+                        S.paste_redsky, lambda v: S.set_paste("redsky", v),
+                        "Paste one location name per line. A header row is optional.",
+                        "SFO Office\nNYC Office",
+                        rx.button(rx.icon("list-checks", size=16), "Select from text", variant="soft",
+                                  on_click=S.select_from_text, disabled=S.rows.length() == 0),
+                        [
+                            rx.text("First column, header row skipped.", size="2", color="var(--gray-11)"),
+                            code_block("Location\nSFO Office\nNYC Office\n"),
+                            csv_dropzone("redsky_upload"),
+                            rx.button(rx.icon("list-checks", size=16), "Select from CSV", variant="soft",
+                                      on_click=S.select_from_csv(rx.upload_files(upload_id="redsky_upload")),
+                                      disabled=S.rows.length() == 0),
+                        ],
+                    ),
                     rx.hstack(
-                        rx.button(rx.icon("list-checks", size=16), "Select from CSV", variant="soft",
-                                  on_click=S.select_from_csv(rx.upload_files(upload_id="redsky_upload")),
-                                  disabled=S.rows.length() == 0),
                         rx.button("Select all shown", variant="ghost", on_click=S.select_shown),
                         rx.button("Clear selection", variant="ghost", color_scheme="gray", on_click=S.select_none),
                         spacing="3", wrap="wrap", align="center",

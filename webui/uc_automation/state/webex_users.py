@@ -4,20 +4,23 @@ import asyncio
 
 import reflex as rx
 
-from ..backend import webex_users as u, webex_workspaces as w
+from ..backend import webex_users as u, webex_voicemail as vm, webex_workspaces as w
 from ..backend.errors import UserError
+from ..backend.paste import no_at
 from ..backend.webex_locations import list_locations
+from ..backend.webex_routing import find_location_id
 from .run_mixin import RunMixin
 from .webex_groups import PickerMixin
-from .webex_routing import WebexSession
+from .webex_routing import PasteMixin, WebexSession
 
 PREVIEW_LIMIT = 300
 
 
-class DeleteUsersState(WebexSession, RunMixin):
+class DeleteUsersState(WebexSession, RunMixin, PasteMixin):
     emails: list[str] = []
     file_name: str = ""
     confirm_open: bool = False
+    paste_delete: str = ""
 
     @rx.var
     def preview(self) -> list[str]:
@@ -33,6 +36,16 @@ class DeleteUsersState(WebexSession, RunMixin):
 
     @rx.event
     async def load_csv(self, files: list[rx.UploadFile]):
+        async for ev in self._load_csv(files):
+            yield ev
+
+    @rx.event
+    async def load_text(self):
+        async for ev in self._from_paste(self._load_csv, "delete", columns=("email",), flatten=True,
+                                         header_if=no_at):
+            yield ev
+
+    async def _load_csv(self, files: list[rx.UploadFile]):
         if not files:
             yield rx.toast.error("Choose a CSV file first.")
             return
@@ -125,12 +138,13 @@ class ResetPinState(WebexSession, RunMixin):
             log.close()
 
 
-class AddWorkspaceState(WebexSession, RunMixin):
+class AddWorkspaceState(WebexSession, RunMixin, PasteMixin):
     form_workspace: str = ""
     form_model: str = ""
     form_mac: str = ""
     form_location: str = ""
     location_names: list[str] = []
+    paste_device: str = ""
 
     @rx.event
     def set_form(self, field: str, value: str):
@@ -188,6 +202,16 @@ class AddWorkspaceState(WebexSession, RunMixin):
 
     @rx.event
     async def add_from_csv(self, files: list[rx.UploadFile]):
+        async for ev in self._add_from_csv(files):
+            yield ev
+
+    @rx.event
+    async def add_from_text(self):
+        async for ev in self._from_paste(self._add_from_csv, "device", columns=w.DEVICE_COLUMNS,
+                                         markers=("workspace", "mac")):
+            yield ev
+
+    async def _add_from_csv(self, files: list[rx.UploadFile]):
         if not files:
             yield rx.toast.error("Choose a CSV file first.")
             return
@@ -303,5 +327,122 @@ class MigrateState(WebexSession, RunMixin, PickerMixin):
             async for ev in self._run_items(items, "Moving", log):
                 yield ev
             self.plan_rows, self._plan_moves = [], []
+        finally:
+            log.close()
+
+
+class VoicemailState(WebexSession, RunMixin):
+    form_email: str = ""
+    form_location: str = ""
+    location_names: list[str] = []
+    rows: list[dict[str, str]] = []
+    report_title: str = ""
+
+    @rx.event
+    def set_form_email(self, value: str):
+        self.form_email = value.strip()
+
+    @rx.event
+    def set_form_location(self, value: str):
+        self.form_location = value
+
+    @rx.var
+    def internal_count(self) -> int:
+        return sum(1 for r in self.rows if r["storage"] == "Internal")
+
+    @rx.var
+    def external_count(self) -> int:
+        return sum(1 for r in self.rows if r["storage"] == "External")
+
+    @rx.event
+    async def load_page(self):
+        """Page load: check the login, then list the locations for the dropdown."""
+        await self._refresh_session()
+        if not self.webex_ok:
+            return
+        log = self._webex_log("List locations", "webex-list-locations")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                return
+            try:
+                rows = await asyncio.to_thread(list_locations, client)
+            except UserError as e:
+                log.error(str(e))
+                return
+            self.location_names = [r["name"] for r in rows]
+            log.info(f"{len(rows)} location(s)")
+        finally:
+            log.close()
+
+    async def _report(self, client, people: list[dict[str, str]], log):
+        self.busy = True
+        self.rows = []
+        for i, p in enumerate(people, 1):
+            self.progress = f"Reading voicemail {i} of {len(people)}"
+            yield
+            row = {"name": p["name"], "email": p["email"], "enabled": "", "storage": "", "details": ""}
+            try:
+                info = await asyncio.to_thread(vm.voicemail_info, client, p["id"])
+                log.info(f"{p['email']}: raw settings {info.pop('raw')}")
+                row.update(info)
+                log.info(f"{p['email']}: {row['storage']} - {row['details']}")
+            except UserError as e:
+                row["details"] = str(e)
+                log.error(f"{p['email']}: {e}")
+            self.rows.append(row)
+        log.info(f"Report finished: {self.internal_count} internal, {self.external_count} external")
+        self.progress = ""
+        self.busy = False
+
+    @rx.event
+    async def report_user(self):
+        if not self.form_email:
+            yield rx.toast.error("Enter the user's email address.")
+            return
+        log = self._webex_log("Voicemail report (user)", "webex-voicemail-user")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            try:
+                person = await asyncio.to_thread(vm.find_person, client, self.form_email)
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            self.report_title = person["email"]
+            async for ev in self._report(client, [person], log):
+                yield ev
+        finally:
+            log.close()
+
+    @rx.event
+    async def report_location(self):
+        name = self.form_location.strip()
+        if not name:
+            yield rx.toast.error("Choose a location.")
+            return
+        log = self._webex_log("Voicemail report (location)", "webex-voicemail-location")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            try:
+                location_id = await asyncio.to_thread(find_location_id, client, name, {})
+                people = await asyncio.to_thread(vm.list_location_people, client, location_id)
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            log.info(f"Location {name}: {len(people)} user(s)")
+            if not people:
+                yield rx.toast.error("No Calling users were found in that location.")
+                return
+            self.report_title = name
+            async for ev in self._report(client, people, log):
+                yield ev
         finally:
             log.close()

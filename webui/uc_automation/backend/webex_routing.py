@@ -40,6 +40,35 @@ def parse_add_numbers_csv(data: bytes) -> list[dict[str, str]]:
     return rows
 
 
+def parse_add_numbers_text(text: str, default_location: str = "") -> list[dict[str, str]]:
+    """Pasted delimited text (tab, comma, semicolon or pipe). The header row is optional: without one the
+    columns are locationId, phoneNumber, numberType, numberUsageType, state in that order.
+    Lines holding only a phone number (no delimiter) use default_location."""
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    if not lines:
+        raise ValueError("Paste some text first.")
+    delim = next((d for d in ("\t", ",", ";", "|") if d in lines[0]), None)
+    if delim is None:
+        if not all(re.fullmatch(r"[\d\s()+.\-]+", ln) for ln in lines):
+            raise ValueError("Separate the columns with tabs, commas, semicolons or pipes.")
+        if not default_location:
+            raise ValueError("Only numbers were pasted: choose the location in the top section first.")
+        return [{"locationId": default_location, "phoneNumber": ln.strip(), "numberType": "",
+                 "numberUsageType": "", "state": ""} for ln in lines]
+    reader = csv.reader(io.StringIO("\n".join(lines)), delimiter=delim)
+    rows = [[c.strip() for c in r_] for r_ in reader]
+    if "locationid" in lines[0].lower() and "phonenumber" in lines[0].lower():
+        header, body = rows[0], rows[1:]
+    else:
+        header = ["locationId", "phoneNumber", "numberType", "numberUsageType", "state"]
+        body = rows
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(header)
+    w.writerows(body)
+    return parse_add_numbers_csv(out.getvalue().encode("utf-8"))
+
+
 def normalize_number(number: str) -> str:
     """Digits only, 10 digit US numbers get a 1. Returns E.164 with the leading +."""
     digits = re.sub(r"\D", "", number)

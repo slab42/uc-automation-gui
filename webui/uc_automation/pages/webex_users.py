@@ -1,9 +1,9 @@
 import reflex as rx
 
-from ..components.tool_widgets import code_block, confirm_dialog, csv_dropzone, field, run_results
+from ..components.tool_widgets import code_block, confirm_dialog, csv_dropzone, field, paste_csv_tabs, run_results
 from ..components.webex_nav import webex_page
 from ..components.webex_picker import picker
-from ..state.webex_users import AddWorkspaceState, DeleteUsersState, MigrateState, ResetPinState
+from ..state.webex_users import AddWorkspaceState, DeleteUsersState, MigrateState, ResetPinState, VoicemailState
 from .webex_routing import need_login
 
 
@@ -17,13 +17,26 @@ def delete_users() -> rx.Component:
             rx.card(
                 rx.vstack(
                     rx.heading("Users to delete", size="4"),
-                    rx.text("Upload the CSV exported from Control Hub and remove every row for a user who should "
-                            "NOT be deleted. Keep the header row. The email is read from the column whose header "
-                            "contains \"email\", otherwise from the fourth column.",
-                            size="2", color="var(--gray-11)"),
-                    csv_dropzone("delete_upload"),
-                    rx.button(rx.icon("file-up", size=16), "Load CSV",
-                              on_click=S.load_csv(rx.upload_files(upload_id="delete_upload")), disabled=S.busy),
+                    paste_csv_tabs(
+                        S.paste_delete, lambda v: S.set_paste("delete", v),
+                        "Paste one email address per line (or separated by commas, tabs, semicolons or pipes). "
+                        "A pasted Control Hub export with its header row also works: the email is read from the "
+                        "column whose header contains \"email\". The list is shown for review before anything is "
+                        "deleted.",
+                        "jsmith@example.com\nadoe@example.com",
+                        rx.button(rx.icon("list-plus", size=16), "Load list", on_click=S.load_text,
+                                  disabled=S.busy),
+                        [
+                            rx.text("Upload the CSV exported from Control Hub and remove every row for a user "
+                                    "who should NOT be deleted. Keep the header row. The email is read from the "
+                                    "column whose header contains \"email\", otherwise from the fourth column.",
+                                    size="2", color="var(--gray-11)"),
+                            csv_dropzone("delete_upload"),
+                            rx.button(rx.icon("file-up", size=16), "Load CSV",
+                                      on_click=S.load_csv(rx.upload_files(upload_id="delete_upload")),
+                                      disabled=S.busy),
+                        ],
+                    ),
                     spacing="3", align="start", width="100%",
                 ),
                 size="3", width="100%",
@@ -104,7 +117,7 @@ def reset_pin() -> rx.Component:
 def add_workspace() -> rx.Component:
     S = AddWorkspaceState
     return webex_page(
-        "Add Workspace",
+        "Add Device",
         need_login(rx.vstack(
             rx.card(
                 rx.vstack(
@@ -137,14 +150,27 @@ def add_workspace() -> rx.Component:
             ),
             rx.card(
                 rx.vstack(
-                    rx.heading("From CSV", size="4"),
-                    rx.text("Header row required: workspace, model and mac. location is optional.",
-                            size="2", color="var(--gray-11)"),
-                    code_block("workspace,model,mac,location\nLobby Room,Cisco 8845,AA:BB:CC:DD:EE:FF,Dallas\n"),
-                    csv_dropzone("device_upload"),
-                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)), "Add devices",
-                              on_click=S.add_from_csv(rx.upload_files(upload_id="device_upload")),
-                              disabled=S.busy),
+                    rx.heading("Multiple devices", size="4"),
+                    paste_csv_tabs(
+                        S.paste_device, lambda v: S.set_paste("device", v),
+                        "One device per line, columns separated by tabs (straight from Excel), pipes, semicolons "
+                        "or commas. The header row is optional; without it the order is workspace, model, mac, "
+                        "location (location is optional).",
+                        "Lobby Room,Cisco 8845,AA:BB:CC:DD:EE:FF,Dallas",
+                        rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add devices",
+                                  on_click=S.add_from_text, disabled=S.busy),
+                        [
+                            rx.text("Header row required: workspace, model and mac. location is optional.",
+                                    size="2", color="var(--gray-11)"),
+                            code_block("workspace,model,mac,location\n"
+                                       "Lobby Room,Cisco 8845,AA:BB:CC:DD:EE:FF,Dallas\n"),
+                            csv_dropzone("device_upload"),
+                            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
+                                      "Add devices",
+                                      on_click=S.add_from_csv(rx.upload_files(upload_id="device_upload")),
+                                      disabled=S.busy),
+                        ],
+                    ),
                     spacing="3", align="start", width="100%",
                 ),
                 size="3", width="100%",
@@ -216,6 +242,82 @@ def migrate() -> rx.Component:
             confirm_dialog(S, "Move these users?",
                            "Validates and moves " + S.move_count.to_string() + " user(s) to " + S.selected_label
                            + ". Each move runs as a Webex job and can take a minute.", "Move users", S.run_migration),
+            spacing="4", align="start", width="100%",
+        )),
+    )
+
+
+def voicemail() -> rx.Component:
+    S = VoicemailState
+    return webex_page(
+        "Voicemail",
+        need_login(rx.vstack(
+            rx.card(
+                rx.vstack(
+                    rx.heading("One user", size="4"),
+                    field("Email", rx.input(value=S.form_email, on_change=S.set_form_email, width="100%",
+                                            placeholder="jane.doe@example.com")),
+                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("voicemail", size=16)),
+                              "Check user", on_click=S.report_user, disabled=S.busy),
+                    spacing="3", align="start", width="100%",
+                ),
+                size="3", width="100%",
+            ),
+            rx.card(
+                rx.vstack(
+                    rx.heading("Every user in a location", size="4"),
+                    field("Location name", rx.fragment(
+                        rx.input(value=S.form_location, on_change=S.set_form_location, width="100%",
+                                 list="voicemail-locations", placeholder="Start typing to search",
+                                 auto_complete="off"),
+                        rx.el.datalist(rx.foreach(S.location_names, lambda n: rx.el.option(value=n)),
+                                       id="voicemail-locations"),
+                    ), "Click the field to see every location, or type to narrow the list."),
+                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("voicemail", size=16)),
+                              "Check location", on_click=S.report_location, disabled=S.busy),
+                    spacing="3", align="start", width="100%",
+                ),
+                size="3", width="100%",
+            ),
+            rx.cond(S.busy, rx.hstack(rx.spinner(size="2"), rx.text(S.progress, size="2"), align="center",
+                                      spacing="2"), rx.fragment()),
+            rx.cond(
+                S.rows.length() > 0,
+                rx.vstack(
+                    rx.hstack(
+                        rx.heading(S.report_title, size="4"),
+                        rx.badge(S.internal_count.to_string() + " internal", color_scheme="blue"),
+                        rx.badge(S.external_count.to_string() + " external", color_scheme="orange"),
+                        spacing="2", align="center",
+                    ),
+                    rx.card(
+                        rx.scroll_area(
+                            rx.table.root(
+                                rx.table.header(rx.table.row(
+                                    rx.table.column_header_cell("User"),
+                                    rx.table.column_header_cell("Email"),
+                                    rx.table.column_header_cell("Voicemail"),
+                                    rx.table.column_header_cell("Mailbox"),
+                                    rx.table.column_header_cell("Usage / destination"),
+                                )),
+                                rx.table.body(rx.foreach(S.rows, lambda r: rx.table.row(
+                                    rx.table.cell(r["name"]),
+                                    rx.table.cell(rx.code(r["email"])),
+                                    rx.table.cell(r["enabled"]),
+                                    rx.table.cell(rx.badge(r["storage"], color_scheme=rx.cond(
+                                        r["storage"] == "Internal", "blue", "orange"))),
+                                    rx.table.cell(r["details"]),
+                                ))),
+                                variant="ghost", width="100%",
+                            ),
+                            max_height="60vh",
+                        ),
+                        padding="0", width="100%",
+                    ),
+                    spacing="3", align="start", width="100%",
+                ),
+                rx.fragment(),
+            ),
             spacing="4", align="start", width="100%",
         )),
     )

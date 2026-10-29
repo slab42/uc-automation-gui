@@ -132,19 +132,30 @@ def parse_agent_list_csv(data: bytes) -> list[str]:
     return [r[0].strip() for r in rows[1:] if r and r[0].strip()]
 
 
-def replace_agents(c: WebexClient, kind: str, group: dict[str, str], entries: list[str]) -> str:
-    """Replace the whole agent list of a queue or hunt group ("queue" / "hunt")."""
+def replace_agents(c: WebexClient, kind: str, group: dict[str, str], entries: list[str], add: bool = False) -> str:
+    """Replace the whole agent list of a queue or hunt group ("queue" / "hunt"), or with add=True keep the
+    current agents and add the new ones."""
     numeric = "virtual_line" if kind == "hunt" else None
     agents, skipped = resolve_agents(c, entries, numeric)
     if not agents:
         raise WebexError("None of the agents could be resolved, so nothing was changed. " + "; ".join(skipped))
     path = f"{location_path(group['locationId'])}/{'huntGroups' if kind == 'hunt' else 'queues'}/{group['id']}"
-    c.call("PUT", path, body={"agents": agents})
     note = f" Skipped: {'; '.join(skipped)}" if skipped else ""
+    if add:
+        current = [a["id"] for a in c.call("GET", path).get("agents") or []]
+        new = [a for a in dict.fromkeys(a["id"] for a in agents) if a not in current]
+        if new:
+            c.call("PUT", path, body={"agents": [{"id": i} for i in current + new]})
+        already = len(set(a["id"] for a in agents)) - len(new)
+        return f"{len(new)} agent(s) added, {already} already in the list ({len(current) + len(new)} total).{note}"
+    c.call("PUT", path, body={"agents": agents})
     return f"Agents replaced ({len(agents)} set).{note}"
 
 
 # --- Create ---
+
+CREATE_COLUMNS = ("name", "location", "firstName", "lastName", "phoneNumber", "extension", "policy", "destination")
+
 
 def parse_group_csv(data: bytes) -> list[dict]:
     """Header row required: name, location (a location name), policy, destination are required;

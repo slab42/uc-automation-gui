@@ -7,6 +7,8 @@ import reflex as rx
 from ..backend import webex_auth, webex_routing as r
 from ..backend.applog import OpLog
 from ..backend.errors import UserError
+from ..backend.paste import PastedFile, no_at_or_digit
+from ..backend.webex_locations import list_locations
 from ..backend.webex_api import WebexClient
 from .run_mixin import RunMixin
 
@@ -44,6 +46,27 @@ class WebexSession(rx.State):
             return None
 
 
+class PasteMixin(rx.State, mixin=True):
+    """"Paste text" boxes: a state with a paste_<field> var includes this for set_paste and _from_paste.
+
+    Must be a mixin: an event handler on the shared WebexSession parent would run against the parent, which
+    has no paste_<field> vars."""
+
+    @rx.event
+    def set_paste(self, field: str, value: str):
+        """Text of a "Paste text" box; the state holds it in a var named paste_<field>."""
+        setattr(self, f"paste_{field}", value)
+
+    async def _from_paste(self, handler, field: str, **options):
+        """Run a "files" handler on the pasted text of paste_<field> as if it were an uploaded CSV."""
+        text = getattr(self, f"paste_{field}", "")
+        if not text.strip():
+            yield rx.toast.error("Paste some text first.")
+            return
+        async for ev in handler([PastedFile(text, **options)]):
+            yield ev
+
+
 def _one(value: str | list[str]) -> str:
     return value if isinstance(value, str) else value[0]
 
@@ -54,6 +77,33 @@ class AddNumbersState(WebexSession, RunMixin):
     form_type: str = "DID"
     form_usage: str = "NONE"
     form_state: str = "ACTIVE"
+    paste_text: str = ""
+    location_names: list[str] = []
+
+    @rx.event
+    async def load_page(self):
+        """Page load: check the login, then list the locations for the dropdown."""
+        await self._refresh_session()
+        if not self.webex_ok:
+            return
+        log = self._webex_log("List locations", "webex-list-locations")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                return
+            try:
+                rows = await asyncio.to_thread(list_locations, client)
+            except UserError as e:
+                log.error(str(e))
+                return
+            self.location_names = [r_["name"] for r_ in rows]
+            log.info(f"{len(rows)} location(s)")
+        finally:
+            log.close()
+
+    @rx.event
+    def set_paste_text(self, value: str):
+        self.paste_text = value
 
     @rx.event
     def set_form_location(self, value: str):
@@ -92,6 +142,9 @@ class AddNumbersState(WebexSession, RunMixin):
         if not row["locationId"] or not row["phoneNumber"]:
             yield rx.toast.error("Enter the location and the phone number.")
             return
+        if self.location_names and row["locationId"] not in self.location_names:
+            yield rx.toast.error("Pick the location from the list.")
+            return
         log = self._webex_log("Add number to location", "webex-add-number")
         try:
             async for ev in self._add([row], log):
@@ -123,11 +176,31 @@ class AddNumbersState(WebexSession, RunMixin):
         finally:
             log.close()
 
+    @rx.event
+    async def add_from_text(self):
+        try:
+            rows = r.parse_add_numbers_text(self.paste_text, self.form_location.strip())
+        except ValueError as e:
+            yield rx.toast.error(str(e))
+            return
+        if not rows:
+            yield rx.toast.error("The pasted text has no data rows.")
+            return
+        log = self._webex_log("Add numbers to locations from pasted text", "webex-add-numbers-text")
+        try:
+            async for ev in self._add(rows, log):
+                yield ev
+            if self.result_fail_count == 0 and self.results:
+                self.paste_text = ""
+        finally:
+            log.close()
 
-class CallForwardState(WebexSession, RunMixin):
+
+class CallForwardState(WebexSession, RunMixin, PasteMixin):
     cf_mode: str = "set"
     cf_prefix: str = r.DEFAULT_FORWARD_PREFIX
     cf_number: str = ""
+    paste_forward: str = ""
 
     @rx.event
     def set_cf_mode(self, value: str | list[str]):
@@ -179,6 +252,16 @@ class CallForwardState(WebexSession, RunMixin):
 
     @rx.event
     async def run_csv(self, files: list[rx.UploadFile]):
+        async for ev in self._run_csv(files):
+            yield ev
+
+    @rx.event
+    async def run_text(self):
+        async for ev in self._from_paste(self._run_csv, "forward", columns=("phoneNumber",), flatten=True,
+                                         header_if=no_at_or_digit):
+            yield ev
+
+    async def _run_csv(self, files: list[rx.UploadFile]):
         if not files:
             yield rx.toast.error("Choose a CSV file first.")
             return

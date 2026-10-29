@@ -13,6 +13,7 @@ HUNT_GROUPS = "/webex/hunt-groups"
 VIRTUAL_LINES = "/webex/virtual-lines"
 DELETE_USERS = "/webex/delete-users"
 RESET_PIN = "/webex/reset-pin"
+VOICEMAIL = "/webex/voicemail"
 ADD_WORKSPACE = "/webex/add-workspace"
 MIGRATE = "/webex/migrate"
 SCHEDULES = "/webex/schedules"
@@ -35,7 +36,7 @@ GROUPS = [
         ("Reset PIN", RESET_PIN, "key-round", "Reset the voicemail PIN of one user or of users in a CSV."),
     ]),
     ("Workspaces", [
-        ("Add Workspace", ADD_WORKSPACE, "monitor-smartphone", "Add devices to workspaces by MAC address."),
+        ("Add Device", ADD_WORKSPACE, "monitor-smartphone", "Add devices to workspaces by MAC address."),
         ("Migrate", MIGRATE, "arrow-right-left", "Move users to another location by phone number."),
     ]),
     ("Locations", [
@@ -48,6 +49,10 @@ GROUPS = [
     ("Tools", [
         ("Check Hardware Compatibility", HARDWARE, "shield-check",
          "Check phone models and MAC addresses against Webex before onboarding."),
+    ]),
+    ("Reports", [
+        ("Voicemail", VOICEMAIL, "voicemail",
+         "Show whether a user, or every user in a location, has an internal or external mailbox."),
     ]),
 ]
 

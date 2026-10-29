@@ -2,7 +2,7 @@ import reflex as rx
 
 from ..backend.webex_groups import POLICIES
 from ..backend.webex_routing import NUMBER_STATES, NUMBER_TYPES, USAGE_TYPES
-from ..components.tool_widgets import code_block, csv_dropzone, field, file_dropzone, run_results
+from ..components.tool_widgets import code_block, csv_dropzone, field, file_dropzone, paste_csv_tabs, run_results
 from ..components.webex_nav import GROUPS, webex_page
 from ..components.webex_picker import picker
 from ..state.webex_groups import CallQueuesState, HuntGroupsState, VirtualLinesState
@@ -70,20 +70,26 @@ def add_numbers() -> rx.Component:
                 rx.vstack(
                     rx.heading("One number", size="4"),
                     rx.grid(
-                        field("Location name", rx.input(value=S.form_location, on_change=S.set_form_location,
-                                                        width="100%"), "Must already exist in Control Hub."),
+                        field("Location name", rx.fragment(
+                            rx.input(value=S.form_location, on_change=S.set_form_location, width="100%",
+                                     list="number-locations", placeholder="Start typing to search",
+                                     auto_complete="off"),
+                            rx.el.datalist(rx.foreach(S.location_names, lambda n: rx.el.option(value=n)),
+                                           id="number-locations"),
+                        ), "Click the field to see every location, or type to narrow the list. "
+                           "Also used for pasted numbers that have no location."),
                         field("Phone number", rx.input(value=S.form_number, on_change=S.set_form_number,
                                                        width="100%", placeholder="12704435531"),
                               "10 digit US numbers get a leading 1; the + is added for you."),
                         columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%",
                     ),
-                    rx.hstack(
+                    rx.grid(
                         field("Number type", rx.select(list(NUMBER_TYPES), value=S.form_type,
                                                        on_change=S.set_form_type)),
                         field("Usage", rx.select(list(USAGE_TYPES), value=S.form_usage, on_change=S.set_form_usage)),
                         field("State", rx.select(list(NUMBER_STATES), value=S.form_state,
                                                  on_change=S.set_form_state)),
-                        spacing="4", wrap="wrap",
+                        columns="3", spacing="4", width="100%",
                     ),
                     rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add number",
                               on_click=S.add_single, disabled=S.busy),
@@ -93,15 +99,45 @@ def add_numbers() -> rx.Component:
             ),
             rx.card(
                 rx.vstack(
-                    rx.heading("From CSV", size="4"),
-                    rx.text("Header row required. Only locationId and phoneNumber are needed (DID, NONE, ACTIVE "
-                            "are then assumed); the other columns are optional.", size="2", color="var(--gray-11)"),
-                    code_block("locationId,phoneNumber,numberType,numberUsageType,state\n"
-                               "Location1,12704435531,DID,NONE,ACTIVE\n"),
-                    csv_dropzone("numbers_upload"),
-                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)), "Add numbers",
-                              on_click=S.add_from_csv(rx.upload_files(upload_id="numbers_upload")),
-                              disabled=S.busy),
+                    rx.heading("Multiple numbers", size="4"),
+                    rx.tabs.root(
+                        rx.tabs.list(
+                            rx.tabs.trigger("Paste text", value="text"),
+                            rx.tabs.trigger("CSV", value="csv"),
+                        ),
+                        rx.tabs.content(
+                            rx.vstack(
+                                rx.text("Header row required. Only locationId and phoneNumber are needed (DID, "
+                                        "NONE, ACTIVE are then assumed); the other columns are optional.",
+                                        size="2", color="var(--gray-11)"),
+                                code_block("locationId,phoneNumber,numberType,numberUsageType,state\n"
+                                           "Location1,12704435531,DID,NONE,ACTIVE\n"),
+                                csv_dropzone("numbers_upload"),
+                                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
+                                          "Add numbers",
+                                          on_click=S.add_from_csv(rx.upload_files(upload_id="numbers_upload")),
+                                          disabled=S.busy),
+                                spacing="3", align="start", width="100%", padding_top="1rem",
+                            ),
+                            value="csv",
+                        ),
+                        rx.tabs.content(
+                            rx.vstack(
+                                rx.text("Paste one number per line; lines with only a number use the location chosen above. Columns can be separated by tabs (straight "
+                                        "from Excel), commas, semicolons or pipes. The header row is optional; "
+                                        "without it the order is locationId, phoneNumber, numberType, "
+                                        "numberUsageType, state, and only the first two are needed.",
+                                        size="2", color="var(--gray-11)"),
+                                rx.text_area(value=S.paste_text, on_change=S.set_paste_text, width="100%",
+                                             rows="8", placeholder="Location1,12704435531\n12704435532"),
+                                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)),
+                                          "Add numbers", on_click=S.add_from_text, disabled=S.busy),
+                                spacing="3", align="start", width="100%", padding_top="1rem",
+                            ),
+                            value="text",
+                        ),
+                        default_value="text", width="100%",
+                    ),
                     spacing="3", align="start", width="100%",
                 ),
                 size="3", width="100%",
@@ -151,14 +187,26 @@ def call_forward() -> rx.Component:
             ),
             rx.card(
                 rx.vstack(
-                    rx.heading("From CSV", size="4"),
-                    rx.text("Header row required. The column named phoneNumber or pattern is used, "
-                            "otherwise the first column.", size="2", color="var(--gray-11)"),
-                    code_block("phoneNumber\n12704435531\n12704435532\n"),
-                    csv_dropzone("forward_upload"),
-                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
-                              rx.cond(setting, "Set forward for all", "Remove forward for all"),
-                              on_click=S.run_csv(rx.upload_files(upload_id="forward_upload")), disabled=S.busy),
+                    rx.heading("Multiple numbers", size="4"),
+                    paste_csv_tabs(
+                        S.paste_forward, lambda v: S.set_paste("forward", v),
+                        "Paste one number per line (or separated by commas, tabs, semicolons or pipes). "
+                        "A header row is optional.",
+                        "12704435531\n12704435532",
+                        rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("play", size=16)),
+                                  rx.cond(setting, "Set forward for all", "Remove forward for all"),
+                                  on_click=S.run_text, disabled=S.busy),
+                        [
+                            rx.text("Header row required. The column named phoneNumber or pattern is used, "
+                                    "otherwise the first column.", size="2", color="var(--gray-11)"),
+                            code_block("phoneNumber\n12704435531\n12704435532\n"),
+                            csv_dropzone("forward_upload"),
+                            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
+                                      rx.cond(setting, "Set forward for all", "Remove forward for all"),
+                                      on_click=S.run_csv(rx.upload_files(upload_id="forward_upload")),
+                                      disabled=S.busy),
+                        ],
+                    ),
                     spacing="3", align="start", width="100%",
                 ),
                 size="3", width="100%",
@@ -177,18 +225,31 @@ _CREATE_HEADER = "name,location,firstName,lastName,phoneNumber,extension,policy,
 def _create_card(S, noun: str, upload_id: str, example: str, agent_help: str) -> rx.Component:
     return rx.card(
         rx.vstack(
-            rx.heading(f"Create {noun}s from CSV", size="4"),
+            rx.heading(f"Create {noun}s", size="4"),
             rx.text(
-                "Header row required. name, location (a location name), policy and destination are required, plus "
+                "name, location (a location name), policy and destination are required, plus "
                 "at least one agent column. Add as many agent1, agent2, ... columns as you need. "
                 f"policy is one of {', '.join(POLICIES)}. destination is the no-answer and business continuity "
                 f"forward number. {agent_help}",
                 size="2", color="var(--gray-11)",
             ),
-            code_block(_CREATE_HEADER + example),
-            file_dropzone(upload_id, {"text/csv": [".csv"]}, "Drop a CSV here or click to choose"),
-            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)), f"Create {noun}s",
-                      on_click=S.create_from_csv(rx.upload_files(upload_id=upload_id)), disabled=S.busy),
+            paste_csv_tabs(
+                S.paste_create, lambda v: S.set_paste("create", v),
+                "One " + noun + " per line, columns separated by tabs (straight from Excel), pipes, semicolons or "
+                "commas. The header row is optional; without it the order is name, location, firstName, "
+                "lastName, phoneNumber, extension, policy, destination, then the agents.",
+                example.strip(),
+                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), f"Create {noun}s",
+                          on_click=S.create_from_text, disabled=S.busy),
+                [
+                    rx.text("Header row required.", size="2", color="var(--gray-11)"),
+                    code_block(_CREATE_HEADER + example),
+                    file_dropzone(upload_id, {"text/csv": [".csv"]}, "Drop a CSV here or click to choose"),
+                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
+                              f"Create {noun}s",
+                              on_click=S.create_from_csv(rx.upload_files(upload_id=upload_id)), disabled=S.busy),
+                ],
+            ),
             spacing="3", align="start", width="100%",
         ),
         size="3", width="100%",
@@ -198,14 +259,37 @@ def _create_card(S, noun: str, upload_id: str, example: str, agent_help: str) ->
 def _agents_card(S, noun: str, upload_id: str, agent_help: str) -> rx.Component:
     return rx.card(
         rx.vstack(
-            rx.heading(f"Replace {noun} agents", size="4"),
-            rx.text("Select the " + noun + " above, then upload a CSV. The agents in the CSV REPLACE the current "
-                    "agent list. " + agent_help, size="2", color="var(--gray-11)"),
-            code_block("agent\njsmith@example.com\nadoe@example.com\n"),
-            file_dropzone(upload_id, {"text/csv": [".csv"]}, "Drop a CSV here or click to choose"),
-            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("users", size=16)), "Replace agents",
-                      on_click=S.update_agents(rx.upload_files(upload_id=upload_id)),
-                      disabled=S.busy | ~S.has_selection),
+            rx.heading(f"Update {noun} agents", size="4"),
+            rx.segmented_control.root(
+                rx.segmented_control.item("Add agents", value="add"),
+                rx.segmented_control.item("Replace all agents", value="replace"),
+                value=S.agent_mode, on_change=S.set_agent_mode,
+            ),
+            rx.text(
+                "Select the " + noun + " above, then paste or upload the agents. ",
+                rx.cond(S.agent_mode == "add",
+                        "They are ADDED to the current agent list; agents already in it are left as they are. ",
+                        "They REPLACE the current agent list. "),
+                agent_help, size="2", color="var(--gray-11)"),
+            paste_csv_tabs(
+                S.paste_agents, lambda v: S.set_paste("agents", v),
+                "Paste one agent per line (or separated by commas, tabs, semicolons or pipes). "
+                "A header row is optional.",
+                "jsmith@example.com\nadoe@example.com",
+                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("users", size=16)),
+                          rx.cond(S.agent_mode == "add", "Add agents", "Replace agents"),
+                          on_click=S.update_agents_text, disabled=S.busy | ~S.has_selection),
+                [
+                    rx.text("Header row required; the first column holds the agents.", size="2",
+                            color="var(--gray-11)"),
+                    code_block("agent\njsmith@example.com\nadoe@example.com\n"),
+                    file_dropzone(upload_id, {"text/csv": [".csv"]}, "Drop a CSV here or click to choose"),
+                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("users", size=16)),
+                              rx.cond(S.agent_mode == "add", "Add agents", "Replace agents"),
+                              on_click=S.update_agents(rx.upload_files(upload_id=upload_id)),
+                              disabled=S.busy | ~S.has_selection),
+                ],
+            ),
             spacing="3", align="start", width="100%",
         ),
         size="3", width="100%",

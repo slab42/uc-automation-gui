@@ -4,6 +4,8 @@ Features (`webex_routing.py` and later modules) take a `WebexClient` and never t
 Plain Python, no Reflex imports.
 """
 
+import base64
+import re
 import time
 
 import requests
@@ -18,6 +20,16 @@ MAX_RETRIES = 3  # for HTTP 429 (rate limited)
 
 class WebexError(UserError):
     """A Webex API problem. The message is shown as is."""
+
+
+_UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
+
+
+def _core_org_id(org_id: str) -> str:
+    """The core /people API rejects a bare UUID org id; it wants the base64 form (assumes the US cluster)."""
+    if _UUID.match(org_id):
+        return base64.b64encode(f"ciscospark://us/ORGANIZATION/{org_id}".encode()).decode().rstrip("=")
+    return org_id
 
 
 class WebexClient:
@@ -38,7 +50,7 @@ class WebexClient:
         `files` makes it a multipart upload ({"file": (name, bytes, content_type)}); `body` is then ignored."""
         params = dict(params or {})
         if self.org_id:
-            params["orgId"] = self.org_id
+            params["orgId"] = _core_org_id(self.org_id) if path.startswith("/people") else self.org_id
         headers = {"Authorization": f"Bearer {self._token}"}
         for attempt in range(MAX_RETRIES + 1):
             try:

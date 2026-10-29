@@ -19,6 +19,9 @@ MOVE_PATH = "/telephony/config/jobs/person/moveLocation"
 
 # --- Add devices to workspaces ---
 
+DEVICE_COLUMNS = ("workspace", "model", "mac", "location")
+
+
 def parse_device_csv(data: bytes) -> list[dict[str, str]]:
     """Header row required: workspace (display name), model, mac; location is optional and narrows the workspace search."""
     reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig", errors="replace")))

@@ -1,6 +1,6 @@
 import reflex as rx
 
-from ..components.tool_widgets import code_block, csv_dropzone, field
+from ..components.tool_widgets import code_block, csv_dropzone, field, paste_csv_tabs
 from ..components.webex_nav import webex_page
 from ..state.webex_tools import HardwareCompatState
 from .webex_routing import need_login
@@ -74,13 +74,25 @@ def hardware_compatibility() -> rx.Component:
             ),
             rx.card(
                 rx.vstack(
-                    rx.heading("From CSV", size="4"),
-                    rx.text("Header row skipped. Columns: model, then mac.", size="2", color="var(--gray-11)"),
-                    code_block("model,mac\nCisco 8865,6C74AAAAAAAA\nCisco 8845,AC7A594BBBBB\n"),
-                    csv_dropzone("hardware_upload"),
-                    rx.button(rx.cond(S.checking, rx.spinner(size="2"), rx.icon("upload", size=16)), "Check phones",
-                              on_click=S.check_csv(rx.upload_files(upload_id="hardware_upload")),
-                              disabled=S.checking),
+                    rx.heading("Multiple phones", size="4"),
+                    paste_csv_tabs(
+                        S.paste_hardware, lambda v: S.set_paste("hardware", v),
+                        "One phone per line: model, then mac, separated by a tab (straight from Excel), pipe, "
+                        "semicolon or comma. A header row is optional.",
+                        "Cisco 8865,6C74AAAAAAAA\nCisco 8845,AC7A594BBBBB",
+                        rx.button(rx.cond(S.checking, rx.spinner(size="2"), rx.icon("shield-check", size=16)),
+                                  "Check phones", on_click=S.check_text, disabled=S.checking),
+                        [
+                            rx.text("Header row skipped. Columns: model, then mac.", size="2",
+                                    color="var(--gray-11)"),
+                            code_block("model,mac\nCisco 8865,6C74AAAAAAAA\nCisco 8845,AC7A594BBBBB\n"),
+                            csv_dropzone("hardware_upload"),
+                            rx.button(rx.cond(S.checking, rx.spinner(size="2"), rx.icon("upload", size=16)),
+                                      "Check phones",
+                                      on_click=S.check_csv(rx.upload_files(upload_id="hardware_upload")),
+                                      disabled=S.checking),
+                        ],
+                    ),
                     spacing="3", align="start", width="100%",
                 ),
                 size="3", width="100%",

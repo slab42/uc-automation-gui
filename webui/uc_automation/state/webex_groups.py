@@ -10,9 +10,10 @@ import reflex as rx
 from ..backend import webex_groups as g, webex_virtual_lines as vl
 from ..backend.applog import OpLog
 from ..backend.errors import UserError
+from ..backend.paste import no_at_or_digit
 from ..backend.paths import LOG_DIR
 from .run_mixin import RunMixin
-from .webex_routing import WebexSession, _one
+from .webex_routing import PasteMixin, WebexSession, _one
 
 DISPLAY_LIMIT = 100
 
@@ -100,12 +101,31 @@ class PickerMixin(rx.State, mixin=True):
             yield ev
 
 
-class _GroupsBase(rx.State, mixin=True):
+class _GroupsBase(PasteMixin, mixin=True):
     """Create-from-CSV and replace-agents, shared by the queue and hunt group states (methods only, no vars)."""
+
+    paste_create: str = ""
+    paste_agents: str = ""
+    agent_mode: str = "replace"
+
+    @rx.event
+    def set_agent_mode(self, value: str | list[str]):
+        self.agent_mode = value if isinstance(value, str) else value[0]
 
     def _kind(self) -> str:
         """"queue" or "hunt"."""
         raise NotImplementedError
+
+    async def _create_from_text(self, upload_id: str):
+        async for ev in self._from_paste(lambda f: self._create_from_csv(f, upload_id), "create",
+                                         columns=g.CREATE_COLUMNS, markers=("name", "location"),
+                                         extra_prefix="agent"):
+            yield ev
+
+    async def _agents_from_text(self, upload_id: str):
+        async for ev in self._from_paste(lambda f: self._update_agents(f, upload_id), "agents",
+                                         columns=("agent",), flatten=True, header_if=no_at_or_digit):
+            yield ev
 
     async def _create_from_csv(self, files: list[rx.UploadFile], upload_id: str):
         if not files:
@@ -159,7 +179,8 @@ class _GroupsBase(rx.State, mixin=True):
             if client is None:
                 yield rx.toast.error(self.webex_message)
                 return
-            items = [(group["name"], lambda: g.replace_agents(client, self._kind(), group, entries))]
+            items = [(group["name"], lambda: g.replace_agents(client, self._kind(), group, entries,
+                                                                  add=self.agent_mode == "add"))]
             async for ev in self._run_items(items, "Updating agents", log):
                 yield ev
             yield rx.clear_selected_files(upload_id)
@@ -192,6 +213,16 @@ class CallQueuesState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
     @rx.event
     async def update_agents(self, files: list[rx.UploadFile]):
         async for ev in self._update_agents(files, "queue_agents_upload"):
+            yield ev
+
+    @rx.event
+    async def create_from_text(self):
+        async for ev in self._create_from_text("queue_create_upload"):
+            yield ev
+
+    @rx.event
+    async def update_agents_text(self):
+        async for ev in self._agents_from_text("queue_agents_upload"):
             yield ev
 
 
@@ -235,6 +266,16 @@ class HuntGroupsState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
     @rx.event
     async def update_agents(self, files: list[rx.UploadFile]):
         async for ev in self._update_agents(files, "hunt_agents_upload"):
+            yield ev
+
+    @rx.event
+    async def create_from_text(self):
+        async for ev in self._create_from_text("hunt_create_upload"):
+            yield ev
+
+    @rx.event
+    async def update_agents_text(self):
+        async for ev in self._agents_from_text("hunt_agents_upload"):
             yield ev
 
     @rx.event

@@ -7,16 +7,17 @@ import reflex as rx
 
 from ..backend import webex_tools as t
 from ..backend.errors import UserError
-from .webex_routing import WebexSession
+from .webex_routing import PasteMixin, WebexSession
 
 
-class HardwareCompatState(WebexSession):
+class HardwareCompatState(WebexSession, PasteMixin):
     form_model: str = ""
     form_mac: str = ""
     model_names: list[str] = []
     checking: bool = False
     checks: list[dict[str, str]] = []
     file_name: str = ""
+    paste_hardware: str = ""
 
     @rx.var
     def valid_count(self) -> int:
@@ -93,6 +94,16 @@ class HardwareCompatState(WebexSession):
 
     @rx.event
     async def check_csv(self, files: list[rx.UploadFile]):
+        async for ev in self._check_csv(files):
+            yield ev
+
+    @rx.event
+    async def check_text(self):
+        async for ev in self._from_paste(self._check_csv, "hardware", columns=("model", "mac"),
+                                         markers=("model", "mac")):
+            yield ev
+
+    async def _check_csv(self, files: list[rx.UploadFile]):
         if not files:
             yield rx.toast.error("Choose a CSV file first.")
             return

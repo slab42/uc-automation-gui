@@ -32,6 +32,32 @@ def csv_dropzone(upload_id: str) -> rx.Component:
     return file_dropzone(upload_id, {"text/csv": [".csv"]}, "Drop a CSV here or click to choose")
 
 
+def paste_csv_tabs(paste_value, on_paste_change, paste_help: str, placeholder: str, paste_button: rx.Component,
+                   csv_content: list) -> rx.Component:
+    """Paste text (default) and CSV file tabs for a bulk input. csv_content is the existing CSV card body."""
+    return rx.tabs.root(
+        rx.tabs.list(
+            rx.tabs.trigger("Paste text", value="text"),
+            rx.tabs.trigger("CSV", value="csv"),
+        ),
+        rx.tabs.content(
+            rx.vstack(
+                rx.text(paste_help, size="2", color="var(--gray-11)"),
+                rx.text_area(value=paste_value, on_change=on_paste_change, width="100%", rows="8",
+                             placeholder=placeholder),
+                paste_button,
+                spacing="3", align="start", width="100%", padding_top="1rem",
+            ),
+            value="text",
+        ),
+        rx.tabs.content(
+            rx.vstack(*csv_content, spacing="3", align="start", width="100%", padding_top="1rem"),
+            value="csv",
+        ),
+        default_value="text", width="100%",
+    )
+
+
 def code_block(text: str) -> rx.Component:
     return rx.box(
         rx.el.pre(text, style={"margin": "0", "font_size": "12px", "font_family": "var(--code-font-family)"}),

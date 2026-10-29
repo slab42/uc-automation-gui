@@ -31,10 +31,12 @@ backend/cucm_devices.py      phones, CTI route points (delete cleans up orphaned
 backend/cucm_connections.py  saved CUCM connections ([CUCM:<name>] in .env/credentials.env)
 backend/errors.py            UserError: base of AxlError, WebexError, WebexAuthError (run loops catch it)
 backend/webex_api.py         WebexClient: one per operation, token checked once, `orgId` added to every call, 429 retry
+backend/paste.py              PastedFile: pasted text as a stand-in for an uploaded CSV (delimiter detection, optional header)
 backend/webex_routing.py     Add Numbers and Call Forward All (set/remove) calls and CSV parsers
 backend/webex_groups.py      Call queues and hunt groups: lists, create from CSV, replace agents, migrate hunt group to queue
 backend/webex_virtual_lines.py  Virtual line busy/unanswered voicemail greeting upload
 backend/webex_users.py       Delete users, reset voicemail PIN
+backend/webex_voicemail.py   Voicemail report: internal vs external mailbox per user (single user or a location)
 backend/webex_workspaces.py  Add devices to workspaces, move users to another location (Move Users job)
 backend/webex_locations.py   Location schedules (export/update/copy/remove past) and RedSky E911 status/opt-out
 backend/webex_tools.py       Hardware compatibility check (supported models + validateMacs)
@@ -44,7 +46,7 @@ backend/ini_store.py         comment-preserving credentials.env editor (copied f
 state/logs.py                LogsState: Logs page (search, read, export; no delete or import)
 state/run_mixin.py           RunMixin: busy/progress/per-row results for tool pages (CUCM and Webex)
 state/webex_tools.py         Check Hardware Compatibility state
-state/webex_users.py         Delete Users, Reset PIN, Add Workspace, Migrate states
+state/webex_users.py         Delete Users, Reset PIN, Voicemail, Add Device, Migrate states
 state/webex_locations.py     Schedules and E911 states
 state/webex_groups.py        PickerMixin (searchable list + selection) and the Call Queues / Hunt Groups / Virtual Lines states
 state/webex_routing.py       WebexSession (login status in the menu bar, checked on page load) + Add Numbers / Call Forward states
@@ -108,7 +110,7 @@ Webex has no username/password token API, so login is the OAuth authorization co
 ### Webex features
 
 - Menu: `components/webex_nav.GROUPS` drives the Webex menu bar and the `/webex` home cards. Section **Call Routing**:
-  Add Numbers (`/webex/add-numbers`) and Call Forward (`/webex/call-forward`, Set or Remove switch).
+  Add Numbers (`/webex/add-numbers`, single number plus a CSV | Paste text tab pair for bulk) and Call Forward (`/webex/call-forward`, Set or Remove switch).
 - A feature is backend functions taking a `WebexClient` (`webex_api.py`), a state `class X(_WebexRun)` that builds
   `(label, callable)` items and runs them with `_run_items` (per-row results, one log per operation), and a page using
   `webex_page` + `tool_widgets`. Create the client once per run with `self._connect(log)`; never call `ensure_token` per row.
@@ -126,11 +128,11 @@ Webex has no username/password token API, so login is the OAuth authorization co
 - Create CSVs are header based (`name,location,firstName,lastName,phoneNumber,extension,policy,destination,agent1,agent2,...`),
   unlike the scripts' fixed column positions. The queue create no longer sends the script's hardcoded org-specific announcement
   file id: all greetings are DEFAULT.
-- **Users** (Delete Users, Reset PIN), **Workspaces** (Add Workspace, Migrate), **Locations** (Schedules) and **E911** are menu groups
+- **Users** (Delete Users, Reset PIN), **Reports** (Voicemail: `/webex/voicemail`, one email or every Calling user of a location via the Add Numbers style location datalist; reads `GET /people/{id}/features/voicemail`, shows internal/external and, for external, the destination email; internal message counts are not available to an admin login), **Workspaces** (Add Device, Migrate), **Locations** (Schedules) and **E911** are menu groups
   in `webex_nav.GROUPS`. Destructive actions (delete users, migrate, copy/update/remove schedule events, RedSky opt-out) go
   through `tool_widgets.confirm_dialog` (`S.confirm_open`). Delete Users and Migrate are two-step: load/review a plan first,
   then confirm.
-- Add Workspace: `AddDevicesWorkspaces.py` is an unfinished draft (it never runs the CSV loop), so the page implements its
+- Add Device: `AddDevicesWorkspaces.py` is an unfinished draft (it never runs the CSV loop), so the page implements its
   intent: add a device (`POST /v1/devices`: model, MAC, workspace) to an existing workspace found by display name. CSV is
   `workspace,model,mac[,location]`. It does not create workspaces.
 - Migrate moves users (PRIMARY number, owner type PEOPLE) with the Move Users job (validate, run, poll up to 180 s).
@@ -312,3 +314,13 @@ None of this proves the behavior on a real cluster. Say so when reporting, and t
 - Phone button template list cannot show the base template (AXL does not return it).
 - Only CUCM is ported. CUC, CUBE and RedSky have placeholder pages and credential tabs. Webex has login, Call Routing, Users, Workspaces and Locations pages.
 - `gui/` (old FastAPI/React wrapper) still exists and is unchanged.
+
+## Paste text input
+
+Bulk Webex inputs offer a "Paste text" tab (default) beside the "CSV" tab, built with `paste_csv_tabs` (`components/tool_widgets.py`).
+The text is turned into CSV bytes by `backend/paste.py` (`PastedFile`, same `read()`/`filename` as `rx.UploadFile`), so the CSV
+handler logic is shared: each "from CSV" handler delegates to a `_x(files)` helper and a `x_text` event calls it through
+`WebexSession._from_paste(handler, field, ...)`. The box text lives in a `paste_<field>` var set with `S.set_paste("<field>", v)`.
+Delimiters: tab, pipe, semicolon, comma; the header row is optional (columns are then taken by position).
+Pages with it: Add Numbers, Call Forward, Call Queues and Hunt Groups (create, replace agents), Delete Users, Add Device,
+Schedules (update), E911 (select locations), Check Hardware Compatibility.
