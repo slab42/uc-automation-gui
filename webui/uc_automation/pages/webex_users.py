@@ -96,14 +96,25 @@ def reset_pin() -> rx.Component:
             ),
             rx.card(
                 rx.vstack(
-                    rx.heading("From CSV", size="4"),
-                    rx.text("Header row required. The column whose header contains \"email\" is used, otherwise "
-                            "the first column.", size="2", color="var(--gray-11)"),
-                    code_block("Email\njane.doe@example.com\njohn.smith@example.com\n"),
-                    csv_dropzone("pin_upload"),
-                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
-                              "Reset PINs",
-                              on_click=S.reset_from_csv(rx.upload_files(upload_id="pin_upload")), disabled=S.busy),
+                    rx.heading("Multiple users", size="4"),
+                    paste_csv_tabs(
+                        S.paste_pin, lambda v: S.set_paste("pin", v),
+                        "Paste one email address per line (or separated by commas, tabs, semicolons or pipes). "
+                        "A header row is optional.",
+                        "jane.doe@example.com\njohn.smith@example.com",
+                        rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("key-round", size=16)),
+                                  "Reset PINs", on_click=S.reset_from_text, disabled=S.busy),
+                        [
+                            rx.text("Header row required. The column whose header contains \"email\" is used, "
+                                    "otherwise the first column.", size="2", color="var(--gray-11)"),
+                            code_block("Email\njane.doe@example.com\njohn.smith@example.com\n"),
+                            csv_dropzone("pin_upload"),
+                            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
+                                      "Reset PINs",
+                                      on_click=S.reset_from_csv(rx.upload_files(upload_id="pin_upload")),
+                                      disabled=S.busy),
+                        ],
+                    ),
                     spacing="3", align="start", width="100%",
                 ),
                 size="3", width="100%",

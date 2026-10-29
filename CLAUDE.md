@@ -183,6 +183,8 @@ structural change. The rules:
 - A new CUCM list/add/modify/delete resource is: backend functions + a `ResourceSpec` + `class XState(CucmState, CrudMixin)`
   + a `build_crud_page(...)` config + one `add_page` + one entry in `GROUPS` (`components/cucm_nav.py`). Do not copy the page code.
 - Custom behavior goes through `CrudPageConfig.extra_toolbar` / `extra_dialogs`, not a forked page.
+- Any bulk input that accepts a CSV must offer "Paste text" as the first (default) tab, CSV second: use
+  `paste_csv_tabs` + `PasteMixin` and route both through the same handler.
 - Passwords stay in backend (`_`-prefixed) vars and `.env/credentials.env`; never send one to the browser.
 - Check AXL request shapes against `cucm/schema/current/AXLSoap.xsd` with zeep `create_message`, and compile with
   `reflex export --frontend-only --no-zip`. Say plainly that nothing was tested against a real CUCM.
