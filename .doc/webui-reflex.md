@@ -1,11 +1,10 @@
 # Reflex web UI (`webui/`)
 
-The web-native replacement for `gui/`. It does not wrap the CLI scripts. Each feature is
-ported into the app as Python backend code (AXL calls) plus a Reflex page. The CLI scripts in
-`cucm/` are reference only and are never imported or modified. Version: `VERSION` in
+The only front end of this repo (the old CLI scripts and the `gui/` wrapper were removed; see git history). Each feature is
+Python backend code (AXL, REST or SSH calls) plus a Reflex page. Version: `VERSION` in
 `webui/uc_automation/config.py`.
 
-Run: `cd webui && .venv/bin/reflex run` (UI on :3000, backend on :8000, localhost only).
+Run: `python3 main.py` from the repo root (creates `webui/.venv` on first run), or `cd webui && .venv/bin/reflex run` (UI on :3000, backend on :8000, localhost only).
 Setup: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`.
 Compile check: `.venv/bin/reflex export --frontend-only --no-zip` (fails on any bad page).
 
@@ -33,7 +32,7 @@ backend/cuc_connections.py   saved CUC connections ([CUC:<name>]), same shape as
 backend/cuc_api.py           CUC REST plumbing: CucError, schema pick, `detect_version` (GET /vmrest/version), CucClient (paged GET, DELETE, users/mailboxes, call handlers, menu entries)
 backend/cube_ssh.py          CubeError, Router, parse_routers (router_ip,hostname CSV), run_command (netmiko, cisco_ios, port 22)
 backend/cube_mem.py          Mem Status parsing (free % of RP0/RP1, memory section), CSV export
-backend/cube_config.py       Config Compare: voice section parser, comparator, HTML report (copied from the CLI script)
+backend/cube_config.py       Config Compare: voice section parser, comparator, HTML report
 backend/cube_credentials.py  named router credential sets ([CUBE:<name>]: username, password)
 backend/redsky_connections.py  saved RedSky connections ([REDSKY:<name>]: username, password, org_id)
 backend/redsky_api.py        RedskyError, RedskyClient (login, 15 min token renewal, geography/networking/alert calls; raises RedskyError), `check_login`
@@ -56,7 +55,7 @@ backend/webex_locations.py   Location schedules (export/update/copy/remove past)
 backend/webex_tools.py       Hardware compatibility check (supported models + validateMacs)
 backend/webex_auth.py        Webex OAuth login, token storage/refresh ([WEBEX:default]); `ensure_token()` for API code
 backend/applog.py            operation logs: OpLog writer, plus list/read/export helpers for the Logs page
-backend/ini_store.py         comment-preserving credentials.env editor (copied from gui/backend/ini_editor.py)
+backend/ini_store.py         comment-preserving credentials.env editor
 state/logs.py                LogsState: Logs page (search, read, export; no delete or import)
 state/search.py              SearchState: home page search over the GROUPS of the CUCM, CUC and Webex menus (platform, section, link)
 state/run_mixin.py           RunMixin: busy/progress/per-row results for tool pages (CUCM and Webex)
@@ -95,7 +94,7 @@ uc_automation.py             app + every add_page()
 ## Logging
 
 - Every operation writes its own text file to `webui/logs/` (git-ignored): `<YYYY-MM-DD_HH-MM-SS>-<slug>.log`,
-  same line format as the CLI, first line `<Title> - Started`, last line `<Title> - Completed`.
+  first line `<Title> - Started`, last line `<Title> - Completed`.
 - Use `OpLog(title, slug)` from `backend/applog.py` and close it in `try/finally`. On CRUD pages call
   `self._open_log("Action")` (builds title and slug from the spec). Pass the log into `_run_each(..., log)` and
   `_fetch(log)` so a follow-up reload lands in the parent operation's log. A bare `_fetch()` opens its own "List" log.
@@ -110,13 +109,13 @@ uc_automation.py             app + every add_page()
 ## Credentials
 
 - Stored in `.env/credentials.env` as `[CUCM:<name>]` with `server`, `username`, `password`,
-  `version` (detected CUCM release) and `schema_version` (AXL schema folder used). Same file the CLI reads.
+  `version` (detected CUCM release) and `schema_version` (AXL schema folder used).
 - Passwords never reach the browser. The password input is uncontrolled and feeds a **backend var**
   (`_password`, underscore prefix = not sent to the client). Saved passwords show only as "Stored".
 - The Test button calls `getCCMVersion`, derives the major release (for example 14.0), picks the
   closest installed schema (`webui/uc_automation/schemas/cucm/<version>/`, exact match else nearest older), and saves both.
 - Schemas are tracked in git under `webui/uc_automation/schemas/<platform>/<version>/` (`cucm`, `cuc`); a new platform gets its own folder and a constant in `backend/paths.py`.
-- The webui keeps its own copy of the schemas; it does not read the CLI's `cucm/schema/` or `cuc/schema/`.
+- The webui keeps its own copy of the schemas.
 
 ### CUC credentials
 
@@ -129,7 +128,7 @@ uc_automation.py             app + every add_page()
 ### CUBE credentials
 
 - Credentials > CUBE stores named sets: `[CUBE:<name>]` with `username` and `password`. A set is not tied to a router, so
-  several routers can share one. The CLI reads `[CUBE:<hostname>]` then `[CUBE:default]`, so a set named `default` is its fallback.
+  several routers can share one. A set named `default` is preselected on the CUBE pages.
 - No Test button yet (a set has no router to test against). Saves and deletes are logged without the password.
 
 ### CUBE features
@@ -137,19 +136,18 @@ uc_automation.py             app + every add_page()
 - Menu (`components/cube_nav.GROUPS`, also the `/cube` home cards): **Health** = Mem Status; **Configuration** = Config Compare.
   Port of `cube/check_router_mem_status.py` and `cube/compare_router_config.py` (reference only).
 - No router list is stored. Each run takes routers from Paste Text (first) or CSV (`router_ip,hostname`, header optional, same layout
-  as `_DATA/routers.csv`) and one saved credential set picked in a dropdown (`default` preselected), or **Enter Manually** (username and password fields, held in
+  as the old `routers.csv`) and one saved credential set picked in a dropdown (`default` preselected), or **Enter Manually** (username and password fields, held in
   backend vars for the session, never written to `credentials.env`, never logged). Routers run one by one over SSH.
 - **Mem Status** runs `show platform software status control-processor br`, reads the free % and flags routers below the threshold
-  (field on the page, default 33, replaces the CLI `.var` value). Export CSV is a browser download. The CLI's summary email is not ported.
+  (field on the page, default 33). Export CSV is a browser download. There is no summary email.
 - **Config Compare** takes the template as pasted text or a loaded file (the file fills the text box), runs `show running-config`,
   compares the voice sections and builds one HTML report per router. Download Reports gives one `.html`, or a `.zip` for several,
-  instead of writing to `_DATA/reports/`. Export CSV gives the results table.
+  as browser downloads. Export CSV gives the results table.
 - Needs `netmiko` (in `requirements.txt`). Not tested against a real router: the parsers and report were run on sample text, and the app compiles.
 
 ### RedSky credentials
 
-- Credentials > RedSky works like CUCM: `[REDSKY:<name>]` with `username`, `password`, `org_id`. The CLI reads `[REDSKY:default]`
-  from the same file, so save one connection named `default` to share it.
+- Credentials > RedSky works like CUCM: `[REDSKY:<name>]` with `username`, `password`, `org_id`.
 - Test logs in (`POST /auth-service/login`), then lists the organization's buildings to prove the org ID, and saves on success.
 - Not tested against a real RedSky tenant. Only the page compile was checked.
 
@@ -160,9 +158,9 @@ uc_automation.py             app + every add_page()
   One active connection (picker in the menu bar, shared with the Credentials tab). Port of `redsky/*.py` (reference only).
 - **Add tools** share one page (`add_page`) built from an `AddSpec`: a single entry form (one field per CSV column, suggestions
   for buildings, locations, alert types and templates), then Paste Text (first) and CSV tabs that go through the same handler,
-  a Download Template button and a per-row result table. CSV layout and column order match the CLI scripts (header row skipped).
+  a Download Template button and a per-row result table. Column order is the Download Template order (header row skipped).
   Pasted text may be tab, pipe or comma separated (not semicolon: it separates items inside a cell); quote addresses with commas.
-- **Check tools** (`check_page`, `CheckSpec`) run on demand, list the problems and Export CSV (browser download, not `_DATA/reports/`).
+- **Check tools** (`check_page`, `CheckSpec`) run on demand, list the problems and Export CSV (browser download).
 - Add a tool: a spec in `backend/redsky_*.py`, `class XState(RedskyState, RedskyBulk)` (or `RedskyCheck`) with `SPEC`/`CHECK`
   and `row`, one page function calling `add_page`/`check_page` with the spec object (not `State.SPEC`, which is a Var),
   an entry in `GROUPS` and an `add_page` in `uc_automation.py`.
@@ -174,8 +172,7 @@ uc_automation.py             app + every add_page()
   **Call Handlers** = Map, Search, Bulk Delete. Same single active connection as CUCM; no multi-cluster mode.
 - Port of `cuc/check_userMailbox.py`, `check_userMailboxUsage.py`, `cleanup_emptyMailboxes.py`, `build_call_trees.py`,
   `list_CallHandlers.py`, `list_NonSubscriber_CallHandlers_WithMenuEntries.py`, `delete_CallHandlers.py` (reference only).
-  CSV layouts match the scripts, so files move between the CLI and the web app.
-- Extensions come from a pasted list or a CSV (first column, header optional). Exports are browser downloads, not files in `_DATA/`.
+- Extensions come from a pasted list or a CSV (first column, header optional). Exports are browser downloads.
 - **Status Check, Usage Check and Remove Empty** share one layout (`_three_tabs` in `pages/cuc_users.py`, state mixin `AllRows`): tabs
   All users (first), Paste text and CSV. All users loads automatically when the page opens (10 parallel requests; Reload re-reads) and has a
   search on extension, alias and display name (Contains | Begins with), a checkbox per row and a header checkbox that selects every user the
@@ -183,7 +180,7 @@ uc_automation.py             app + every add_page()
 - Status Check and Usage Check: Export selected writes the ticked rows to CSV (status columns, or dtmfAccessID/alias/mailboxSize).
 - **Remove Empty** deletes the whole user account (CUC cannot remove only a mailbox). Its All users tab lists only mailboxes with no data;
   Delete selected asks for confirmation, and deletes only ticked users whose mailbox is still empty in the loaded list, then reloads. Paste text and
-  CSV keep the scan, review, confirm flow (and Export mailboxes with data, the CLI's "remaining" CSV).
+  CSV keep the scan, review, confirm flow (and Export mailboxes with data).
 - **Search** loads every call handler (system and subscriber handlers left out) when the page opens, with the same search, checkboxes and Reload as the
   user pages (state mixin `AllRows`, view `cuc_widgets.all_rows_view`). Export Selected writes the Delete/Map CSV; Export Menu Entries reads the menu
   entries of the ticked handlers (parallel fetch, 10 workers) and writes the second Map CSV, with an errors CSV when some handlers fail. Delete Selected... confirms, deletes the ticked handlers and reloads the list. **Map** builds the call tree xlsx from the live connection or
@@ -228,7 +225,7 @@ Webex has no username/password token API, so login is the OAuth authorization co
 - Every call gets `orgId` from the saved Org ID when there is one. The Locations lookup uses the Calling API
   (`GET /telephony/config/locations`), not the core `/v1/locations` (different scope).
 - Call forward owner types: PEOPLE, PLACE, VIRTUAL_LINE (also sets business continuity), HUNT_GROUP, CALL_QUEUE,
-  AUTO_ATTENDANT. The forward prefix (default 88888888) is a form field, not a `.var` file.
+  AUTO_ATTENDANT. The forward prefix (default 88888888) is a form field.
 - Page states are `class X(WebexSession, RunMixin, ...)`: mixins go on the leaf so busy/results are per page.
 - **Call Queues** (`/webex/call-queues`): Create (CSV) and Update agents. **Hunt Groups**: Create, Update agents, Migrate to Call
   Queue (Review, then a confirm dialog; the original settings are saved to `webui/logs/<ts>-hunt_group_backup-<name>.json`
@@ -255,10 +252,8 @@ Webex has no username/password token API, so login is the OAuth authorization co
 - **Tools > Check Hardware Compatibility** (`/webex/hardware-compatibility`): one phone or a CSV (`model,mac`). Model is checked
   against `GET /telephony/config/supportedDevices` (model code or display name), MACs against `validateMacs` in batches of 50
   (a write-scoped call that only validates). Status VALID / WARNING / INVALID with a reason; results export as CSV. The
-  model box suggests the supported models. Example CSV: `_DATA/examples/phone_compatibility.csv.EXAMPLE`.
-- Example CSVs in `_DATA/examples/`: `webex_add_numbers`, `webex_call_forward`, `webex_call_queues_create`,
-  `webex_hunt_groups_create`, `webex_group_agents`, `webex_workspace_devices` (all `.csv.EXAMPLE`). Existing examples also used: `reset_user_pin`, `migration_userWorkspace_location`, `holiday_schedule`, `locations_DisableRedSky`.
-- Request shapes are copied from the CLI scripts and docs; not tested against a real Webex org.
+  model box suggests the supported models.
+- Request shapes come from the Webex docs; not tested against a real Webex org.
 
 ## Adding a new CRUD resource (the normal case)
 
@@ -310,7 +305,7 @@ Hub_None). Their dependency checks (`find_region_usage`, `find_location_usage`, 
 candidate table to the referenced table by `fk<table>`; a table or column missing on a release is skipped, any other
 SQL error becomes a warning (status Unconfirmed). Regions cannot be modified: AXL `updateRegion` has no `defaultCodec`.
 Cleanup needs `executeSQLQuery` (`cucm_axl.sql_rows`, AXL has no call for "which devices use this DN"). SQL is
-copied from the CLI scripts and is the least verified part, so test it on a lab CUCM.
+is the least verified part, so test it on a lab CUCM.
 
 ### Dependency check (`DepCheckMixin`)
 
@@ -407,24 +402,22 @@ var) or an uploaded CSV, go straight to CUCM or the EM servlet, and are never lo
 4. Boot: `reflex run` and confirm each route returns 200.
 None of this proves the behavior on a real cluster. Say so when reporting, and try a lab CUCM.
 
-## Conventions carried over from the CLI
+## Conventions
 
 - Passwords are never displayed or logged. Credentials only come from `.env/credentials.env`.
-- Names and CSV column names match the AXL tags (`pattern`, `patternType`, `devicePoolName`) so a CSV
-  exported from the old scripts imports here.
+- Names and CSV column names match the AXL tags (`pattern`, `patternType`, `devicePoolName`) .
 - Selection, search and counts always act on the active connection only. The web app has no multi-cluster
   mode yet.
 
 ## Known gaps
 
-- Web logs live in `webui/logs/`, not the repo-root `_logs/` the CLI uses. No rotation or cleanup yet.
+- Web logs live in `webui/logs/`. No rotation or cleanup yet.
 - **No login.** Anyone who can reach the port can use the stored credentials. Keep it on localhost or
   behind an authenticating proxy.
-- **Template CSVs are embedded in code**, not stored in `_DATA/examples/` as the CLI rule requires.
-- Phone delete does not clean up orphaned directory numbers (the CLI script does).
+- Template CSVs are embedded in code (Download Template buttons); there is no examples folder.
+- Phone delete does not clean up orphaned directory numbers.
 - Phone button template list cannot show the base template (AXL does not return it).
-- Only CUCM, CUC (users and call handlers) and Webex are ported; CUBE and RedSky have placeholder pages and credential tabs. Webex has login, Call Routing, Users, Workspaces and Locations pages.
-- `gui/` (old FastAPI/React wrapper) still exists and is unchanged.
+- Ported: CUCM, CUC (users and call handlers), CUBE (Mem Status, Config Compare), Webex and RedSky. The `Tools` platform is still a placeholder.
 
 ## Paste text input
 
