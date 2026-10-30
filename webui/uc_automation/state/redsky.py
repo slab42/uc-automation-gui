@@ -36,11 +36,6 @@ class RedskyState(rx.State):
     def has_active(self) -> bool:
         return self.active in self.connection_names
 
-    @rx.var
-    def active_org(self) -> str:
-        c = next((c for c in self.connections if c["name"] == self.active), None)
-        return f"org {c['org_id']}" if c else ""
-
     def _conn(self) -> RedskyConnection | None:
         """The active connection with its stored credentials (backend only), or None."""
         return redsky_connections.load(self.active) if self.active else None

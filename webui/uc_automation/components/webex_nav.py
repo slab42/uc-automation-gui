@@ -72,11 +72,6 @@ def _status() -> rx.Component:
             rx.badge("Login " + WebexSession.webex_login, variant="soft", color_scheme="gray"),
             rx.fragment(),
         ),
-        rx.cond(
-            WebexSession.webex_org != "",
-            rx.badge("Org " + WebexSession.webex_org.to(str)[:12] + "...", variant="soft", color_scheme="gray"),
-            rx.badge("No org ID", variant="soft", color_scheme="gray"),
-        ),
         rx.link(
             rx.cond(
                 WebexSession.webex_ok,

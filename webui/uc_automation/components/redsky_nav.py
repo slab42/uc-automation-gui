@@ -42,7 +42,6 @@ def _connection_picker() -> rx.Component:
     return rx.cond(
         RedskyState.has_active,
         rx.hstack(
-            rx.badge(RedskyState.active_org, variant="soft", color_scheme="gray"),
             rx.select(RedskyState.connection_names, value=RedskyState.active, on_change=RedskyState.select_active,
                       size="1"),
             align="center",
