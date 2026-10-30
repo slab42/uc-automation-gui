@@ -153,7 +153,8 @@ class AllRows(CucRun, mixin=True):
     @rx.event
     async def auto_load(self):
         """Page load: read all users, quietly skipping when there is no connection yet."""
-        if self._conn() is not None and not self.all_loading:
+        # Not guarded by all_loading: a load cancelled mid-way (page left, socket drop) can leave the flag stuck on.
+        if self._conn() is not None:
             async for ev in self._load_all():
                 yield ev
 

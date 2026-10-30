@@ -31,6 +31,12 @@ backend/cucm_devices.py      phones, CTI route points (delete cleans up orphaned
 backend/cucm_connections.py  saved CUCM connections ([CUCM:<name>] in .env/credentials.env)
 backend/cuc_connections.py   saved CUC connections ([CUC:<name>]), same shape as CUCM
 backend/cuc_api.py           CUC REST plumbing: CucError, schema pick, `detect_version` (GET /vmrest/version), CucClient (paged GET, DELETE, users/mailboxes, call handlers, menu entries)
+backend/redsky_connections.py  saved RedSky connections ([REDSKY:<name>]: username, password, org_id)
+backend/redsky_api.py        RedskyError, RedskyClient (login, 15 min token renewal, geography/networking/alert calls; raises RedskyError), `check_login`
+backend/redsky_common.py     Field / AddSpec / CheckSpec (one spec drives form, CSV template, parser and run loop), CSV rows, location lookup
+backend/redsky_geography.py  Add Buildings, Add Locations, Check Entire Site specs
+backend/redsky_alerts.py     Add Alerts, Check All Buildings specs
+backend/redsky_networking.py BSSID, LLDP, Private IP, Public IP specs
 backend/cuc_users.py         CUC users: extension list parsing, status/usage rows and CSV
 backend/cuc_handlers.py      CUC call handlers: classify, menu entries, CSV in/out, call tree workbook (openpyxl)
 backend/errors.py            UserError: base of AxlError, WebexError, WebexAuthError (run loops catch it)
@@ -48,6 +54,7 @@ backend/webex_auth.py        Webex OAuth login, token storage/refresh ([WEBEX:de
 backend/applog.py            operation logs: OpLog writer, plus list/read/export helpers for the Logs page
 backend/ini_store.py         comment-preserving credentials.env editor (copied from gui/backend/ini_editor.py)
 state/logs.py                LogsState: Logs page (search, read, export; no delete or import)
+state/search.py              SearchState: home page search over the GROUPS of the CUCM, CUC and Webex menus (platform, section, link)
 state/run_mixin.py           RunMixin: busy/progress/per-row results for tool pages (CUCM and Webex)
 state/webex_tools.py         Check Hardware Compatibility state
 state/webex_users.py         Delete Users, Reset PIN, Voicemail, Add Device, Migrate states
@@ -56,6 +63,10 @@ state/webex_groups.py        PickerMixin (searchable list + selection) and the C
 state/webex_routing.py       WebexSession (login status in the menu bar, checked on page load) + Add Numbers / Call Forward states
 state/webex.py               WebexState: Webex tab on the credentials page and the /webex/callback page
 state/cucm.py                CucmState: connection list, active connection, credentials form, Test button
+state/redsky.py              RedskyState: connection list, active connection, credentials form, Test button
+state/redsky_tools.py        RedskyBulk / RedskyCheck mixins (all handlers) + one tiny state per tool
+components/redsky_nav.py     RedSky top menu bar (GROUPS), connection picker, redsky_page(), need_connection()
+pages/redsky_tools.py        home cards, generic add_page(S, spec) and check_page(S, spec)
 state/cuc.py                 CucState: same for CUC; plus CucRun (RunMixin + failed_results)
 state/cuc_users.py           Status Check, Usage Check, Remove Empty states
 state/cuc_handlers.py        List, Map, Delete states
@@ -66,6 +77,7 @@ state/<resource>.py          one tiny class per resource: `class XState(CucmStat
 components/crud_page.py      build_crud_page(): the shared page (toolbar, table, all dialogs)
 components/webex_picker.py   picker(): search + click-to-select table for a PickerMixin state
 components/webex_nav.py      Webex top menu bar (GROUPS) and webex_page(); shows org and login status
+components/search_input.py   search_input(value, on_change, placeholder): every search box uses it (clear button once there is text)
 components/cucm_nav.py       CUCM top menu bar. GROUPS drives the menu and the CUCM home cards
 components/layout.py         sidebar, top bar, page() wrapper
 pages/<resource>.py          one config per resource (columns, add form)
@@ -106,6 +118,28 @@ uc_automation.py             app + every add_page()
   `schemas/cuc/<version>/` (only 15.0 today) and saves both. Port 443, basic auth, TLS not verified.
 - Not tested against a real CUC (the version call was checked against a local fake server only).
 
+### RedSky credentials
+
+- Credentials > RedSky works like CUCM: `[REDSKY:<name>]` with `username`, `password`, `org_id`. The CLI reads `[REDSKY:default]`
+  from the same file, so save one connection named `default` to share it.
+- Test logs in (`POST /auth-service/login`), then lists the organization's buildings to prove the org ID, and saves on success.
+- Not tested against a real RedSky tenant. Only the page compile was checked.
+
+### RedSky features
+
+- Menu (`components/redsky_nav.GROUPS`, also the `/redsky` home cards): **Buildings And Locations** = Add Buildings, Add Locations,
+  Check Entire Site; **Alerts** = Add Alerts, Check All Buildings; **Tracking** = BSSID, LLDP, Private IP, Public IP.
+  One active connection (picker in the menu bar, shared with the Credentials tab). Port of `redsky/*.py` (reference only).
+- **Add tools** share one page (`add_page`) built from an `AddSpec`: a single entry form (one field per CSV column, suggestions
+  for buildings, locations, alert types and templates), then Paste Text (first) and CSV tabs that go through the same handler,
+  a Download Template button and a per-row result table. CSV layout and column order match the CLI scripts (header row skipped).
+  Pasted text may be tab, pipe or comma separated (not semicolon: it separates items inside a cell); quote addresses with commas.
+- **Check tools** (`check_page`, `CheckSpec`) run on demand, list the problems and Export CSV (browser download, not `_DATA/reports/`).
+- Add a tool: a spec in `backend/redsky_*.py`, `class XState(RedskyState, RedskyBulk)` (or `RedskyCheck`) with `SPEC`/`CHECK`
+  and `row`, one page function calling `add_page`/`check_page` with the spec object (not `State.SPEC`, which is a Var),
+  an entry in `GROUPS` and an `add_page` in `uc_automation.py`.
+- Not tested against a real RedSky tenant. The specs were run against a fake client (all add paths, both checks) and the app compiles.
+
 ### CUC features
 
 - Menu (`components/cuc_nav.GROUPS`, also the `/cuc` home cards): **Users** (first) = Status Check, Usage Check, Remove Empty;
@@ -136,9 +170,18 @@ Webex has no username/password token API, so login is the OAuth authorization co
 
 - Credentials > Webex: save Client ID, Client Secret and scopes, then "Log in with Webex". The browser goes to Webex's
   login page and returns to `/webex/callback`, which verifies the one-time `state`, exchanges the code and stores
-  `access_token` (about 14 days) and `refresh_token` (about 90 days) in `[WEBEX:default]`.
+  `access_token` (about 14 days) and `refresh_token` (about 90 days) in the connection's `[WEBEX:<name>]` section.
 - Tokens, the client secret and the refresh token are in `ini_store.SECRET_KEYS`: never sent to the browser.
-- `webex_auth.ensure_token()` is what every Webex feature must call before an API request. It checks expiry, confirms the
+- The Webex tab (`pages/webex_credentials.py`) has two lists, **Credentials** and **Organizations**; Add/edit open a dialog, delete asks first,
+  and each org row has its own credentials dropdown.
+- **Logins and orgs are separate** (mix and match): a login is a named `[WEBEX:<name>]` section (Integration and tokens, or a
+  pasted bearer token); an org is a named `[WEBEXORG:<name>]` section with `org_id` and `login` (the login it uses). Any login can
+  serve any org, and the pairing is changed per org from the Saved orgs list. `webex_auth.resolve(org)` returns `(login, org_id)`;
+  `WebexClient.connect(org)` and `check_org(org)` take the **org** name, `ensure_token(login)` takes a login name. The active org is
+  `WebexSession.webex_active` (browser LocalStorage, picker in the Webex menu bar; switching reloads the page). `WebexState` is a child
+  of `WebexSession` so both lists and the active org are shared. The OAuth `state` remembers which login started it. Older
+  `[WEBEX:x]` sections that held an `org_id` are turned into an org `x` using login `x` the first time orgs are listed.
+- `webex_auth.ensure_token(login)` is what every Webex feature must call before an API request. It checks expiry, confirms the
   token live with `GET /v1/people/me`, and silently refreshes when needed. It raises `WebexAuthError` (message is
   user-ready) when a new login is required. The Credentials page runs the same check on every load.
 - Credentials > Webex also takes the customer's **Org ID** (`org_id`, either sign-in method; read it with `webex_auth.get_org_id()`) and

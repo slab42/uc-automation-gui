@@ -60,13 +60,6 @@ class ListHandlersState(CucState, AllRows):
         return ("displayName", "extension")
 
     @rx.event
-    async def auto_load(self):
-        """Page load: read all call handlers, quietly skipping when there is no connection yet."""
-        if self._conn() is not None and not self.all_loading:
-            async for ev in self._load_all():
-                yield ev
-
-    @rx.event
     def export_selected(self):
         rows = self._selected_rows()
         if not rows:

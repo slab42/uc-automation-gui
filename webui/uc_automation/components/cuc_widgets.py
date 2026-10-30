@@ -2,6 +2,7 @@
 
 import reflex as rx
 
+from .search_input import search_input
 
 def failures(S, item_header: str) -> rx.Component:
     """Progress line, succeeded/failed badges and a table of only the failed items of a CucRun state."""
@@ -131,8 +132,7 @@ def all_rows_view(S, columns: list[tuple[str, str]], blurb: str, action: rx.Comp
             S.all_rows.length() > 0,
             rx.vstack(
                 rx.hstack(
-                    rx.input(rx.input.slot(rx.icon("search", size=16)), placeholder=placeholder,
-                             value=S.search, on_change=S.set_search, width="320px", max_width="100%"),
+                    search_input(S.search, S.set_search, placeholder, width="320px", max_width="100%"),
                     rx.select(["Contains", "Begins With"], value=S.search_mode, on_change=S.set_search_mode),
                     rx.spacer(),
                     rx.badge(S.selected_count.to_string() + " selected", variant="soft"),

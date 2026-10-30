@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import reflex as rx
 
 from .cucm_nav import cucm_page
+from .search_input import search_input
 
 
 @dataclass
@@ -349,14 +350,7 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
 
     def toolbar() -> rx.Component:
         return rx.hstack(
-            rx.input(
-                rx.input.slot(rx.icon("search", size=16)),
-                placeholder="Search",
-                value=S.search,
-                on_change=S.set_search,
-                width="320px",
-                max_width="100%",
-            ),
+            search_input(S.search, S.set_search, width="320px", max_width="100%"),
             rx.text(
                 rx.cond(S.search != "",
                         S.filtered.length().to_string() + " of " + S.items.length().to_string(),

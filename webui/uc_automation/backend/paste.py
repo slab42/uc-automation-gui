@@ -28,20 +28,21 @@ def _split(line: str, delim: str | None) -> list[str]:
 
 
 def paste_to_csv(text: str, columns=(), markers=(), header_if=None, flatten=False, extra_prefix="",
-                 item_split=r"[\t|;,]") -> bytes:
+                 item_split=r"[\t|;,]", delims=DELIMS) -> bytes:
     """CSV bytes (with a header row) from pasted text.
 
     columns      header to use when the pasted text has none; empty means the text always carries its header
     markers      a first line holding one of these cells (case-insensitive) is a header row
     header_if    alternative header test, called with the cells of the first line
     flatten      without a header, every separated item is its own row of the single column
+    delims       column separators to look for, in order (leave out ";" when cells hold ;-separated lists)
     item_split   regex that separates the items of a flattened list (names may contain commas: use a tab only)
     extra_prefix cells beyond `columns` are named prefix1, prefix2, ... (for agent1, agent2 columns)
     """
     lines = [ln for ln in text.splitlines() if ln.strip()]
     if not lines:
         raise ValueError("Paste some text first.")
-    delim = next((d for d in DELIMS if d in lines[0]), None)
+    delim = next((d for d in delims if d in lines[0]), None)
     first = _split(lines[0], delim)
     if not columns:
         has_header = True

@@ -1,6 +1,7 @@
 import reflex as rx
 
 from ..components.layout import page
+from ..components.search_input import search_input
 from ..state.logs import LogsState as S
 
 
@@ -41,11 +42,10 @@ def _table() -> rx.Component:
 
 def _toolbar() -> rx.Component:
     return rx.hstack(
-        rx.input(
-            rx.input.slot(rx.icon("search", size=16)),
-            placeholder="Search names and contents",
-            value=S.search,
-            on_change=S.set_search,
+        search_input(
+            S.search,
+            S.set_search,
+            "Search names and contents",
             debounce_timeout=300,
             width="320px",
             max_width="100%",

@@ -8,6 +8,7 @@ from .pages.cuc_handlers import call_map, delete_handlers, list_handlers
 from .pages.cuc_home import cuc_home
 from .pages.cuc_users import remove_empty, status_check, usage_check
 from .pages.cucm_home import cucm_home
+from .pages import redsky_tools as rs_pages
 from .pages.dn import alternate_numbers, move_partition, orphans
 from .pages.devices import (
     cti_route_points,
@@ -36,6 +37,8 @@ from .state.advertised_patterns import AdvertisedPatternsState
 from .state.css import CssState
 from .state.cucm import CucmState
 from .state.cuc import CucState
+from .state import redsky_tools as rs_state
+from .state.redsky import RedskyState
 from .state.cuc_handlers import ListHandlersState
 from .state.cuc_users import RemoveEmptyState, StatusCheckState, UsageCheckState
 from .state.dn import AlternateNumbersState, MoveDnState, OrphansState
@@ -68,7 +71,7 @@ app = rx.App(
 
 app.add_page(home, route="/", title=APP_NAME)
 for _p in PLATFORMS:
-    if _p.slug in ("cucm", "cuc", "webex"):
+    if _p.slug in ("cucm", "cuc", "webex", "redsky"):
         continue
     app.add_page(platform_page(_p), route=f"/{_p.slug}", title=f"{_p.label} | {APP_NAME}")
 app.add_page(webex_home, route="/webex", title=f"Webex | {APP_NAME}", on_load=WebexSession.on_page_load)
@@ -112,6 +115,23 @@ for _route, _title, _page, _state in [
                  on_load=[CucState.load_connections, _state.auto_load])
 app.add_page(list_handlers, route="/cuc/list-handlers", title=f"CUC Search | {APP_NAME}",
              on_load=[CucState.load_connections, ListHandlersState.auto_load])
+app.add_page(rs_pages.redsky_home, route="/redsky", title=f"RedSky | {APP_NAME}", on_load=RedskyState.load_connections)
+for _route, _title, _page, _state in [
+    ("/redsky/buildings-add", "Add Buildings", rs_pages.buildings_add, rs_state.AddBuildingsState),
+    ("/redsky/locations-add", "Add Locations", rs_pages.locations_add, rs_state.AddLocationsState),
+    ("/redsky/alerts-add", "Add Alerts", rs_pages.alerts_add, rs_state.AddAlertsState),
+    ("/redsky/bssid", "BSSID", rs_pages.bssid, rs_state.BssidState),
+    ("/redsky/lldp", "LLDP", rs_pages.lldp, rs_state.LldpState),
+    ("/redsky/private-ip", "Private IP", rs_pages.private_ip, rs_state.PrivateIpState),
+    ("/redsky/public-ip", "Public IP", rs_pages.public_ip, rs_state.PublicIpState),
+]:
+    app.add_page(_page, route=_route, title=f"RedSky {_title} | {APP_NAME}",
+                 on_load=[RedskyState.load_connections, _state.load_lookups])
+for _route, _title, _page in [
+    ("/redsky/entire-site", "Check Entire Site", rs_pages.entire_site),
+    ("/redsky/alerts-check", "Check All Buildings", rs_pages.alerts_check),
+]:
+    app.add_page(_page, route=_route, title=f"RedSky {_title} | {APP_NAME}", on_load=RedskyState.load_connections)
 app.add_page(cucm_home, route="/cucm", title=f"CUCM | {APP_NAME}", on_load=CucmState.load_connections)
 app.add_page(
     advertised_patterns,
@@ -123,7 +143,8 @@ app.add_page(
     credentials,
     route="/credentials",
     title=f"Credentials | {APP_NAME}",
-    on_load=[CucmState.load_connections, CucState.load_connections, WebexState.on_page_load],
+    on_load=[CucmState.load_connections, CucState.load_connections, RedskyState.load_connections,
+             WebexState.on_credentials_load],
 )
 app.add_page(webex_callback, route="/webex/callback", title=f"Webex login | {APP_NAME}",
              on_load=WebexState.handle_callback)

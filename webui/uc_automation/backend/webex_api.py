@@ -39,9 +39,11 @@ class WebexClient:
         self.cache: dict = {}  # per-run lookups (license ids and the like)
 
     @classmethod
-    def connect(cls) -> "WebexClient":
-        """Check the stored login (renewing it if needed) and build a client. Raises WebexAuthError."""
-        return cls(webex_auth.ensure_token(), webex_auth.saved_org_id())
+    def connect(cls, org: str) -> "WebexClient":
+        """Check the login assigned to a saved org (renewing it if needed) and build a client for that org.
+        Raises WebexAuthError."""
+        login, org_id = webex_auth.resolve(org)
+        return cls(webex_auth.ensure_token(login), org_id)
 
     def call(self, method: str, path: str, params: dict | None = None, body: dict | None = None,
              files: dict | None = None) -> dict:

@@ -2,6 +2,7 @@ import reflex as rx
 
 from ..components.tool_widgets import code_block, confirm_dialog, csv_dropzone, paste_csv_tabs, run_results
 from ..components.webex_nav import webex_page
+from ..components.search_input import search_input
 from ..components.webex_picker import picker
 from ..state.webex_locations import E911State, SchedulesState
 from .webex_routing import need_login
@@ -245,8 +246,7 @@ def e911() -> rx.Component:
             rx.card(
                 rx.vstack(
                     rx.hstack(
-                        rx.input(rx.input.slot(rx.icon("search", size=16)), placeholder="Search locations",
-                                 value=S.search, on_change=S.set_search, width="260px", max_width="100%"),
+                        search_input(S.search, S.set_search, "Search locations", width="260px", max_width="100%"),
                         rx.spacer(),
                         rx.button(rx.cond(S.loading, rx.spinner(size="2"), rx.icon("refresh-cw", size=16)),
                                   "Reload", variant="soft", on_click=S.reload, disabled=S.loading),

@@ -2,6 +2,7 @@ import reflex as rx
 
 from ..backend.cucm_tools import EM_MODES
 from ..components.cucm_nav import cucm_page
+from ..components.search_input import search_input
 from ..components.tool_widgets import code_block, csv_dropzone, field, run_results
 from ..state.tools import EmBulkState, PhoneCountState, SetPinState
 
@@ -78,8 +79,7 @@ def phone_count() -> rx.Component:
         "Phone Count By DP",
         _need_connection(S, rx.vstack(
             rx.hstack(
-                rx.input(rx.input.slot(rx.icon("search", size=16)), placeholder="Search device pools",
-                         value=S.search, on_change=S.set_search, width="320px", max_width="100%"),
+                search_input(S.search, S.set_search, "Search device pools", width="320px", max_width="100%"),
                 rx.hstack(rx.switch(checked=S.include_analog, on_change=S.set_include_analog),
                           rx.text("Include analog and CTI devices", size="2"), align="center", spacing="2"),
                 rx.spacer(),

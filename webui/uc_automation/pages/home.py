@@ -1,7 +1,9 @@
 import reflex as rx
 
 from ..components.layout import page
+from ..components.search_input import search_input
 from ..config import APP_NAME, PLATFORMS, VERSION
+from ..state.search import SearchState
 
 
 def platform_card(p) -> rx.Component:
@@ -31,6 +33,54 @@ def platform_card(p) -> rx.Component:
     )
 
 
+def result_row(r) -> rx.Component:
+    return rx.link(
+        rx.card(
+            rx.hstack(
+                rx.vstack(
+                    rx.text(r["label"], weight="medium"),
+                    rx.text(r["description"], size="2", color="var(--gray-11)"),
+                    spacing="1",
+                    align="start",
+                ),
+                rx.spacer(),
+                rx.badge(r["platform"], color_scheme="blue"),
+                rx.badge(r["section"], variant="soft", color_scheme="gray"),
+                align="center",
+                spacing="2",
+                width="100%",
+            ),
+            width="100%",
+            _hover={"border_color": "var(--accent-8)"},
+        ),
+        href=r["route"],
+        underline="none",
+        width="100%",
+    )
+
+
+def search_box() -> rx.Component:
+    return rx.vstack(
+        search_input(
+            SearchState.query,
+            SearchState.set_query,
+            "Search all platforms...",
+            size="3",
+            width="100%",
+        ),
+        rx.cond(
+            SearchState.searching,
+            rx.cond(
+                SearchState.results.length() > 0,
+                rx.vstack(rx.foreach(SearchState.results, result_row), spacing="2", width="100%"),
+                rx.text("No matches.", color="var(--gray-11)"),
+            ),
+        ),
+        spacing="3",
+        width="100%",
+    )
+
+
 def home() -> rx.Component:
     return page(
         "Home",
@@ -51,6 +101,7 @@ def home() -> rx.Component:
                 align="center",
                 wrap="wrap",
             ),
+            search_box(),
             rx.grid(
                 *[platform_card(p) for p in PLATFORMS],
                 columns=rx.breakpoints(initial="1", sm="2", lg="3"),

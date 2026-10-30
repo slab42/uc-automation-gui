@@ -17,11 +17,11 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 SECRET_KEYS = {"password", "api_token", "token", "secret", "client_secret", "access_token", "refresh_token"}
-SERVICES = ("CUCM", "CUC", "CUBE", "WEBEX", "REDSKY")
+SERVICES = ("CUCM", "CUC", "CUBE", "WEBEX", "WEBEXORG", "REDSKY")
 
 _SECTION_RE = re.compile(r'^\s*\[([^\]]+)\]\s*$')
 _KV_RE = re.compile(r'^\s*([^=:#;\s][^=:]*?)\s*[=:]\s*(.*?)\s*$')
-_SECTION_NAME_RE = re.compile(r'^(CUCM|CUC|CUBE|WEBEX|REDSKY):([A-Za-z0-9._-]+)$')
+_SECTION_NAME_RE = re.compile(r'^(CUCM|CUC|CUBE|WEBEX|WEBEXORG|REDSKY):([A-Za-z0-9._-]+)$')
 
 
 def validate_section_name(section: str) -> Tuple[str, str]:
@@ -30,7 +30,7 @@ def validate_section_name(section: str) -> Tuple[str, str]:
     if not m:
         raise ValueError(
             "Section must look like SERVICE:identifier where SERVICE is one of "
-            "CUCM, CUC, CUBE, WEBEX, REDSKY and identifier uses letters, digits, '.', '_' or '-'.")
+            "CUCM, CUC, CUBE, WEBEX, WEBEXORG, REDSKY and identifier uses letters, digits, '.', '_' or '-'.")
     return m.group(1), m.group(2)
 
 

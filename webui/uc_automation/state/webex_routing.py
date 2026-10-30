@@ -14,32 +14,71 @@ from .run_mixin import RunMixin
 
 
 class WebexSession(rx.State):
-    """Login status shown in the Webex menu bar, checked (and the token renewed) on every page load.
+    """Active Webex org (and the login assigned to it), shown in the Webex menu bar.
 
+    The login status is checked (and the token renewed) on every page load.
     Page states subclass this plus RunMixin, so busy/results stay per page."""
 
+    webex_orgs: list[dict[str, str]] = []
+    webex_logins: list[dict[str, str]] = []
+    webex_active: str = rx.LocalStorage("")  # name of the saved org in use
     webex_ok: bool = False
     webex_message: str = ""
-    webex_org: str = ""
+    webex_org: str = ""  # org id of the active org
+    webex_login: str = ""  # login assigned to the active org
+
+    @rx.var
+    def webex_org_names(self) -> list[str]:
+        return [o["name"] for o in self.webex_orgs]
+
+    @rx.var
+    def webex_login_names(self) -> list[str]:
+        return [x["name"] for x in self.webex_logins]
+
+    @rx.var
+    def webex_has_orgs(self) -> bool:
+        return len(self.webex_orgs) > 0
+
+    def _load_webex(self):
+        self.webex_orgs = webex_auth.list_orgs()
+        self.webex_logins = webex_auth.list_logins()
+        names = self.webex_org_names
+        if names and self.webex_active not in names:
+            self.webex_active = names[0]
+        if not names:
+            self.webex_active = ""
+        active = next((o for o in self.webex_orgs if o["name"] == self.webex_active), None)
+        self.webex_org = active["org_id"] if active else ""
+        self.webex_login = active["login"] if active else ""
 
     async def _refresh_session(self):
-        self.webex_org = webex_auth.saved_org_id()
-        ok, msg = await asyncio.to_thread(webex_auth.check)
+        self._load_webex()
+        if not self.webex_active:
+            self.webex_ok, self.webex_message = False, "No Webex org yet. Add one on the Credentials page."
+            return
+        ok, msg = await asyncio.to_thread(webex_auth.check_org, self.webex_active)
         self.webex_ok, self.webex_message = ok, msg
 
     @rx.event
     async def on_page_load(self):
         await self._refresh_session()
 
+    @rx.event
+    def select_webex_org(self, name: str):
+        """Switch org. The page reloads so it lists the new org's data."""
+        self.webex_active = name
+        return rx.call_script("setTimeout(() => window.location.reload(), 200)")
+
     def _webex_log(self, title: str, slug: str) -> OpLog:
         log = OpLog(title, slug)
-        log.info("Webex org: " + (self.webex_org or "(token owner's own org)"))
+        own = "token owner's own org"
+        log.info(f"Webex org: {self.webex_active} ({self.webex_org or own}), login: {self.webex_login}")
         return log
 
     async def _connect(self, log: OpLog):
         """A checked WebexClient, or None after showing why not (the caller then returns)."""
         try:
-            return await asyncio.to_thread(WebexClient.connect)
+            return await asyncio.to_thread(WebexClient.connect, self.webex_active)
         except UserError as e:
             log.error(str(e))
             self.webex_ok, self.webex_message = False, str(e)

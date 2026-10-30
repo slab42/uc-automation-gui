@@ -58,6 +58,21 @@ GROUPS = [
 def _status() -> rx.Component:
     return rx.hstack(
         rx.cond(
+            WebexSession.webex_has_orgs,
+            rx.select(
+                WebexSession.webex_org_names,
+                value=WebexSession.webex_active,
+                on_change=WebexSession.select_webex_org,
+                size="1",
+            ),
+            rx.link(rx.button("Add an org", size="1", variant="soft"), href="/credentials"),
+        ),
+        rx.cond(
+            WebexSession.webex_login != "",
+            rx.badge("Login " + WebexSession.webex_login, variant="soft", color_scheme="gray"),
+            rx.fragment(),
+        ),
+        rx.cond(
             WebexSession.webex_org != "",
             rx.badge("Org " + WebexSession.webex_org.to(str)[:12] + "...", variant="soft", color_scheme="gray"),
             rx.badge("No org ID", variant="soft", color_scheme="gray"),

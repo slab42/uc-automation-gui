@@ -2,6 +2,7 @@
 
 import reflex as rx
 
+from .search_input import search_input
 
 DEFAULT_COLUMNS = (("Name", "name"), ("Location", "location"), ("Number", "number"))
 
@@ -21,8 +22,7 @@ def picker(S, title: str, columns=DEFAULT_COLUMNS) -> rx.Component:
             rx.hstack(
                 rx.heading(title, size="4"),
                 rx.spacer(),
-                rx.input(rx.input.slot(rx.icon("search", size=16)), placeholder="Search", value=S.search,
-                         on_change=S.set_search, width="260px", max_width="100%"),
+                search_input(S.search, S.set_search, width="260px", max_width="100%"),
                 rx.button(rx.cond(S.loading, rx.spinner(size="2"), rx.icon("refresh-cw", size=16)), "Reload",
                           variant="soft", on_click=S.reload, disabled=S.loading),
                 align="center", spacing="3", wrap="wrap", width="100%",
