@@ -1,6 +1,0 @@
-cluster_type,server_type,cluster_name,server,version
-cucm,publisher,CUCM1,192.168.25.100,15.0
-cucm,subscriber,CUCM2,192.168.25.200,15.0
-cucm,em,CUCM1,192.168.25.100,15.0
-cuc,publisher,CUC1,192.168.10.120,15.0
-cuc,subscriber,CUC2,192.168.10.121,15.0

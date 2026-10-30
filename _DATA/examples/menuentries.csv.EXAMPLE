@@ -1,3 +1,0 @@
-sourceHandler,sourceExtension,sourceObjectId,touchToneKey,locked,actionCode,destinationType,destinationName,targetConversation,targetHandlerObjectId,targetHandlerName,transferDisplayName,transferNumber,transferType,transferRings,menuEntryObjectId,menuEntryUri
-Sales Menu,2000,ca8cdbd5-9b1b-4893-9237-171d78b5c6a2,1,FALSE,3,Call Handler,Support Queue,,f349f979-308b-4fad-b110-f58c132c2cae,Support Queue,,,,,menuentry-obj-1,/vmrest/handlers/callhandlers/ca8cdbd5-9b1b-4893-9237-171d78b5c6a2/menuentries/menuentry-obj-1
-Support Queue,2001,f349f979-308b-4fad-b110-f58c132c2cae,0,FALSE,1,Transfer,5551234,,,,,5551234,1,2,menuentry-obj-2,/vmrest/handlers/callhandlers/f349f979-308b-4fad-b110-f58c132c2cae/menuentries/menuentry-obj-2

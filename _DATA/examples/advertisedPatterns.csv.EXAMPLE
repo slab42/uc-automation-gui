@@ -1,3 +1,0 @@
-description, pattern, patternType, hostedRoutePSTNRule, pstnFailStrip, pstnFailPrepend
-Test DIDs,+155585944XX,+E.164 Number,Use pattern,0,
-Sales Line,+13125550100,+E.164 Number,Use pattern,0,

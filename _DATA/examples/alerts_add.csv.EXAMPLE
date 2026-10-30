@@ -1,3 +1,0 @@
-name,alertType,template,emailRecipients,smsRecipients,timezone,allCorporateLocations,allPersonalLocations,scope
-HQ 911 Calls,EMERGENCY_CALL,Default Email,a@example.com;b@example.com,+12175550100,America/Chicago,no,no,HQ Building;Branch Office
-All Sites Security,EMERGENCY_CALL,,security@example.com,,,yes,no,

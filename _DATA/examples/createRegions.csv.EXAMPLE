@@ -1,5 +1,0 @@
-region_name,audio_codec_preference_list,max_audio_bit_rate
-US-Region-G711,Standard-G711,256
-EU-Region-Premium,Premium-Codecs,512
-APAC-Region-G729,G729-Preferred,64
-Remote-Region-iLBC,iLBC-Standard,128
