@@ -31,6 +31,10 @@ backend/cucm_devices.py      phones, CTI route points (delete cleans up orphaned
 backend/cucm_connections.py  saved CUCM connections ([CUCM:<name>] in .env/credentials.env)
 backend/cuc_connections.py   saved CUC connections ([CUC:<name>]), same shape as CUCM
 backend/cuc_api.py           CUC REST plumbing: CucError, schema pick, `detect_version` (GET /vmrest/version), CucClient (paged GET, DELETE, users/mailboxes, call handlers, menu entries)
+backend/cube_ssh.py          CubeError, Router, parse_routers (router_ip,hostname CSV), run_command (netmiko, cisco_ios, port 22)
+backend/cube_mem.py          Mem Status parsing (free % of RP0/RP1, memory section), CSV export
+backend/cube_config.py       Config Compare: voice section parser, comparator, HTML report (copied from the CLI script)
+backend/cube_credentials.py  named router credential sets ([CUBE:<name>]: username, password)
 backend/redsky_connections.py  saved RedSky connections ([REDSKY:<name>]: username, password, org_id)
 backend/redsky_api.py        RedskyError, RedskyClient (login, 15 min token renewal, geography/networking/alert calls; raises RedskyError), `check_login`
 backend/redsky_common.py     Field / AddSpec / CheckSpec (one spec drives form, CSV template, parser and run loop), CSV rows, location lookup
@@ -63,6 +67,10 @@ state/webex_groups.py        PickerMixin (searchable list + selection) and the C
 state/webex_routing.py       WebexSession (login status in the menu bar, checked on page load) + Add Numbers / Call Forward states
 state/webex.py               WebexState: Webex tab on the credentials page and the /webex/callback page
 state/cucm.py                CucmState: connection list, active connection, credentials form, Test button
+state/cube_tools.py          CubeRun mixin (router list, credential set picker) + MemStatusState, ConfigCompareState
+components/cube_nav.py       CUBE top menu bar (GROUPS), cred_picker, cube_page()
+pages/cube_tools.py          CUBE home cards, Mem Status and Config Compare pages
+state/cube.py                CubeState: credential set list and form (Credentials > CUBE)
 state/redsky.py              RedskyState: connection list, active connection, credentials form, Test button
 state/redsky_tools.py        RedskyBulk / RedskyCheck mixins (all handlers) + one tiny state per tool
 components/redsky_nav.py     RedSky top menu bar (GROUPS), connection picker, redsky_page(), need_connection()
@@ -117,6 +125,26 @@ uc_automation.py             app + every add_page()
 - Test calls `GET https://<server>/vmrest/version`, takes the major release, picks the closest schema folder under
   `schemas/cuc/<version>/` (only 15.0 today) and saves both. Port 443, basic auth, TLS not verified.
 - Not tested against a real CUC (the version call was checked against a local fake server only).
+
+### CUBE credentials
+
+- Credentials > CUBE stores named sets: `[CUBE:<name>]` with `username` and `password`. A set is not tied to a router, so
+  several routers can share one. The CLI reads `[CUBE:<hostname>]` then `[CUBE:default]`, so a set named `default` is its fallback.
+- No Test button yet (a set has no router to test against). Saves and deletes are logged without the password.
+
+### CUBE features
+
+- Menu (`components/cube_nav.GROUPS`, also the `/cube` home cards): **Health** = Mem Status; **Configuration** = Config Compare.
+  Port of `cube/check_router_mem_status.py` and `cube/compare_router_config.py` (reference only).
+- No router list is stored. Each run takes routers from Paste Text (first) or CSV (`router_ip,hostname`, header optional, same layout
+  as `_DATA/routers.csv`) and one saved credential set picked in a dropdown (`default` preselected), or **Enter Manually** (username and password fields, held in
+  backend vars for the session, never written to `credentials.env`, never logged). Routers run one by one over SSH.
+- **Mem Status** runs `show platform software status control-processor br`, reads the free % and flags routers below the threshold
+  (field on the page, default 33, replaces the CLI `.var` value). Export CSV is a browser download. The CLI's summary email is not ported.
+- **Config Compare** takes the template as pasted text or a loaded file (the file fills the text box), runs `show running-config`,
+  compares the voice sections and builds one HTML report per router. Download Reports gives one `.html`, or a `.zip` for several,
+  instead of writing to `_DATA/reports/`. Export CSV gives the results table.
+- Needs `netmiko` (in `requirements.txt`). Not tested against a real router: the parsers and report were run on sample text, and the app compiles.
 
 ### RedSky credentials
 

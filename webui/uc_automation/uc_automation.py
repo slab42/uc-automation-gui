@@ -9,6 +9,7 @@ from .pages.cuc_home import cuc_home
 from .pages.cuc_users import remove_empty, status_check, usage_check
 from .pages.cucm_home import cucm_home
 from .pages import redsky_tools as rs_pages
+from .pages.cube_tools import config_compare, cube_home, mem_status
 from .pages.dn import alternate_numbers, move_partition, orphans
 from .pages.devices import (
     cti_route_points,
@@ -38,6 +39,8 @@ from .state.css import CssState
 from .state.cucm import CucmState
 from .state.cuc import CucState
 from .state import redsky_tools as rs_state
+from .state.cube import CubeState
+from .state.cube_tools import ConfigCompareState, MemStatusState
 from .state.redsky import RedskyState
 from .state.cuc_handlers import ListHandlersState
 from .state.cuc_users import RemoveEmptyState, StatusCheckState, UsageCheckState
@@ -71,9 +74,14 @@ app = rx.App(
 
 app.add_page(home, route="/", title=APP_NAME)
 for _p in PLATFORMS:
-    if _p.slug in ("cucm", "cuc", "webex", "redsky"):
+    if _p.slug in ("cucm", "cuc", "cube", "webex", "redsky"):
         continue
     app.add_page(platform_page(_p), route=f"/{_p.slug}", title=f"{_p.label} | {APP_NAME}")
+app.add_page(cube_home, route="/cube", title=f"CUBE | {APP_NAME}")
+app.add_page(mem_status, route="/cube/mem-status", title=f"CUBE Mem Status | {APP_NAME}",
+             on_load=MemStatusState.load_page)
+app.add_page(config_compare, route="/cube/config-compare", title=f"CUBE Config Compare | {APP_NAME}",
+             on_load=ConfigCompareState.load_page)
 app.add_page(webex_home, route="/webex", title=f"Webex | {APP_NAME}", on_load=WebexSession.on_page_load)
 app.add_page(add_numbers, route="/webex/add-numbers", title=f"Add Numbers | {APP_NAME}",
              on_load=AddNumbersState.load_page)
@@ -144,6 +152,7 @@ app.add_page(
     route="/credentials",
     title=f"Credentials | {APP_NAME}",
     on_load=[CucmState.load_connections, CucState.load_connections, RedskyState.load_connections,
+             CubeState.load_credentials,
              WebexState.on_credentials_load],
 )
 app.add_page(webex_callback, route="/webex/callback", title=f"Webex login | {APP_NAME}",

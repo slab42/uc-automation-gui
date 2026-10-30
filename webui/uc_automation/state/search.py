@@ -2,10 +2,10 @@
 
 import reflex as rx
 
-from ..components import cuc_nav, cucm_nav, redsky_nav, webex_nav
+from ..components import cube_nav, cuc_nav, cucm_nav, redsky_nav, webex_nav
 
 # (platform label, GROUPS) - same data that drives each platform's menu bar
-_SOURCES = [("CUCM", cucm_nav.GROUPS), ("CUC", cuc_nav.GROUPS), ("Webex", webex_nav.GROUPS),
+_SOURCES = [("CUCM", cucm_nav.GROUPS), ("CUC", cuc_nav.GROUPS), ("CUBE", cube_nav.GROUPS), ("Webex", webex_nav.GROUPS),
             ("RedSky", redsky_nav.GROUPS)]
 
 INDEX: list[dict[str, str]] = [

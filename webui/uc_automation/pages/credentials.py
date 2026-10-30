@@ -1,6 +1,7 @@
 import reflex as rx
 
 from ..components.layout import page
+from ..state.cube import CubeState
 from ..state.cucm import CucmState
 from ..state.cuc import CucState
 from ..state.redsky import RedskyState
@@ -266,6 +267,98 @@ def _redsky_tab() -> rx.Component:
     )
 
 
+def _cube_row(c) -> rx.Component:
+    S = CubeState
+    return rx.hstack(
+        rx.vstack(
+            rx.text(c["name"], weight="bold"),
+            rx.text(c["username"], size="2", color="var(--gray-11)"),
+            spacing="0",
+            align="start",
+        ),
+        rx.spacer(),
+        rx.icon_button(rx.icon("pencil", size=15), variant="ghost", on_click=S.edit_credential(c["name"])),
+        rx.icon_button(
+            rx.icon("trash-2", size=15), variant="ghost", color_scheme="red",
+            on_click=S.delete_credential(c["name"]),
+        ),
+        align="center",
+        width="100%",
+        padding="0.6rem 0.75rem",
+        border="1px solid var(--gray-5)",
+        border_radius="var(--radius-3)",
+    )
+
+
+def _cube_form() -> rx.Component:
+    S = CubeState
+    return rx.card(
+        rx.vstack(
+            rx.heading("Credential Set", size="4"),
+            _field(
+                "Name",
+                rx.input(
+                    value=S.form_name, placeholder="e.g. branch-routers",
+                    on_change=lambda v: S.set_form("name", v), width="100%",
+                ),
+                "A label for this set. Saving under an existing name updates it. "
+                "A set named default is the fallback for routers without their own.",
+            ),
+            _field(
+                "Username",
+                rx.input(
+                    value=S.form_username, placeholder="username",
+                    on_change=lambda v: S.set_form("username", v), width="100%",
+                    auto_complete="off",
+                ),
+            ),
+            _field(
+                "Password",
+                rx.input(
+                    type="password",
+                    key=S.password_key.to_string(),
+                    placeholder=rx.cond(S.form_has_password, "Stored. Leave blank to keep it.", ""),
+                    on_change=S.set_password,
+                    auto_complete="new-password",
+                    width="100%",
+                ),
+                "Stored in .env/credentials.env and never shown again.",
+            ),
+            rx.hstack(
+                rx.button("Save", on_click=S.save_credential),
+                rx.button("Clear", variant="ghost", color_scheme="gray", on_click=S.new_credential),
+                spacing="3",
+            ),
+            spacing="4",
+            align="start",
+            width="100%",
+        ),
+        size="3",
+        width="100%",
+    )
+
+
+def _cube_tab() -> rx.Component:
+    S = CubeState
+    return rx.grid(
+        _cube_form(),
+        rx.vstack(
+            rx.heading("Saved Credential Sets", size="4"),
+            rx.cond(
+                S.credentials.length() > 0,
+                rx.vstack(rx.foreach(S.credentials, _cube_row), spacing="2", width="100%"),
+                rx.text("None yet. Fill in the form and save one.", color="var(--gray-11)", size="2"),
+            ),
+            spacing="3",
+            align="start",
+            width="100%",
+        ),
+        columns=rx.breakpoints(initial="1", lg="2"),
+        spacing="5",
+        width="100%",
+    )
+
+
 def _soon(name: str) -> rx.Component:
     return rx.text(f"{name} credentials will be added when its features are ported.", color="var(--gray-11)")
 
@@ -294,7 +387,7 @@ def credentials() -> rx.Component:
             ),
             rx.tabs.content(rx.box(_cucm_tab(), padding_top="1rem"), value="cucm"),
             rx.tabs.content(rx.box(_cuc_tab(), padding_top="1rem"), value="cuc"),
-            rx.tabs.content(rx.box(_soon("CUBE"), padding_top="1rem"), value="cube"),
+            rx.tabs.content(rx.box(_cube_tab(), padding_top="1rem"), value="cube"),
             rx.tabs.content(rx.box(webex_tab(), padding_top="1rem"), value="webex"),
             rx.tabs.content(rx.box(_redsky_tab(), padding_top="1rem"), value="redsky"),
             value=WebexState.cred_tab,
