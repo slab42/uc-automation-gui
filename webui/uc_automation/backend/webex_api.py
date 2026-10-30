@@ -9,6 +9,7 @@ import re
 import time
 
 import requests
+from requests.adapters import HTTPAdapter
 
 from . import webex_auth
 from .errors import UserError
@@ -16,6 +17,7 @@ from .errors import UserError
 BASE = "https://webexapis.com/v1"
 TIMEOUT = 30
 MAX_RETRIES = 3  # for HTTP 429 (rate limited)
+POOL_SIZE = 16   # keep-alive connections, enough for the parallel bulk runs
 
 
 class WebexError(UserError):
@@ -37,6 +39,10 @@ class WebexClient:
         self._token = token
         self.org_id = org_id
         self.cache: dict = {}  # per-run lookups (license ids and the like)
+        # One session per client: reuses the TLS connection across calls (and across the worker threads of a bulk run).
+        self._session = requests.Session()
+        adapter = HTTPAdapter(pool_connections=1, pool_maxsize=POOL_SIZE)
+        self._session.mount("https://", adapter)
 
     @classmethod
     def connect(cls, org: str) -> "WebexClient":
@@ -56,8 +62,8 @@ class WebexClient:
         headers = {"Authorization": f"Bearer {self._token}"}
         for attempt in range(MAX_RETRIES + 1):
             try:
-                r = requests.request(method, BASE + path, headers=headers, params=params,
-                                     json=None if files else body, files=files, timeout=TIMEOUT)
+                r = self._session.request(method, BASE + path, headers=headers, params=params,
+                                          json=None if files else body, files=files, timeout=TIMEOUT)
             except requests.RequestException as e:
                 raise WebexError(f"Could not reach Webex: {e}") from e
             if r.status_code == 429 and attempt < MAX_RETRIES:

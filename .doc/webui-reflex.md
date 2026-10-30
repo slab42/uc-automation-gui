@@ -19,7 +19,7 @@ Every feature has the same three layers. Keep them separate.
 | Page | `uc_automation/pages/`, `components/` | Layout only. Reads state vars, binds buttons to state handlers. |
 
 ```
-backend/cucm_axl.py          shared plumbing only: AxlError, schema/version, cached zeep client, `_call`, `list_paged`, `sql_rows`
+backend/cucm_axl.py          shared plumbing only: AxlError, schema/version, cached zeep client, `_call`, `list_paged`, `sql_rows`. Every AXL call goes through `_Service`: network/5xx problems become `AxlError`, reads (get/list/SQL) retry twice on a reset connection or HTTP 502/503/504, writes never retry
 backend/cucm_routing.py      advertised patterns, partitions, calling search spaces, call pickup groups, route patterns, translation patterns
 backend/cucm_hunt.py         hunt pilots, plus hunt list / line group cleanup and the line group dependency check
 backend/cucm_system.py       System: audio codec preference lists, regions, locations, device pools (+ SQL dependency checks)
@@ -43,7 +43,7 @@ backend/redsky_networking.py BSSID, LLDP, Private IP, Public IP specs
 backend/cuc_users.py         CUC users: extension list parsing, status/usage rows and CSV
 backend/cuc_handlers.py      CUC call handlers: classify, menu entries, CSV in/out, call tree workbook (openpyxl)
 backend/errors.py            UserError: base of AxlError, WebexError, WebexAuthError (run loops catch it)
-backend/webex_api.py         WebexClient: one per operation, token checked once, `orgId` added to every call, 429 retry
+backend/webex_api.py         WebexClient: one per operation, token checked once, `orgId` added to every call, one pooled `requests.Session` (keep-alive), 429 retry
 backend/paste.py              PastedFile: pasted text as a stand-in for an uploaded CSV (delimiter detection, optional header)
 backend/webex_routing.py     Add Numbers and Call Forward All (set/remove) calls and CSV parsers
 backend/webex_groups.py      Call queues and hunt groups: lists, create from CSV, replace agents, migrate hunt group to queue
@@ -54,11 +54,12 @@ backend/webex_workspaces.py  Add devices to workspaces, move users to another lo
 backend/webex_locations.py   Location schedules (export/update/copy/remove past) and RedSky E911 status/opt-out
 backend/webex_tools.py       Hardware compatibility check (supported models + validateMacs)
 backend/webex_auth.py        Webex OAuth login, token storage/refresh ([WEBEX:default]); `ensure_token()` for API code
-backend/applog.py            operation logs: OpLog writer, plus list/read/export helpers for the Logs page
+backend/applog.py            operation logs: OpLog writer, pruning (`prune_logs`), plus list/read/export helpers for the Logs page
+backend/app_settings.py      `webui/app_settings.json` (git-ignored): log retention days and max size, defaults 90 days / 2048 MB
 backend/ini_store.py         comment-preserving credentials.env editor
 state/logs.py                LogsState: Logs page (search, read, export; no delete or import)
 state/search.py              SearchState: home page search over the GROUPS of the CUCM, CUC and Webex menus (platform, section, link)
-state/run_mixin.py           RunMixin: busy/progress/per-row results for tool pages (CUCM and Webex)
+state/run_mixin.py           RunMixin: busy/progress/per-row results for tool pages (CUCM and Webex); `_run_items(..., workers=N)` runs N rows at once
 state/webex_tools.py         Check Hardware Compatibility state
 state/webex_users.py         Delete Users, Reset PIN, Voicemail, Add Device, Migrate states
 state/webex_locations.py     Schedules and E911 states
@@ -102,7 +103,9 @@ uc_automation.py             app + every add_page()
   migrate/prep, and save/test/delete connection. New features must log too. Never log passwords.
 - Logs page (`/logs`, sidebar above Credentials): newest first, search matches file names and contents,
   click a row to read it, select one or more and Export (one `.log`, or a `.zip` for several). It has no delete
-  or import on purpose. The Parser mode switch replaces the file list with the last 200 log lines (oldest first)
+  or import on purpose. The viewer and the content search read only the last 1000 lines of each log (`applog.LINE_LIMIT`); Export gives the whole file.
+  Old logs are pruned by `applog.prune_logs`: older than `log_retention_days` (default 90), then oldest first while the total is over `log_max_mb` (default 2048); 0 turns a limit off. It runs at app start, before a log opens (at most every 10 minutes) and when Settings > Log Retention is saved. Logs being written are never pruned.
+  The Parser mode switch replaces the file list with the last 200 log lines (oldest first)
   across all logs, filtered by the search text when there is one (`applog.parse_logs`). File names from the browser are validated against a strict pattern before any read.
 - Not logged: template downloads, selection/search clicks, dialog open/close, and CSV rejections on the MPP page.
 
@@ -227,6 +230,7 @@ Webex has no username/password token API, so login is the OAuth authorization co
 - Call forward owner types: PEOPLE, PLACE, VIRTUAL_LINE (also sets business continuity), HUNT_GROUP, CALL_QUEUE,
   AUTO_ATTENDANT. The forward prefix (default 88888888) is a form field.
 - Page states are `class X(WebexSession, RunMixin, ...)`: mixins go on the leaf so busy/results are per page.
+  `WebexSession._run_items` runs `WEBEX_WORKERS` (4) rows at once; the result table keeps CSV order, the log lists rows as they finish. Row callables must not touch state.
 - **Call Queues** (`/webex/call-queues`): Create (CSV) and Update agents. **Hunt Groups**: Create, Update agents, Migrate to Call
   Queue (Review, then a confirm dialog; the original settings are saved to `webui/logs/<ts>-hunt_group_backup-<name>.json`
   before the hunt group is deleted). **Virtual Lines**: upload a .wav as busy + unanswered greeting. Agents are an email, or a

@@ -1,5 +1,6 @@
 import reflex as rx
 
+from .backend import applog
 from .config import APP_NAME, PLATFORMS
 from .pages.advertised_patterns import advertised_patterns
 from .pages.css import css
@@ -54,6 +55,7 @@ from .state.devices import (
     SoftkeyTemplatesState,
 )
 from .state.logs import LogsState
+from .state.settings import SettingsState
 from .state.webex import WebexState
 from .state.webex_groups import CallQueuesState, HuntGroupsState as WebexHuntGroupsState, VirtualLinesState
 from .state.webex_locations import E911State, SchedulesState
@@ -67,6 +69,8 @@ from .state.system import CodecListsState, DevicePoolsState, LocationsState, Reg
 from .state.pickup_groups import PickupGroupsState
 from .state.route_patterns import RoutePatternsState
 from .state.translation_patterns import TranslationPatternsState
+
+applog.prune_if_due()  # apply the log retention settings at startup
 
 app = rx.App(
     head_components=[rx.el.link(rel="icon", href="/slab42.jpg")],
@@ -106,7 +110,7 @@ for _route, _title, _page, _state in [
     app.add_page(_page, route=_route, title=f"{_title} | {APP_NAME}",
                  on_load=_state.load_page if _state in (AddWorkspaceState, VoicemailState) else _state.on_page_load)
 app.add_page(logs, route="/logs", title=f"Logs | {APP_NAME}", on_load=LogsState.on_page_load)
-app.add_page(settings, route="/settings", title=f"Settings | {APP_NAME}")
+app.add_page(settings, route="/settings", title=f"Settings | {APP_NAME}", on_load=SettingsState.on_page_load)
 
 app.add_page(cuc_home, route="/cuc", title=f"CUC | {APP_NAME}", on_load=CucState.load_connections)
 for _route, _title, _page in [

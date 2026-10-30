@@ -7,6 +7,7 @@ WSDL files live in the webui under schemas/cucm/<version>/.
 
 import re
 import threading
+import time
 from xml.etree import ElementTree as ET
 
 import requests
@@ -20,6 +21,10 @@ from .paths import CUCM_SCHEMA_DIR
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 _VERSION_RE = re.compile(r"^(\d+)\.(\d+)")
+
+RETRIES = 2                      # extra attempts for a read that hit a transient network or 5xx problem
+RETRY_STATUS = (502, 503, 504)
+RETRY_BACKOFF = 1.0              # seconds, doubled each attempt
 
 
 class AxlError(UserError):
@@ -45,24 +50,38 @@ def pick_schema(major: str) -> str:
     return older[-1] if older else schemas[0]
 
 
+def _reset(e: Exception) -> bool:
+    """True for a dropped or reset connection (worth another try), false for refused or unresolvable hosts."""
+    text = str(e).lower()
+    return "reset" in text or "aborted" in text or "remote end closed" in text
+
+
 def _soap(server: str, username: str, password: str, body: str, ns_version: str, timeout: int = 15) -> ET.Element:
     envelope = (
         '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" '
         f'xmlns:ns="http://www.cisco.com/AXL/API/{ns_version}"><soapenv:Header/>'
         f"<soapenv:Body>{body}</soapenv:Body></soapenv:Envelope>"
     )
-    try:
-        resp = requests.post(
-            f"https://{server}:8443/axl/", data=envelope.encode(), timeout=timeout, verify=False,
-            auth=HTTPBasicAuth(username, password),
-            headers={"Content-Type": "text/xml", "SOAPAction": f'"CUCM:DB ver={ns_version}"'},
-        )
-    except requests.exceptions.SSLError as e:
-        raise AxlError(f"TLS error talking to {server}: {e}")
-    except requests.exceptions.ConnectTimeout:
-        raise AxlError(f"Timed out connecting to {server}:8443")
-    except requests.exceptions.ConnectionError as e:
-        raise AxlError(f"Cannot reach {server}:8443 ({e.__class__.__name__})")
+    for attempt in range(RETRIES + 1):
+        try:
+            resp = requests.post(
+                f"https://{server}:8443/axl/", data=envelope.encode(), timeout=timeout, verify=False,
+                auth=HTTPBasicAuth(username, password),
+                headers={"Content-Type": "text/xml", "SOAPAction": f'"CUCM:DB ver={ns_version}"'},
+            )
+        except requests.exceptions.SSLError as e:
+            raise AxlError(f"TLS error talking to {server}: {e}")
+        except requests.exceptions.ConnectTimeout:
+            raise AxlError(f"Timed out connecting to {server}:8443")
+        except requests.exceptions.ConnectionError as e:
+            if attempt < RETRIES and _reset(e):
+                time.sleep(RETRY_BACKOFF * 2 ** attempt)
+                continue
+            raise AxlError(f"Cannot reach {server}:8443 ({e.__class__.__name__})")
+        if resp.status_code in RETRY_STATUS and attempt < RETRIES:
+            time.sleep(RETRY_BACKOFF * 2 ** attempt)
+            continue
+        break
     if resp.status_code == 401:
         raise AxlError("Authentication failed (401). Check the username and password.")
     if resp.status_code == 403:
@@ -109,6 +128,52 @@ _clients: dict[tuple, object] = {}
 _lock = threading.Lock()
 
 
+def _is_read(op: str) -> bool:
+    return op.startswith(("get", "list")) or op == "executeSQLQuery"
+
+
+class _Service:
+    """Wraps the zeep service so every AXL call gets the same transport handling.
+
+    A Fault passes through untouched (callers translate it). Network and 5xx problems become AxlError, and a
+    read (get/list/SQL) is retried on a transient one. Writes are never retried: a repeat could apply twice."""
+
+    def __init__(self, svc, server: str):
+        self._svc = svc
+        self._server = server
+
+    def __getattr__(self, op: str):
+        fn = getattr(self._svc, op)
+        retries = RETRIES if _is_read(op) else 0
+
+        def call(*args, **kwargs):
+            from zeep.exceptions import TransportError
+            for attempt in range(retries + 1):
+                try:
+                    return fn(*args, **kwargs)
+                except TransportError as e:
+                    transient = e.status_code in RETRY_STATUS
+                    if transient and attempt < retries:
+                        time.sleep(RETRY_BACKOFF * 2 ** attempt)
+                        continue
+                    if e.status_code == 401:
+                        raise AxlError("Authentication failed (401). Check the username and password.")
+                    if e.status_code == 403:
+                        raise AxlError("Access denied (403). The account needs the Standard AXL API Access role.")
+                    raise AxlError(f"{self._server} returned HTTP {e.status_code}: {e.message}")
+                except requests.exceptions.SSLError as e:
+                    raise AxlError(f"TLS error talking to {self._server}: {e}")
+                except requests.exceptions.Timeout:
+                    raise AxlError(f"Timed out talking to {self._server}:8443")
+                except requests.exceptions.ConnectionError as e:
+                    if attempt < retries and _reset(e):
+                        time.sleep(RETRY_BACKOFF * 2 ** attempt)
+                        continue
+                    raise AxlError(f"Cannot reach {self._server}:8443 ({e.__class__.__name__})")
+
+        return call
+
+
 def _service(conn: CucmConnection):
     from zeep import Client, Settings
     from zeep.transports import Transport
@@ -127,8 +192,8 @@ def _service(conn: CucmConnection):
                 transport=Transport(session=session, timeout=30),
                 settings=Settings(strict=False, xml_huge_tree=True),
             )
-            svc = client.create_service(
-                "{http://www.cisco.com/AXLAPIService/}AXLAPIBinding", f"https://{conn.server}:8443/axl/")
+            svc = _Service(client.create_service(
+                "{http://www.cisco.com/AXLAPIService/}AXLAPIBinding", f"https://{conn.server}:8443/axl/"), conn.server)
             _clients[key] = svc
     return svc
 

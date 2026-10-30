@@ -12,6 +12,8 @@ from ..backend.webex_locations import list_locations
 from ..backend.webex_api import WebexClient
 from .run_mixin import RunMixin
 
+WEBEX_WORKERS = 4  # bulk rows sent to Webex at once (429 responses are retried by WebexClient)
+
 
 class WebexSession(rx.State):
     """Active Webex org (and the login assigned to it), shown in the Webex menu bar.
@@ -68,6 +70,11 @@ class WebexSession(rx.State):
         """Switch org. The page reloads so it lists the new org's data."""
         self.webex_active = name
         return rx.call_script("setTimeout(() => window.location.reload(), 200)")
+
+    async def _run_items(self, items, verb: str, log: OpLog, workers: int = WEBEX_WORKERS):
+        """Bulk Webex rows run WEBEX_WORKERS at a time (RunMixin does the work)."""
+        async for ev in super()._run_items(items, verb, log, workers):
+            yield ev
 
     def _webex_log(self, title: str, slug: str) -> OpLog:
         log = OpLog(title, slug)

@@ -84,7 +84,7 @@ def _reader() -> rx.Component:
             rx.vstack(
                 rx.cond(
                     S.view_truncated,
-                    rx.callout("Only the first 1 MB is shown. Export the log to get all of it.",
+                    rx.callout("Only the last 1000 lines are shown. Export the log to get all of it.",
                                icon="info", size="1", width="100%"),
                     rx.fragment(),
                 ),
