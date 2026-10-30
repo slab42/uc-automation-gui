@@ -10,6 +10,7 @@ from .pages.cuc_home import cuc_home
 from .pages.cuc_users import remove_empty, status_check, usage_check
 from .pages.cucm_home import cucm_home
 from .pages import redsky_tools as rs_pages
+from .pages.tools_home import tools_home
 from .pages.cube_tools import config_compare, cube_home, mem_status
 from .pages.dn import alternate_numbers, move_partition, orphans
 from .pages.devices import (
@@ -78,9 +79,10 @@ app = rx.App(
 
 app.add_page(home, route="/", title=APP_NAME)
 for _p in PLATFORMS:
-    if _p.slug in ("cucm", "cuc", "cube", "webex", "redsky"):
+    if _p.slug in ("cucm", "cuc", "cube", "webex", "redsky", "tools"):
         continue
     app.add_page(platform_page(_p), route=f"/{_p.slug}", title=f"{_p.label} | {APP_NAME}")
+app.add_page(tools_home, route="/tools", title=f"Tools | {APP_NAME}")
 app.add_page(cube_home, route="/cube", title=f"CUBE | {APP_NAME}")
 app.add_page(mem_status, route="/cube/mem-status", title=f"CUBE Mem Status | {APP_NAME}",
              on_load=MemStatusState.load_page)
@@ -142,6 +144,7 @@ for _route, _title, _page, _state in [
 for _route, _title, _page in [
     ("/redsky/entire-site", "Check Entire Site", rs_pages.entire_site),
     ("/redsky/alerts-check", "Check All Buildings", rs_pages.alerts_check),
+    ("/redsky/import-precheck", "Import Precheck", rs_pages.import_precheck),
 ]:
     app.add_page(_page, route=_route, title=f"RedSky {_title} | {APP_NAME}", on_load=RedskyState.load_connections)
 app.add_page(cucm_home, route="/cucm", title=f"CUCM | {APP_NAME}", on_load=CucmState.load_connections)

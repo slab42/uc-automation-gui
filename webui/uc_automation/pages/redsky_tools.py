@@ -2,12 +2,13 @@
 
 import reflex as rx
 
-from ..backend import redsky_alerts as alerts, redsky_geography as geo, redsky_networking as net
+from ..backend import redsky_alerts as alerts, redsky_geography as geo, redsky_networking as net, redsky_precheck as pre
 from ..backend.redsky_common import AddSpec, CheckSpec, Field
 from ..components.redsky_nav import GROUPS, need_connection, redsky_page
 from ..components.tool_widgets import code_block, csv_dropzone, field, paste_csv_tabs, run_results
 from ..state.redsky_tools import (AddAlertsState, AddBuildingsState, AddLocationsState, AlertsCheckState,
-                                  BssidState, EntireSiteState, LldpState, PrivateIpState, PublicIpState)
+                                  BssidState, EntireSiteState, LldpState, PrecheckState, PrivateIpState,
+                                  PublicIpState)
 from .cucm_home import _card
 
 
@@ -187,3 +188,106 @@ def private_ip() -> rx.Component:
 
 def public_ip() -> rx.Component:
     return add_page(PublicIpState, net.PUBLIC_IP)
+
+
+
+def _kind_radio() -> rx.Component:
+    return rx.radio_group(list(pre.KINDS), value=PrecheckState.kind, on_change=PrecheckState.set_kind, direction="row",
+                          spacing="4")
+
+
+def _check_button(on_click) -> rx.Component:
+    return rx.button(rx.cond(PrecheckState.checking, rx.spinner(size="2"), rx.icon("search-check", size=16)),
+                     "Run Precheck", on_click=on_click, disabled=PrecheckState.checking)
+
+
+def _result_table(cols) -> rx.Component:
+    return rx.table.root(
+        rx.table.header(rx.table.row(*[rx.table.column_header_cell(h) for _k, h in cols])),
+        rx.table.body(rx.foreach(PrecheckState.found, lambda r: rx.table.row(
+            *[rx.table.cell(rx.badge(r[k], color_scheme=rx.cond(r[k] == "Exists", "green", "orange"))
+                            if k == "status" else r[k]) for k, _h in cols]))),
+        variant="ghost", width="100%",
+    )
+
+
+def _by_kind(buildings: str, locations: str, ips: str):
+    return rx.match(PrecheckState.kind, ("Buildings", buildings), ("Locations", locations), ips)
+
+
+def import_precheck() -> rx.Component:
+    S = PrecheckState
+    return redsky_page(
+        "Import Precheck",
+        need_connection(rx.vstack(
+            rx.text("Check an import list against RedSky before you load it. Pick Buildings to check that each name is "
+                    "new and, when you add an address, that no other Building already uses it. Pick Locations to "
+                    "check that each Location is new (optionally under a given Building). Pick Private IPs to check "
+                    "that each range does not already exist or overlap an existing range. Names are matched "
+                    "case-insensitively, ignoring extra spaces. Nothing is added to RedSky.",
+                    size="2", color="var(--gray-11)"),
+            rx.card(
+                rx.vstack(
+                    paste_csv_tabs(
+                        S.paste_names, lambda v: S.set_paste("names", v),
+                        _by_kind(
+                            "One Building per line. Add the full address after a tab or | to also check the address "
+                            "against every other Building. Results: Exists, Exists - Address Differs, "
+                            "Exists - Address Conflict, Address Conflict (new name, address already used; the "
+                            "Building is named in Conflicts With), Not Found, Duplicate In List.",
+                            "One per line. Add the Building after a tab or | , or write 'Building / Location'. "
+                            "Results: Exists, Not Found, Building Not Found, Duplicate In List.",
+                            "One range per line: low and high address separated by a tab, | , comma, space or -. "
+                            "A single address or a CIDR block (10.10.1.0/24) also works. Results: Exists, Overlaps "
+                            "(with the Location and range it overlaps), Not Found, Invalid, Duplicate In List.",
+                        ),
+                        _by_kind("HQ Building | 100 Main St, Springfield, IL 62701", "Room 101 | HQ Building",
+                                 "10.10.1.0-10.10.1.255"),
+                        _check_button(S.check_text),
+                        [
+                            _kind_radio(),
+                            rx.text(_by_kind(
+                                "Building name in the first column, full address (optional) in the second. "
+                                "Header row optional.",
+                                "Location in the first column, Building (optional) in the second. Header row optional.",
+                                "Low address in the first column, high address in the second (or a CIDR block in "
+                                "the first). Header row optional.",
+                            ), size="2", color="var(--gray-11)"),
+                            csv_dropzone("precheck_upload"),
+                            _check_button(S.check_csv(rx.upload_files(upload_id="precheck_upload"))),
+                        ],
+                        paste_top=_kind_radio(),
+                    ),
+                    spacing="3", align="start", width="100%",
+                ),
+                size="3", width="100%",
+            ),
+            rx.cond(S.error != "", rx.callout(S.error, icon="triangle-alert", color_scheme="red", width="100%"),
+                    rx.fragment()),
+            rx.cond(
+                S.checked,
+                rx.vstack(
+                    rx.hstack(
+                        rx.badge(S.exists_count.to_string() + " exist", color_scheme="green"),
+                        rx.badge(S.other_count.to_string() + " not found or need attention",
+                                 color_scheme=rx.cond(S.other_count > 0, "orange", "gray")),
+                        rx.spacer(),
+                        rx.button(rx.icon("download", size=16), "Export CSV", variant="soft", on_click=S.export_csv),
+                        align="center", width="100%",
+                    ),
+                    rx.card(
+                        rx.scroll_area(
+                            rx.match(S.result_kind, ("Buildings", _result_table(pre.BUILDING_COLUMNS)),
+                                     ("Locations", _result_table(pre.LOCATION_COLUMNS)),
+                                     _result_table(pre.IP_COLUMNS)),
+                            max_height="60vh",
+                        ),
+                        padding="0", width="100%",
+                    ),
+                    spacing="3", align="start", width="100%",
+                ),
+                rx.fragment(),
+            ),
+            spacing="4", align="start", width="100%",
+        )),
+    )

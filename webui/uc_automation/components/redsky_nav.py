@@ -9,6 +9,7 @@ REDSKY_HOME = "/redsky"
 BUILDINGS_ADD = "/redsky/buildings-add"
 LOCATIONS_ADD = "/redsky/locations-add"
 ENTIRE_SITE = "/redsky/entire-site"
+IMPORT_PRECHECK = "/redsky/import-precheck"
 ALERTS_ADD = "/redsky/alerts-add"
 ALERTS_CHECK = "/redsky/alerts-check"
 BSSID = "/redsky/bssid"
@@ -34,6 +35,10 @@ GROUPS = [
         ("LLDP", LLDP, "network", "Add LLDP switches and ports and tie them to a Location."),
         ("Private IP", PRIVATE_IP, "server", "Add private IP ranges and tie each to a Location."),
         ("Public IP", PUBLIC_IP, "globe", "Add public (trusted) IP ranges."),
+    ]),
+    ("Tools", [
+        ("Import Precheck", IMPORT_PRECHECK, "search-check",
+         "Check Buildings (name and address), Locations and Private IP ranges against RedSky before an import."),
     ]),
 ]
 

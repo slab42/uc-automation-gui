@@ -2,7 +2,7 @@
 
 import reflex as rx
 
-from ..components import cube_nav, cuc_nav, cucm_nav, redsky_nav, webex_nav
+from ..components import cube_nav, cuc_nav, cucm_nav, redsky_nav, tools_nav, webex_nav
 
 # (platform label, GROUPS) - same data that drives each platform's menu bar
 _SOURCES = [("CUCM", cucm_nav.GROUPS), ("CUC", cuc_nav.GROUPS), ("CUBE", cube_nav.GROUPS), ("Webex", webex_nav.GROUPS),
@@ -13,6 +13,14 @@ INDEX: list[dict[str, str]] = [
     for platform, groups in _SOURCES
     for section, items in groups
     for label, route, _icon, desc in items
+]
+_OTHER_ROUTES = {item["route"] for item in INDEX}
+
+# Tools platform entries, except those already listed under another platform
+INDEX += [
+    {"platform": "Tools", "section": "Tools", "label": label, "description": desc, "route": route}
+    for label, route, _icon, desc in tools_nav.TOOLS
+    if route not in _OTHER_ROUTES
 ]
 
 

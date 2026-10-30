@@ -168,6 +168,27 @@ class RedskyClient:
             payload["bssidMasking"] = masking
         return self._create("/networking-service/bssid", payload, f"BSSID {bssid}")
 
+    def list_ip_ranges(self) -> list[dict]:
+        """Private IP ranges of the organization. The list endpoint is not documented in the reference JSON, so a few
+        likely shapes are tried in turn; `ip_list_used` records the one that answered."""
+        org = self.org_id
+        attempts = [
+            (f"/networking-service/ipRange/company/{org}", {"sortBy": "ipAddressLow"}),
+            (f"/networking-service/ipRange/company/{org}", {"sortBy": "location"}),
+            (f"/networking-service/ipRange/company/{org}", {}),
+            ("/networking-service/ipRange", {"companyId": org}),
+        ]
+        errors = []
+        for path, params in attempts:
+            try:
+                found = self._list_paged(path, params)
+            except RedskyError as e:
+                errors.append(f"{path} {params}: {e}")
+                continue
+            self.ip_list_used = f"{path} {params}"
+            return found
+        raise RedskyError("Could not list the private IP ranges. Tried: " + " | ".join(errors))
+
     def add_ip_range(self, ip_low: str, ip_high: str, location_id: str | None = None,
                      description: str | None = None) -> tuple[str, str]:
         payload = self._optional({"ipAddressLow": ip_low, "ipAddressHigh": ip_high},

@@ -38,6 +38,7 @@ backend/redsky_connections.py  saved RedSky connections ([REDSKY:<name>]: userna
 backend/redsky_api.py        RedskyError, RedskyClient (login, 15 min token renewal, geography/networking/alert calls; raises RedskyError), `check_login`
 backend/redsky_common.py     Field / AddSpec / CheckSpec (one spec drives form, CSV template, parser and run loop), CSV rows, location lookup
 backend/redsky_geography.py  Add Buildings, Add Locations, Check Entire Site specs
+backend/redsky_precheck.py   Import Precheck: parse pasted/CSV names or IP ranges, check Buildings, Locations or Private IP ranges against RedSky
 backend/redsky_alerts.py     Add Alerts, Check All Buildings specs
 backend/redsky_networking.py BSSID, LLDP, Private IP, Public IP specs
 backend/cuc_users.py         CUC users: extension list parsing, status/usage rows and CSV
@@ -157,13 +158,27 @@ uc_automation.py             app + every add_page()
 ### RedSky features
 
 - Menu (`components/redsky_nav.GROUPS`, also the `/redsky` home cards): **Buildings And Locations** = Add Buildings, Add Locations,
-  Check Entire Site; **Alerts** = Add Alerts, Check All Buildings; **Tracking** = BSSID, LLDP, Private IP, Public IP.
+  Check Entire Site; **Tools** = Import Precheck; **Alerts** = Add Alerts, Check All Buildings; **Tracking** = BSSID, LLDP, Private IP, Public IP.
   One active connection (picker in the menu bar, shared with the Credentials tab). Port of `redsky/*.py` (reference only).
 - **Add tools** share one page (`add_page`) built from an `AddSpec`: a single entry form (one field per CSV column, suggestions
   for buildings, locations, alert types and templates), then Paste Text (first) and CSV tabs that go through the same handler,
   a Download Template button and a per-row result table. Column order is the Download Template order (header row skipped).
   Pasted text may be tab, pipe or comma separated (not semicolon: it separates items inside a cell); quote addresses with commas.
 - **Check tools** (`check_page`, `CheckSpec`) run on demand, list the problems and Export CSV (browser download).
+- **Import Precheck** (`/redsky/import-precheck`, `PrecheckState`, `page import_precheck`, menu **Tools**) is its own page: a
+  Buildings | Locations | Private IPs radio at the top of the input card, above Paste Text (first) and CSV (one radio for both).
+  Buildings: name in the first column, optional full address in the second (tab or `|`); columns Building, Address (as entered, else RedSky's), Status, Conflicts With. The name is
+  checked first, then the address against every other Building (`same_address`: punctuation and street words normalized, RedSky's
+  trailing city/state/zip allowed). Status: Exists (name found, address matches or not given), Exists - Address Differs, Exists - Address
+  Conflict, Address Conflict (new name, address already used; Conflicts With names the Building), Not Found, Duplicate In List. The
+  Building address field name in RedSky's list response is unverified (`building_address` tries several); with none found the run
+  stops and lists the fields so it can be fixed. Locations: Location first, Building second (tab or `|` when pasted, so names may hold commas)
+  or `Building / Location`; a Location without a Building matches in any Building. Private IPs: low and high address (tab, `|`, comma,
+  space or `-`), a single address, or a CIDR block. Status per row: Exists, Not Found, Duplicate In List, Building Not Found
+  (Locations), Overlaps and Invalid (Private IPs: Overlaps = shares addresses with a different existing range). Export CSV is a
+  browser download. Private IPs results have their own columns: Name, Status, Building and Address (of the Location the existing range is tied to), Location, Range (the existing range it matches or overlaps). Logged as one operation. The Private IP list call (`RedskyClient.list_ip_ranges`, `GET
+  /networking-service/ipRange/company/{org}`) is a guess by analogy with the switch list: the reference JSON has no networking
+  endpoints, so verify the path and the location field on a real tenant.
 - Add a tool: a spec in `backend/redsky_*.py`, `class XState(RedskyState, RedskyBulk)` (or `RedskyCheck`) with `SPEC`/`CHECK`
   and `row`, one page function calling `add_page`/`check_page` with the spec object (not `State.SPEC`, which is a Var),
   an entry in `GROUPS` and an `add_page` in `uc_automation.py`.
@@ -421,7 +436,7 @@ None of this proves the behavior on a real cluster. Say so when reporting, and t
 - Template CSVs are embedded in code (Download Template buttons); there is no examples folder.
 - Phone delete does not clean up orphaned directory numbers.
 - Phone button template list cannot show the base template (AXL does not return it).
-- Ported: CUCM, CUC (users and call handlers), CUBE (Mem Status, Config Compare), Webex and RedSky. The `Tools` platform is still a placeholder.
+- Ported: CUCM, CUC (users and call handlers), CUBE (Mem Status, Config Compare), Webex and RedSky. The `Tools` platform (`/tools`, `pages/tools_home.py`) is a card page driven by `components/tools_nav.TOOLS` (empty for now; the home search skips a tool already listed under another platform).
 
 ## Paste text input
 

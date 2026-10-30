@@ -33,8 +33,9 @@ def csv_dropzone(upload_id: str) -> rx.Component:
 
 
 def paste_csv_tabs(paste_value, on_paste_change, paste_help: str, placeholder: str, paste_button: rx.Component,
-                   csv_content: list) -> rx.Component:
-    """Paste text (default) and CSV file tabs for a bulk input. csv_content is the existing CSV card body."""
+                   csv_content: list, paste_top: rx.Component | None = None) -> rx.Component:
+    """Paste text (default) and CSV file tabs for a bulk input. csv_content is the existing CSV card body.
+    paste_top is an optional control shown above the help text and the box."""
     return rx.tabs.root(
         rx.tabs.list(
             rx.tabs.trigger("Paste Text", value="text"),
@@ -42,6 +43,7 @@ def paste_csv_tabs(paste_value, on_paste_change, paste_help: str, placeholder: s
         ),
         rx.tabs.content(
             rx.vstack(
+                paste_top if paste_top is not None else rx.fragment(),
                 rx.text(paste_help, size="2", color="var(--gray-11)"),
                 rx.text_area(value=paste_value, on_change=on_paste_change, width="100%", rows="8",
                              placeholder=placeholder),

@@ -10,7 +10,7 @@ from typing import ClassVar
 
 import reflex as rx
 
-from ..backend import redsky_alerts as alerts, redsky_geography as geo, redsky_networking as net
+from ..backend import redsky_alerts as alerts, redsky_geography as geo, redsky_networking as net, redsky_precheck as pre
 from ..backend.errors import UserError
 from ..backend.redsky_api import RedskyClient
 from ..backend.redsky_common import AddSpec, CheckSpec, build_items, csv_bytes, read_rows
@@ -213,3 +213,94 @@ class PrivateIpState(RedskyState, RedskyBulk):
 class PublicIpState(RedskyState, RedskyBulk):
     SPEC = net.PUBLIC_IP
     row: dict[str, str] = _blank(net.PUBLIC_IP)
+
+
+class PrecheckState(RedskyState, PasteMixin):
+    """Import Precheck: do the pasted or uploaded Buildings, Locations or Private IP ranges already exist in RedSky?"""
+
+    kind: str = "Buildings"
+    paste_names: str = ""
+    checking: bool = False
+    checked: bool = False
+    error: str = ""
+    found: list[dict[str, str]] = []
+    result_kind: str = "Buildings"
+
+    @rx.event
+    def set_kind(self, value: str):
+        self.kind = value
+
+    @rx.var
+    def exists_count(self) -> int:
+        return sum(1 for r in self.found if r["status"] == "Exists")
+
+    @rx.var
+    def other_count(self) -> int:
+        return len(self.found) - self.exists_count
+
+    async def _check(self, entries: list[tuple[str, str]], source: str):
+        conn = self._conn()
+        if conn is None:
+            yield rx.toast.error(_NO_CONNECTION)
+            return
+        if not entries:
+            yield rx.toast.error("No names found in the input.")
+            return
+        kind = self.kind
+        self.checking, self.checked, self.error, self.found = True, False, "", []
+        yield
+        log = self._tool_log(f"RedSky Import Precheck ({kind}) {source}", "redsky-import-precheck", conn)
+        try:
+            try:
+                client = await asyncio.to_thread(RedskyClient, conn.username, conn.password, conn.org_id)
+                if kind == "Private IPs":
+                    rows = await asyncio.to_thread(pre.precheck_ips, client, entries)
+                elif kind == "Buildings":
+                    rows = await asyncio.to_thread(pre.precheck_buildings, client, entries)
+                else:
+                    rows = await asyncio.to_thread(pre.precheck, client, kind, entries)
+            except UserError as e:
+                self.error = str(e)
+                log.error(str(e))
+                return
+            except Exception as e:  # unexpected: show it rather than hang the spinner
+                self.error = f"Unexpected error: {e}"
+                log.error(f"Failed unexpectedly: {e!r}")
+                return
+            finally:
+                self.checking = False
+            self.found, self.checked, self.result_kind = rows, True, kind
+            if getattr(client, "ip_list_used", ""):
+                log.info(f"IP range list endpoint: {client.ip_list_used}")
+            for r in rows:
+                log.info(f"{r['name']} {r['building']}".strip() + f": {r['status']} {r['detail']} {r['range']}".rstrip())
+        finally:
+            log.close()
+
+    @rx.event
+    async def check_text(self):
+        if not self.paste_names.strip():
+            yield rx.toast.error("Paste some text first.")
+            return
+        async for ev in self._check(pre.parse_text(self.paste_names, self.kind), "from pasted text"):
+            yield ev
+
+    @rx.event
+    async def check_csv(self, files: list[rx.UploadFile]):
+        if not files:
+            yield rx.toast.error("Choose a CSV file first.")
+            return
+        try:
+            entries = pre.parse_csv(await files[0].read(), self.kind)
+        except ValueError as e:
+            yield rx.toast.error(str(e))
+            return
+        async for ev in self._check(entries, f"from CSV ({files[0].filename})"):
+            yield ev
+        yield rx.clear_selected_files("precheck_upload")
+
+    @rx.event
+    def export_csv(self):
+        keys = [k for k, _h in pre.columns(self.result_kind)]
+        data = csv_bytes(keys, [[r[k] for k in keys] for r in self.found])
+        return rx.download(data=data, filename=f"redsky_import_precheck_{self.result_kind.lower().replace(' ', '_')}.csv")
