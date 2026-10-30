@@ -4,6 +4,7 @@ import reflex as rx
 
 from ..state.redsky import RedskyState
 from .layout import page
+from .org_picker import org_select
 
 REDSKY_HOME = "/redsky"
 BUILDINGS_ADD = "/redsky/buildings-add"
@@ -44,15 +45,16 @@ GROUPS = [
 
 
 def _connection_picker() -> rx.Component:
-    return rx.cond(
-        RedskyState.has_active,
-        rx.hstack(
+    return rx.hstack(
+        org_select(RedskyState),
+        rx.cond(
+            RedskyState.has_active,
             rx.select(RedskyState.connection_names, value=RedskyState.active, on_change=RedskyState.select_active,
                       size="1"),
-            align="center",
-            spacing="2",
+            rx.link(rx.button("Add a connection", size="1", variant="soft"), href="/credentials"),
         ),
-        rx.link(rx.button("Add a connection", size="1", variant="soft"), href="/credentials"),
+        align="center",
+        spacing="2",
     )
 
 

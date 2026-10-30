@@ -37,6 +37,7 @@ def list_public() -> list[dict[str, str]]:
             "username": f.get("username", ""),
             "version": f.get("version", ""),
             "schema_version": f.get("schema_version", ""),
+            "org": f.get("org", ""),
             "has_password": "yes" if s["secrets"].get("password") else "no",
         })
     return out
@@ -57,10 +58,13 @@ def load(name: str) -> CucConnection | None:
 
 
 def save(name: str, server: str, username: str, password: str | None,
-         version: str | None = None, schema_version: str | None = None) -> None:
+         version: str | None = None, schema_version: str | None = None,
+         org: str | None = None) -> None:
     """password None/'' keeps the stored one. Changing server/username clears stale version info."""
     old = load(name)
     values: dict[str, str | None] = {"server": server, "username": username}
+    if org is not None:
+        values["org"] = org
     if password:
         values["password"] = password
     elif old is None:

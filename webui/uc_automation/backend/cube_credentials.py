@@ -30,6 +30,7 @@ def list_public() -> list[dict[str, str]]:
         out.append({
             "name": s["identifier"],
             "username": s["fields"].get("username", ""),
+            "org": s["fields"].get("org", ""),
             "has_password": "yes" if s["secrets"].get("password") else "no",
         })
     return out
@@ -42,9 +43,11 @@ def load(name: str) -> CubeCredential | None:
     return CubeCredential(name=name, username=kv.get("username", ""), password=kv.get("password", ""))
 
 
-def save(name: str, username: str, password: str | None) -> None:
+def save(name: str, username: str, password: str | None, org: str | None = None) -> None:
     """password None/'' keeps the stored one."""
     values: dict[str, str | None] = {"username": username}
+    if org is not None:
+        values["org"] = org
     if password:
         values["password"] = password
     elif load(name) is None:

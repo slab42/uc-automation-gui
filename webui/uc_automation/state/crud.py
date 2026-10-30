@@ -244,6 +244,16 @@ class CrudMixin(rx.State, mixin=True):
         async for ev in self._fetch():
             yield ev
 
+    @rx.event
+    async def switch_org(self, org: str):
+        self.active_org = org
+        self._reconcile()
+        self.items = []
+        self.selected = []
+        if self.active:
+            async for ev in self._fetch():
+                yield ev
+
     # --- search / selection ---
 
     @rx.event

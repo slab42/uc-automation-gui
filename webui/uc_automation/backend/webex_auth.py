@@ -122,14 +122,17 @@ def _migrate_legacy_orgs() -> None:
 def list_orgs() -> list[dict[str, str]]:
     _migrate_legacy_orgs()
     return [
-        {"name": sec["identifier"], "org_id": sec["fields"].get("org_id", ""), "login": sec["fields"].get("login", "")}
+        {"name": sec["identifier"], "org_id": sec["fields"].get("org_id", ""), "login": sec["fields"].get("login", ""),
+         "org": sec["fields"].get("org", "")}
         for sec in ini_store.read_sections(CREDENTIALS_PATH) if sec["service"] == "WEBEXORG"
     ]
 
 
-def save_org(name: str, org_id: str, login: str | None = None) -> None:
+def save_org(name: str, org_id: str, login: str | None = None, org: str | None = None) -> None:
     """Create or update an org. `login` None keeps the stored choice."""
     values: dict[str, str | None] = {"org_id": org_id.strip()}
+    if org is not None:
+        values["org"] = org
     if login is not None:
         values["login"] = login
     elif not ini_store.read_section(CREDENTIALS_PATH, _org_section(name)):

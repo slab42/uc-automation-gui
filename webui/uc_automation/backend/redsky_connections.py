@@ -33,6 +33,7 @@ def list_public() -> list[dict[str, str]]:
             "name": s["identifier"],
             "username": f.get("username", ""),
             "org_id": f.get("org_id", ""),
+            "org": f.get("org", ""),
             "has_password": "yes" if s["secrets"].get("password") else "no",
         })
     return out
@@ -50,10 +51,12 @@ def load(name: str) -> RedskyConnection | None:
     )
 
 
-def save(name: str, username: str, password: str | None, org_id: str) -> None:
+def save(name: str, username: str, password: str | None, org_id: str, org: str | None = None) -> None:
     """password None/'' keeps the stored one."""
     old = load(name)
     values: dict[str, str | None] = {"username": username, "org_id": org_id}
+    if org is not None:
+        values["org"] = org
     if password:
         values["password"] = password
     elif old is None:

@@ -4,6 +4,7 @@ import reflex as rx
 
 from ..state.cuc import CucState
 from .layout import page
+from .org_picker import org_select
 
 CUC_HOME = "/cuc"
 STATUS_CHECK = "/cuc/status-check"
@@ -33,15 +34,20 @@ GROUPS = [
 
 
 def _connection_picker() -> rx.Component:
-    return rx.cond(
-        CucState.has_active,
-        rx.hstack(
-            rx.badge(CucState.active_label, variant="soft", color_scheme="gray"),
-            rx.select(CucState.connection_names, value=CucState.active, on_change=CucState.select_active, size="1"),
-            align="center",
-            spacing="2",
+    return rx.hstack(
+        org_select(CucState),
+        rx.cond(
+            CucState.has_active,
+            rx.hstack(
+                rx.select(CucState.connection_names, value=CucState.active, on_change=CucState.select_active, size="1"),
+                rx.badge(CucState.active_label, variant="soft", color_scheme="gray"),
+                align="center",
+                spacing="2",
+            ),
+            rx.link(rx.button("Add a connection", size="1", variant="soft"), href="/credentials"),
         ),
-        rx.link(rx.button("Add a connection", size="1", variant="soft"), href="/credentials"),
+        align="center",
+        spacing="2",
     )
 
 

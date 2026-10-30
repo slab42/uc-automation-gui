@@ -5,14 +5,15 @@ import re
 
 import reflex as rx
 
-from ..backend import cucm_axl, cucm_connections
+from ..backend import organizations as orgs, cucm_axl, cucm_connections
 from ..backend.applog import OpLog
 from ..backend.cucm_connections import CucmConnection
+from .org import OrgState
 
 _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,40}$")
 
 
-class CucmState(rx.State):
+class CucmState(OrgState):
     connections: list[dict[str, str]] = []
     active: str = rx.LocalStorage("")
 
@@ -20,6 +21,7 @@ class CucmState(rx.State):
     form_name: str = ""
     form_server: str = ""
     form_username: str = ""
+    form_org: str = ""
     _password: str = ""
     password_key: int = 0
     form_has_password: bool = False
@@ -29,8 +31,23 @@ class CucmState(rx.State):
     test_message: str = ""
 
     @rx.var
+    def org_connections(self) -> list[dict[str, str]]:
+        """Saved connections of the active organization (what the pickers offer)."""
+        return orgs.in_org(self.connections, self.active_org, self.org_names)
+
+    @rx.var
     def connection_names(self) -> list[str]:
-        return [c["name"] for c in self.connections]
+        return [c["name"] for c in self.org_connections]
+
+    @rx.var
+    def org_items(self) -> list[dict[str, str]]:
+        """Saved connections of the organization open in the organization window."""
+        return orgs.in_org(self.connections, self.org_view, self.org_names)
+
+    @rx.var
+    def saved_rows(self) -> list[dict[str, str]]:
+        """Every saved connection, grouped by organization (heading rows have kind org)."""
+        return orgs.grouped(self.connections, self.org_names)
 
     @rx.var
     def active_info(self) -> dict[str, str]:
@@ -56,18 +73,28 @@ class CucmState(rx.State):
 
     # --- loading / selection ---
 
-    @rx.event
-    def load_connections(self):
-        self.connections = cucm_connections.list_public()
-        names = self.connection_names
+    def _reconcile(self):
+        """Keep the active connection inside the active organization."""
+        names = [c["name"] for c in orgs.in_org(self.connections, self.active_org, self.org_names)]
         if names and self.active not in names:
             self.active = names[0]
         if not names:
             self.active = ""
 
     @rx.event
+    def load_connections(self):
+        self.connections = cucm_connections.list_public()
+        self._load_orgs()
+        self._reconcile()
+
+    @rx.event
     def select_active(self, name: str):
         self.active = name
+
+    @rx.event
+    def select_org(self, org: str):
+        self.active_org = org
+        self._reconcile()
 
     @rx.event
     def edit_connection(self, name: str):
@@ -77,6 +104,7 @@ class CucmState(rx.State):
         self.form_name = c["name"]
         self.form_server = c["server"]
         self.form_username = c["username"]
+        self.form_org = c.get("org", "")
         self.form_has_password = c["has_password"] == "yes"
         self._password = ""
         self.password_key += 1
@@ -86,6 +114,7 @@ class CucmState(rx.State):
     @rx.event
     def new_connection(self):
         self.form_name = self.form_server = self.form_username = ""
+        self.form_org = self._default_org()
         self.form_has_password = False
         self._password = ""
         self.password_key += 1
@@ -105,6 +134,8 @@ class CucmState(rx.State):
     # --- actions ---
 
     def _validate(self) -> str:
+        if self.form_org not in self.org_names:
+            return "Choose an organization. Create one on the Credentials > Organizations tab first."
         if not _NAME_RE.match(self.form_name):
             return "Name must use letters, digits, '.', '_' or '-' (max 41 characters)."
         if not self.form_server:
@@ -122,8 +153,9 @@ class CucmState(rx.State):
             return rx.toast.error(err)
         log = OpLog("Save connection", "credentials-save")
         try:
-            log.info(f"Saving connection {self.form_name} ({self.form_server}) as {self.form_username}")
-            cucm_connections.save(self.form_name, self.form_server, self.form_username, self._password)
+            log.info(f"Saving connection {self.form_name} ({self.form_server}) as {self.form_username} in organization {self.form_org}")
+            cucm_connections.save(self.form_name, self.form_server, self.form_username, self._password,
+                                  org=self.form_org)
             cucm_axl.forget(self.form_server)
         finally:
             log.close()
@@ -135,8 +167,9 @@ class CucmState(rx.State):
         self._password = ""
         self.password_key += 1
         self.connections = cucm_connections.list_public()
-        if not self.active:
-            self.active = self.form_name
+        self._load_orgs()
+        self._reconcile()
+        self.plat_dialog = ""  # closes the form when it was opened from an organization window
 
     @rx.event
     async def test_connection(self):
@@ -173,7 +206,7 @@ class CucmState(rx.State):
                 log.error(f"Test failed unexpectedly: {e!r}")
                 return
             cucm_connections.save(self.form_name, self.form_server, self.form_username,
-                                  self._password, version=major, schema_version=schema)
+                                  self._password, version=major, schema_version=schema, org=self.form_org)
             cucm_axl.forget(self.form_server)
             self._after_save()
             self.testing = False
@@ -181,6 +214,7 @@ class CucmState(rx.State):
             note = "" if schema == major else f" (no {major} schema installed, using {schema})"
             self.test_message = f"Connected. CUCM {full}. Schema major release {major}{note}. Saved."
             log.info(self.test_message)
+            yield rx.toast.success(f"Saved {self.form_name}")
         finally:
             log.close()
 
@@ -193,8 +227,8 @@ class CucmState(rx.State):
         finally:
             log.close()
         self.connections = cucm_connections.list_public()
-        if self.active == name:
-            self.active = self.connections[0]["name"] if self.connections else ""
+        self._load_orgs()
+        self._reconcile()
         if self.form_name == name:
             self.new_connection()
         return rx.toast.info(f"Deleted {name}")

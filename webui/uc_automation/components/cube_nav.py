@@ -3,6 +3,7 @@
 import reflex as rx
 
 from .layout import page
+from .org_picker import org_select
 
 CUBE_HOME = "/cube"
 MEM_STATUS = "/cube/mem-status"
@@ -49,6 +50,11 @@ def cube_page(title: str, *children: rx.Component) -> rx.Component:
 def cred_picker(S) -> rx.Component:
     """Credential set dropdown with an Enter Manually choice (username and password are asked here, never saved)."""
     return rx.vstack(
+        rx.hstack(
+            rx.text("Organization", size="2", weight="medium"),
+            org_select(S),
+            align="center", spacing="3", wrap="wrap",
+        ),
         rx.hstack(
             rx.text("Credentials", size="2", weight="medium"),
             rx.select(S.cred_options, value=S.cred_name, on_change=S.set_cred_name),

@@ -4,18 +4,19 @@ import asyncio
 
 import reflex as rx
 
-from ..backend import webex_auth, webex_routing as r
+from ..backend import organizations as orgs, webex_auth, webex_routing as r
 from ..backend.applog import OpLog
 from ..backend.errors import UserError
 from ..backend.paste import PastedFile, no_at_or_digit
 from ..backend.webex_locations import list_locations
 from ..backend.webex_api import WebexClient
+from .org import OrgState
 from .run_mixin import RunMixin
 
 WEBEX_WORKERS = 4  # bulk rows sent to Webex at once (429 responses are retried by WebexClient)
 
 
-class WebexSession(rx.State):
+class WebexSession(OrgState):
     """Active Webex org (and the login assigned to it), shown in the Webex menu bar.
 
     The login status is checked (and the token renewed) on every page load.
@@ -31,7 +32,18 @@ class WebexSession(rx.State):
 
     @rx.var
     def webex_org_names(self) -> list[str]:
-        return [o["name"] for o in self.webex_orgs]
+        """Saved Webex orgs of the active organization (what the menu bar offers)."""
+        return [o["name"] for o in orgs.in_org(self.webex_orgs, self.active_org, self.org_names)]
+
+    @rx.var
+    def org_items(self) -> list[dict[str, str]]:
+        """Saved Webex orgs of the organization open in the organization window."""
+        return orgs.in_org(self.webex_orgs, self.org_view, self.org_names)
+
+    @rx.var
+    def saved_rows(self) -> list[dict[str, str]]:
+        """Every saved Webex org, grouped by organization (heading rows have kind org)."""
+        return orgs.grouped(self.webex_orgs, self.org_names)
 
     @rx.var
     def webex_login_names(self) -> list[str]:
@@ -42,6 +54,7 @@ class WebexSession(rx.State):
         return len(self.webex_orgs) > 0
 
     def _load_webex(self):
+        self._load_orgs()
         self.webex_orgs = webex_auth.list_orgs()
         self.webex_logins = webex_auth.list_logins()
         names = self.webex_org_names
@@ -64,6 +77,13 @@ class WebexSession(rx.State):
     @rx.event
     async def on_page_load(self):
         await self._refresh_session()
+
+    @rx.event
+    def select_org(self, org: str):
+        """Switch organization. The page reloads so it lists the data of the Webex org that follows."""
+        self.active_org = org
+        self._load_webex()
+        return rx.call_script("setTimeout(() => window.location.reload(), 200)")
 
     @rx.event
     def select_webex_org(self, name: str):

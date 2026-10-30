@@ -6,7 +6,7 @@ from datetime import datetime
 
 import reflex as rx
 
-from ..backend import webex_auth
+from ..backend import organizations as orgs, webex_auth
 from ..backend.applog import OpLog
 from ..backend.webex_auth import WebexAuthError
 from .webex_routing import WebexSession
@@ -25,7 +25,7 @@ def _when(epoch: str) -> str:
 class WebexState(WebexSession):
     """Child of WebexSession, so the saved orgs/logins and the active org are shared with the menu bar."""
 
-    cred_tab: str = "cucm"
+    cred_tab: str = "organizations"
 
     # Logins: the one the cards edit (an unsaved name creates it on first save)
     login_name: str = ""
@@ -51,6 +51,7 @@ class WebexState(WebexSession):
     org_name: str = ""
     form_org_id: str = ""
     org_login: str = ""
+    org_customer: str = ""  # the customer organization this Webex org belongs to
 
     @rx.var
     def login_is_new(self) -> bool:
@@ -91,6 +92,10 @@ class WebexState(WebexSession):
     @rx.event
     def set_org_name(self, value: str):
         self.org_name = value.strip()
+
+    @rx.event
+    def set_org_customer(self, value: str):
+        self.org_customer = value
 
     @rx.event
     def set_org_login_form(self, value: str):
@@ -289,18 +294,35 @@ class WebexState(WebexSession):
     @rx.event
     def add_org(self):
         self.org_name = self.org_orig = self.form_org_id = self.org_login = ""
+        self.org_customer = self._default_org()
         self.org_open = True
 
     @rx.event
-    def edit_org(self, name: str):
+    def new_org_form(self):
+        """Empty Webex org form without opening the Webex tab's own dialog (the organization window shows it)."""
+        self.org_name = self.org_orig = self.form_org_id = self.org_login = ""
+        self.org_customer = self._default_org()
+
+    def _fill_org(self, name: str):
         o = next((o for o in self.webex_orgs if o["name"] == name), None)
         if o:
             self.org_name = self.org_orig = o["name"]
             self.form_org_id, self.org_login = o["org_id"], o["login"]
-            self.org_open = True
+            self.org_customer = o.get("org", "")
+
+    @rx.event
+    def fill_org_form(self, name: str):
+        self._fill_org(name)
+
+    @rx.event
+    def edit_org(self, name: str):
+        self._fill_org(name)
+        self.org_open = True
 
     @rx.event
     def save_org(self):
+        if self.org_customer not in self.org_names:
+            return rx.toast.error("Choose an organization. Create one on the Credentials > Organizations tab first.")
         if not _NAME_RE.match(self.org_name):
             return rx.toast.error(_NAME_HINT)
         if self.org_login and self.org_login not in self.webex_login_names:
@@ -317,8 +339,8 @@ class WebexState(WebexSession):
                 if self.webex_active == self.org_orig:
                     self.webex_active = self.org_name
                 self.org_orig = self.org_name
-            log.info(f"Saving org {self.org_name} ({self.form_org_id}) using login {self.org_login or '(none)'}")
-            webex_auth.save_org(self.org_name, self.form_org_id, self.org_login)
+            log.info(f"Saving org {self.org_name} ({self.form_org_id}) using login {self.org_login or '(none)'} in organization {self.org_customer}")
+            webex_auth.save_org(self.org_name, self.form_org_id, self.org_login, org=self.org_customer)
         finally:
             log.close()
         self._load_webex()
@@ -326,6 +348,7 @@ class WebexState(WebexSession):
             self.webex_active = self.org_name
             self._load_webex()
         self.org_open = False
+        self.plat_dialog = ""  # closes the form when it was opened from an organization window
         return rx.toast.success(f"Saved org {self.org_name}")
 
     @rx.event
@@ -344,6 +367,9 @@ class WebexState(WebexSession):
 
     @rx.event
     def use_org(self, name: str):
+        o = next((o for o in self.webex_orgs if o["name"] == name), None)
+        if o:
+            self.active_org = o.get("org") or orgs.UNASSIGNED
         self.webex_active = name
         self._load_webex()
         return rx.toast.info(f"{name} is the active Webex org")

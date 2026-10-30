@@ -237,31 +237,39 @@ def _logins() -> rx.Component:
 
 # --- organizations ---------------------------------------------------------
 
+def org_form() -> rx.Component:
+    """The Webex organization form (also shown on top of the organization window)."""
+    return rx.vstack(
+        _field("Organization", rx.select(S.org_names, value=S.org_customer, on_change=S.set_org_customer,
+                                         placeholder="Choose an organization", width="100%"),
+               "The customer this Webex org belongs to. Create organizations on the Organizations tab."),
+        _field("Name", rx.input(value=S.org_name, on_change=S.set_org_name, width="100%",
+                                placeholder="e.g. customer-a")),
+        _field("Org ID", rx.input(value=S.form_org_id, on_change=S.set_form_org_id, width="100%",
+                                  placeholder="Webex organization ID"),
+               "Find it in Control Hub under Account."),
+        _field("Credentials", rx.select(S.webex_login_names, value=S.org_login,
+                                        on_change=S.set_org_login_form,
+                                        placeholder="Choose saved credentials"),
+               "Any saved credentials can be used with any Webex organization."),
+        rx.hstack(
+            rx.dialog.close(rx.button("Cancel", variant="soft", color_scheme="gray")),
+            rx.button("Save", on_click=S.save_org),
+            justify="end",
+            spacing="3",
+            width="100%",
+        ),
+        spacing="4",
+        align="start",
+        width="100%",
+    )
+
+
 def _org_dialog() -> rx.Component:
     return rx.dialog.root(
         rx.dialog.content(
-            rx.dialog.title(rx.cond(S.org_is_new, "Add Organization", "Edit Organization")),
-            rx.vstack(
-                _field("Name", rx.input(value=S.org_name, on_change=S.set_org_name, width="100%",
-                                        placeholder="e.g. customer-a")),
-                _field("Org ID", rx.input(value=S.form_org_id, on_change=S.set_form_org_id, width="100%",
-                                          placeholder="Webex organization ID"),
-                       "Find it in Control Hub under Account."),
-                _field("Credentials", rx.select(S.webex_login_names, value=S.org_login,
-                                                on_change=S.set_org_login_form,
-                                                placeholder="Choose saved credentials"),
-                       "Any saved credentials can be used with any organization."),
-                rx.hstack(
-                    rx.dialog.close(rx.button("Cancel", variant="soft", color_scheme="gray")),
-                    rx.button("Save", on_click=S.save_org),
-                    justify="end",
-                    spacing="3",
-                    width="100%",
-                ),
-                spacing="4",
-                align="start",
-                width="100%",
-            ),
+            rx.dialog.title(rx.cond(S.org_is_new, "Add Webex Organization", "Edit Webex Organization")),
+            org_form(),
             max_width="480px",
         ),
         open=S.org_open,
@@ -296,11 +304,17 @@ def _org_row(o) -> rx.Component:
 
 def _orgs() -> rx.Component:
     return _section(
-        "Organizations", "Customer orgs by name. Choose which saved credentials each one uses; change it any time.",
-        "Add Organization", S.add_org,
+        "Webex Organizations", "Webex orgs by name, grouped by customer organization. Choose which saved credentials "
+        "each one uses; change it any time.",
+        "Add Webex Organization", S.add_org,
         rx.cond(
             S.webex_has_orgs,
-            rx.vstack(rx.foreach(S.webex_orgs, _org_row), spacing="2", width="100%"),
+            rx.vstack(
+                rx.foreach(S.saved_rows, lambda o: rx.cond(
+                    o["kind"] == "org",
+                    rx.text(o["org"], size="2", weight="bold", color=MUTED, padding_top="0.5rem"),
+                    _org_row(o))),
+                spacing="2", width="100%"),
             rx.text("None yet.", color=MUTED, size="2"),
         ),
     )

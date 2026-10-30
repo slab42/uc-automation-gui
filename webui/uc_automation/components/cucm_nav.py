@@ -4,6 +4,7 @@ import reflex as rx
 
 from ..state.cucm import CucmState
 from .layout import page
+from .org_picker import org_select
 
 CUCM_HOME = "/cucm"
 ADVERTISED_PATTERNS = "/cucm/advertised-patterns"
@@ -63,26 +64,31 @@ GROUPS = [
 ]
 
 
-def _connection_picker(on_change) -> rx.Component:
-    return rx.cond(
-        CucmState.has_active,
-        rx.hstack(
-            rx.badge(CucmState.active_label, variant="soft", color_scheme="gray"),
-            rx.select(
-                CucmState.connection_names,
-                value=CucmState.active,
-                on_change=on_change,
-                size="1",
+def _connection_picker(on_change, on_org_change) -> rx.Component:
+    return rx.hstack(
+        org_select(CucmState, on_org_change),
+        rx.cond(
+            CucmState.has_active,
+            rx.hstack(
+                rx.select(
+                    CucmState.connection_names,
+                    value=CucmState.active,
+                    on_change=on_change,
+                    size="1",
+                ),
+                rx.badge(CucmState.active_label, variant="soft", color_scheme="gray"),
+                align="center",
+                spacing="2",
             ),
-            align="center",
-            spacing="2",
+            rx.link(rx.button("Add a connection", size="1", variant="soft"), href="/credentials"),
         ),
-        rx.link(rx.button("Add a connection", size="1", variant="soft"), href="/credentials"),
+        align="center",
+        spacing="2",
     )
 
 
-def menubar(on_connection_change=None) -> rx.Component:
-    picker = _connection_picker(on_connection_change or CucmState.select_active)
+def menubar(on_connection_change=None, on_org_change=None) -> rx.Component:
+    picker = _connection_picker(on_connection_change or CucmState.select_active, on_org_change or CucmState.select_org)
     return rx.hstack(
         *[
             rx.menu.root(
@@ -106,6 +112,6 @@ def menubar(on_connection_change=None) -> rx.Component:
     )
 
 
-def cucm_page(title: str, *children: rx.Component, on_connection_change=None) -> rx.Component:
+def cucm_page(title: str, *children: rx.Component, on_connection_change=None, on_org_change=None) -> rx.Component:
     heading = title if title == "CUCM" else f"CUCM - {title}"
-    return page(heading, *children, subnav=menubar(on_connection_change))
+    return page(heading, *children, subnav=menubar(on_connection_change, on_org_change))

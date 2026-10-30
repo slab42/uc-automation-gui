@@ -27,6 +27,7 @@ backend/cucm_dn.py           directory numbers: move partition, alternate number
 backend/cucm_tools.py        tools: EM bulk login/logout/check, phone count by device pool, set user PIN
 backend/keys.py              composite row keys (pattern + partition) shared by backend and state
 backend/cucm_devices.py      phones, CTI route points (delete cleans up orphaned DNs), softkey templates, common device configs, button templates, MPP workflows
+backend/organizations.py     customer organizations ([ORG:<name>]), per-organization filtering and grouping helpers
 backend/cucm_connections.py  saved CUCM connections ([CUCM:<name>] in .env/credentials.env)
 backend/cuc_connections.py   saved CUC connections ([CUC:<name>]), same shape as CUCM
 backend/cuc_api.py           CUC REST plumbing: CucError, schema pick, `detect_version` (GET /vmrest/version), CucClient (paged GET, DELETE, users/mailboxes, call handlers, menu entries)
@@ -67,6 +68,7 @@ state/webex_locations.py     Schedules and E911 states
 state/webex_groups.py        PickerMixin (searchable list + selection) and the Call Queues / Hunt Groups / Virtual Lines states
 state/webex_routing.py       WebexSession (login status in the menu bar, checked on page load) + Add Numbers / Call Forward states
 state/webex.py               WebexState: Webex tab on the credentials page and the /webex/callback page
+state/org.py                 OrgState: parent of every platform state (organization list, active organization, organization window)
 state/cucm.py                CucmState: connection list, active connection, credentials form, Test button
 state/cube_tools.py          CubeRun mixin (router list, credential set picker) + MemStatusState, ConfigCompareState
 components/cube_nav.py       CUBE top menu bar (GROUPS), cred_picker, cube_page()
@@ -87,6 +89,8 @@ components/crud_page.py      build_crud_page(): the shared page (toolbar, table,
 components/webex_picker.py   picker(): search + click-to-select table for a PickerMixin state
 components/webex_nav.py      Webex top menu bar (GROUPS) and webex_page(); shows org and login status
 components/search_input.py   search_input(value, on_change, placeholder): every search box uses it (clear button once there is text)
+components/org_picker.py     org_select(): the organization dropdown beside each platform's connection dropdown
+pages/organizations.py       Credentials > Organizations tab and organization window
 components/cucm_nav.py       CUCM top menu bar. GROUPS drives the menu and the CUCM home cards
 components/layout.py         sidebar, top bar, page() wrapper
 pages/<resource>.py          one config per resource (columns, add form)
@@ -111,6 +115,24 @@ uc_automation.py             app + every add_page()
 - Not logged: template downloads, selection/search clicks, dialog open/close, and CSV rejections on the MPP page.
 
 ## Credentials
+
+### Organizations
+
+- The tool is multi customer. An organization is a `[ORG:<name>]` section; every saved platform entry (`[CUCM:x]`, `[CUC:x]`,
+  `[CUBE:x]`, `[WEBEXORG:x]`, `[REDSKY:x]`) carries an `org = <name>` key. Entries without one show as **Unassigned** until
+  edited. An organization with entries cannot be deleted. "Unassigned" is a reserved name.
+- Credentials > **Organizations** (first tab): the list, Add Organization, and an organization window (click a row) with an
+  Add button per platform and the entries it holds (several of each allowed). Add/Edit opens that platform's own form in a
+  dialog on top of the window; saving closes it and the window behind shows the change. The forms are the ones the platform tabs use.
+- Every platform form starts with an **Organization** line (required). The saved lists on the platform tabs are grouped by organization.
+  The Webex tab's own list of orgs is now titled Webex Organizations (a Webex org belongs to a customer organization). Webex logins are
+  not tied to an organization.
+- Every platform state subclasses `OrgState` (`state/org.py`), so `active_org` (browser LocalStorage) is shared. Function pages show an
+  organization dropdown (`components/org_picker.py`) before the connection dropdown; the connection list is filtered to that organization
+  (`org_connections`, `webex_org_names`, `CubeRun._filter_creds`). Changing it re-picks the active connection (`_reconcile`); CRUD pages and
+  Phone Count By DP also reload (`switch_org`), Webex reloads the page. Platform states load organizations through `_load_orgs()`.
+
+### Connections
 
 - Stored in `.env/credentials.env` as `[CUCM:<name>]` with `server`, `username`, `password`,
   `version` (detected CUCM release) and `schema_version` (AXL schema folder used).

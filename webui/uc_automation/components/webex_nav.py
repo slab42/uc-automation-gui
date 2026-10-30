@@ -4,6 +4,7 @@ import reflex as rx
 
 from ..state.webex_routing import WebexSession
 from .layout import page
+from .org_picker import org_select
 
 WEBEX_HOME = "/webex"
 ADD_NUMBERS = "/webex/add-numbers"
@@ -57,8 +58,9 @@ GROUPS = [
 
 def _status() -> rx.Component:
     return rx.hstack(
+        org_select(WebexSession),
         rx.cond(
-            WebexSession.webex_has_orgs,
+            WebexSession.webex_org_names.length() > 0,
             rx.select(
                 WebexSession.webex_org_names,
                 value=WebexSession.webex_active,

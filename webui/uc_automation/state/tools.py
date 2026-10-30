@@ -197,6 +197,17 @@ class PhoneCountState(CucmState):
         async for ev in self._count():
             yield ev
 
+    @rx.event
+    async def switch_org(self, org: str):
+        self.active_org = org
+        self._reconcile()
+        self.pool_rows = []
+        self.total_phones = 0
+        self.error = ""
+        if self.active:
+            async for ev in self._count():
+                yield ev
+
 
 class SetPinState(CucmState, _RunMixin):
     pin_user: str = ""

@@ -116,6 +116,7 @@ def phone_count() -> rx.Component:
             spacing="4", align="start", width="100%",
         )),
         on_connection_change=S.switch_connection,
+        on_org_change=S.switch_org,
     )
 
 

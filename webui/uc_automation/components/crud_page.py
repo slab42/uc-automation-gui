@@ -417,6 +417,7 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
                 dialog=dialog, close_button=close_button, results=results, progress=progress,
                 dropzone=dropzone, code_block=code_block)) if cfg.extra_dialogs else []),
             on_connection_change=S.switch_connection,
+            on_org_change=S.switch_org,
         )
 
     render.__name__ = f"{S.__name__}_page"

@@ -8,8 +8,9 @@ from datetime import datetime
 
 import reflex as rx
 
-from ..backend import cube_config as cfg, cube_credentials, cube_mem as mem, cube_ssh
+from ..backend import cube_config as cfg, cube_credentials, cube_mem as mem, cube_ssh, organizations as orgs
 from ..backend.applog import OpLog
+from .org import OrgState
 from .run_mixin import RunMixin
 from .webex_routing import PasteMixin
 
@@ -47,12 +48,23 @@ class CubeRun(RunMixin, PasteMixin, mixin=True):
     def is_manual(self) -> bool:
         return self.cred_name == MANUAL
 
-    @rx.event
-    def load_page(self):
-        names = [c["name"] for c in cube_credentials.list_public()]
+    def _filter_creds(self):
+        """Credential sets of the active organization."""
+        sets = orgs.in_org(cube_credentials.list_public(), self.active_org, self.org_names)
+        names = [c["name"] for c in sets]
         self.cred_names = names
         if self.cred_name != MANUAL and self.cred_name not in names:
             self.cred_name = "default" if "default" in names else (names[0] if names else MANUAL)
+
+    @rx.event
+    def load_page(self):
+        self._load_orgs()
+        self._filter_creds()
+
+    @rx.event
+    def select_org(self, org: str):
+        self.active_org = org
+        self._filter_creds()
 
     @rx.event
     def set_cred_name(self, value: str):
@@ -97,7 +109,7 @@ class CubeRun(RunMixin, PasteMixin, mixin=True):
         return (routers, cred), ""
 
 
-class MemStatusState(CubeRun, rx.State):
+class MemStatusState(CubeRun, OrgState):
     threshold: str = "33"
 
     @rx.event
@@ -165,7 +177,7 @@ class MemStatusState(CubeRun, rx.State):
         return rx.download(data=mem.memory_csv(self.rows), filename=f"router-memory-{_stamp()}.csv")
 
 
-class ConfigCompareState(CubeRun, rx.State):
+class ConfigCompareState(CubeRun, OrgState):
     template_text: str = ""
     _reports: dict[str, str] = {}
 

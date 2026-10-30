@@ -6,7 +6,8 @@ from ..state.cucm import CucmState
 from ..state.cuc import CucState
 from ..state.redsky import RedskyState
 from ..state.webex import WebexState
-from .webex_credentials import webex_tab
+from .organizations import organizations_tab
+from .webex_credentials import org_form, webex_tab
 
 
 def _field(label: str, control: rx.Component, hint: str = "") -> rx.Component:
@@ -18,6 +19,20 @@ def _field(label: str, control: rx.Component, hint: str = "") -> rx.Component:
         align="start",
         width="100%",
     )
+
+
+def _org_field(S) -> rx.Component:
+    """First line of every platform form: the organization the entry belongs to."""
+    return _field(
+        "Organization",
+        rx.select(S.org_names, value=S.form_org, on_change=lambda v: S.set_form("org", v),
+                  placeholder="Choose an organization", width="100%"),
+        "The customer this belongs to. Create organizations on the Organizations tab.",
+    )
+
+
+def _org_heading(c) -> rx.Component:
+    return rx.text(c["org"], size="2", weight="bold", color="var(--gray-11)", padding_top="0.5rem")
 
 
 def _saved_row(c, S) -> rx.Component:
@@ -55,6 +70,7 @@ def _form(S, placeholder: str, server_hint: str) -> rx.Component:
     return rx.card(
         rx.vstack(
             rx.heading("Connection", size="4"),
+            _org_field(S),
             _field(
                 "Name",
                 rx.input(
@@ -128,7 +144,9 @@ def _conn_tab(S, placeholder: str, server_hint: str) -> rx.Component:
             rx.heading("Saved connections", size="4"),
             rx.cond(
                 S.connections.length() > 0,
-                rx.vstack(rx.foreach(S.connections, lambda c: _saved_row(c, S)), spacing="2", width="100%"),
+                rx.vstack(
+                    rx.foreach(S.saved_rows, lambda c: rx.cond(c["kind"] == "org", _org_heading(c), _saved_row(c, S))),
+                    spacing="2", width="100%"),
                 rx.text("None yet. Fill in the form and test the connection to save one.",
                         color="var(--gray-11)", size="2"),
             ),
@@ -178,6 +196,7 @@ def _redsky_form() -> rx.Component:
     return rx.card(
         rx.vstack(
             rx.heading("Connection", size="4"),
+            _org_field(S),
             _field(
                 "Name",
                 rx.input(
@@ -253,7 +272,9 @@ def _redsky_tab() -> rx.Component:
             rx.heading("Saved connections", size="4"),
             rx.cond(
                 S.connections.length() > 0,
-                rx.vstack(rx.foreach(S.connections, _redsky_row), spacing="2", width="100%"),
+                rx.vstack(
+                    rx.foreach(S.saved_rows, lambda c: rx.cond(c["kind"] == "org", _org_heading(c), _redsky_row(c))),
+                    spacing="2", width="100%"),
                 rx.text("None yet. Fill in the form and test the connection to save one.",
                         color="var(--gray-11)", size="2"),
             ),
@@ -295,6 +316,7 @@ def _cube_form() -> rx.Component:
     return rx.card(
         rx.vstack(
             rx.heading("Credential Set", size="4"),
+            _org_field(S),
             _field(
                 "Name",
                 rx.input(
@@ -346,7 +368,9 @@ def _cube_tab() -> rx.Component:
             rx.heading("Saved Credential Sets", size="4"),
             rx.cond(
                 S.credentials.length() > 0,
-                rx.vstack(rx.foreach(S.credentials, _cube_row), spacing="2", width="100%"),
+                rx.vstack(
+                    rx.foreach(S.saved_rows, lambda c: rx.cond(c["kind"] == "org", _org_heading(c), _cube_row(c))),
+                    spacing="2", width="100%"),
                 rx.text("None yet. Fill in the form and save one.", color="var(--gray-11)", size="2"),
             ),
             spacing="3",
@@ -379,11 +403,26 @@ def credentials() -> rx.Component:
         "Credentials",
         rx.tabs.root(
             rx.tabs.list(
+                rx.tabs.trigger("Organizations", value="organizations"),
                 rx.tabs.trigger("CUCM", value="cucm"),
                 rx.tabs.trigger("CUC", value="cuc"),
                 rx.tabs.trigger("CUBE", value="cube"),
                 rx.tabs.trigger("Webex", value="webex"),
                 rx.tabs.trigger("RedSky", value="redsky"),
+            ),
+            rx.tabs.content(
+                rx.box(
+                    organizations_tab({
+                        "cucm": _form(CucmState, "e.g. lab-cucm", "The publisher. AXL is reached on port 8443."),
+                        "cuc": _form(CucState, "e.g. lab-cuc",
+                                     "The Unity Connection server. The REST API is reached on port 443."),
+                        "cube": _cube_form(),
+                        "webex": org_form(),
+                        "redsky": _redsky_form(),
+                    }),
+                    padding_top="1rem",
+                ),
+                value="organizations",
             ),
             rx.tabs.content(rx.box(_cucm_tab(), padding_top="1rem"), value="cucm"),
             rx.tabs.content(rx.box(_cuc_tab(), padding_top="1rem"), value="cuc"),
