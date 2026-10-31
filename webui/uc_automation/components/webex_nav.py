@@ -4,7 +4,7 @@ import reflex as rx
 
 from ..state.webex_routing import WebexSession
 from .layout import page
-from .org_picker import org_select
+from .org_picker import instance_select, org_select
 
 WEBEX_HOME = "/webex"
 ADD_NUMBERS = "/webex/add-numbers"
@@ -61,12 +61,7 @@ def _status() -> rx.Component:
         org_select(WebexSession),
         rx.cond(
             WebexSession.webex_org_names.length() > 0,
-            rx.select(
-                WebexSession.webex_org_names,
-                value=WebexSession.webex_active,
-                on_change=WebexSession.select_webex_org,
-                size="1",
-            ),
+            instance_select(WebexSession.webex_org_names, WebexSession.webex_active, WebexSession.select_webex_org),
             rx.link(rx.button("Add an org", size="1", variant="soft"), href="/credentials"),
         ),
         rx.cond(

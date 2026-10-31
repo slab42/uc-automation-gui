@@ -2,6 +2,8 @@
 
 import re
 
+from typing import Any
+
 import reflex as rx
 
 from ..backend import cube_credentials, organizations as orgs
@@ -32,8 +34,8 @@ class CubeState(OrgState):
         return orgs.in_org(self.credentials, self.org_view, self.org_names)
 
     @rx.var
-    def saved_rows(self) -> list[dict[str, str]]:
-        """Every saved credential set, grouped by organization (heading rows have kind org)."""
+    def saved_groups(self) -> list[dict[str, Any]]:
+        """Every saved credential set, grouped by organization."""
         return orgs.grouped(self.credentials, self.org_names)
 
     @rx.event

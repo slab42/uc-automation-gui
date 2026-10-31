@@ -4,7 +4,7 @@ import reflex as rx
 
 from ..state.cucm import CucmState
 from .layout import page
-from .org_picker import org_select
+from .org_picker import instance_select, org_select
 
 CUCM_HOME = "/cucm"
 ADVERTISED_PATTERNS = "/cucm/advertised-patterns"
@@ -70,12 +70,7 @@ def _connection_picker(on_change, on_org_change) -> rx.Component:
         rx.cond(
             CucmState.has_active,
             rx.hstack(
-                rx.select(
-                    CucmState.connection_names,
-                    value=CucmState.active,
-                    on_change=on_change,
-                    size="1",
-                ),
+                instance_select(CucmState.connection_names, CucmState.active, on_change),
                 rx.badge(CucmState.active_label, variant="soft", color_scheme="gray"),
                 align="center",
                 spacing="2",

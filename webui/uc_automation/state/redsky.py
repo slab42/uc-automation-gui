@@ -3,6 +3,8 @@
 import asyncio
 import re
 
+from typing import Any
+
 import reflex as rx
 
 from ..backend import organizations as orgs, redsky_api, redsky_connections
@@ -45,8 +47,8 @@ class RedskyState(OrgState):
         return orgs.in_org(self.connections, self.org_view, self.org_names)
 
     @rx.var
-    def saved_rows(self) -> list[dict[str, str]]:
-        """Every saved connection, grouped by organization (heading rows have kind org)."""
+    def saved_groups(self) -> list[dict[str, Any]]:
+        """Every saved connection, grouped by organization."""
         return orgs.grouped(self.connections, self.org_names)
 
     @rx.var

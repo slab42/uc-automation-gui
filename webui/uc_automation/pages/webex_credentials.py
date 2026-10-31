@@ -3,6 +3,7 @@
 import reflex as rx
 
 from ..backend.webex_auth import REDIRECT_URI
+from ..components.org_box import org_box
 from ..state.webex import WebexState as S
 
 MUTED = "var(--gray-11)"
@@ -310,10 +311,7 @@ def _orgs() -> rx.Component:
         rx.cond(
             S.webex_has_orgs,
             rx.vstack(
-                rx.foreach(S.saved_rows, lambda o: rx.cond(
-                    o["kind"] == "org",
-                    rx.text(o["org"], size="2", weight="bold", color=MUTED, padding_top="0.5rem"),
-                    _org_row(o))),
+                rx.foreach(S.saved_groups, lambda g: org_box(g, _org_row)),
                 spacing="2", width="100%"),
             rx.text("None yet.", color=MUTED, size="2"),
         ),

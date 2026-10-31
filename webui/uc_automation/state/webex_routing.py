@@ -2,6 +2,8 @@
 
 import asyncio
 
+from typing import Any
+
 import reflex as rx
 
 from ..backend import organizations as orgs, webex_auth, webex_routing as r
@@ -41,8 +43,8 @@ class WebexSession(OrgState):
         return orgs.in_org(self.webex_orgs, self.org_view, self.org_names)
 
     @rx.var
-    def saved_rows(self) -> list[dict[str, str]]:
-        """Every saved Webex org, grouped by organization (heading rows have kind org)."""
+    def saved_groups(self) -> list[dict[str, Any]]:
+        """Every saved Webex org, grouped by organization."""
         return orgs.grouped(self.webex_orgs, self.org_names)
 
     @rx.var

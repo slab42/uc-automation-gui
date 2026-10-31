@@ -16,7 +16,7 @@ def _section(name: str) -> str:
 
 def list_names() -> list[str]:
     names = [s["identifier"] for s in ini_store.read_sections(CREDENTIALS_PATH) if s["service"] == "ORG"]
-    return sorted(names, key=str.lower)
+    return sorted(names, key=lambda n: (n.lower(), n))
 
 
 def add(name: str) -> None:
@@ -76,12 +76,11 @@ def in_org(items: list[dict[str, str]], org: str, names: list[str]) -> list[dict
     return [i for i in items if i.get("org", "") == org]
 
 
-def grouped(items: list[dict[str, str]], names: list[str]) -> list[dict[str, str]]:
-    """Flat rows for a list grouped by organization: a heading row (kind=org) then its items (kind=item)."""
-    rows: list[dict[str, str]] = []
+def grouped(items: list[dict[str, str]], names: list[str]) -> list[dict]:
+    """Groups for a list shown by organization, alphabetical: {"org": name, "items": [...]} (Unassigned last)."""
+    groups = []
     for org in names + [UNASSIGNED]:
         mine = in_org(items, org, names)
         if mine:
-            rows.append({"kind": "org", "org": org, "name": org})
-            rows += [{**i, "kind": "item"} for i in mine]
-    return rows
+            groups.append({"org": org, "items": mine})
+    return groups

@@ -166,20 +166,14 @@ def _org_window(forms: dict) -> rx.Component:
     )
 
 
-def _org_row(o) -> rx.Component:
-    return rx.hstack(
-        rx.vstack(
-            rx.text(o["name"], weight="bold"),
-            rx.text(o["count"] + " platform entries", size="2", color=MUTED),
-            spacing="0",
-            align="start",
-        ),
-        rx.spacer(),
-        rx.icon("chevron-right", size=18, color=MUTED),
+def _org_tile(o) -> rx.Component:
+    return rx.vstack(
+        rx.text(o["name"], weight="bold", size="3"),
+        rx.text(o["count"] + " entries", size="1", color=MUTED),
         on_click=O.open_org(o["name"]),
-        align="center",
-        width="100%",
-        padding="0.7rem 0.9rem",
+        spacing="0",
+        align="start",
+        padding="0.6rem 0.8rem",
         border="1px solid var(--gray-5)",
         border_radius="var(--radius-3)",
         cursor="pointer",
@@ -230,7 +224,8 @@ def organizations_tab(forms: dict) -> rx.Component:
         ),
         rx.cond(
             O.org_rows.length() > 0,
-            rx.vstack(rx.foreach(O.org_rows, _org_row), spacing="2", width="100%"),
+            rx.grid(rx.foreach(O.org_rows, _org_tile), columns=rx.breakpoints(initial="2", sm="3", lg="4"),
+                    spacing="3", width="100%"),
             rx.text("None yet. Add an organization, then add its platforms.", size="2", color=MUTED),
         ),
         _new_org_dialog(),

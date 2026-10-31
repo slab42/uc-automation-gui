@@ -4,7 +4,7 @@ import reflex as rx
 
 from ..state.cuc import CucState
 from .layout import page
-from .org_picker import org_select
+from .org_picker import instance_select, org_select
 
 CUC_HOME = "/cuc"
 STATUS_CHECK = "/cuc/status-check"
@@ -39,7 +39,7 @@ def _connection_picker() -> rx.Component:
         rx.cond(
             CucState.has_active,
             rx.hstack(
-                rx.select(CucState.connection_names, value=CucState.active, on_change=CucState.select_active, size="1"),
+                instance_select(CucState.connection_names, CucState.active, CucState.select_active),
                 rx.badge(CucState.active_label, variant="soft", color_scheme="gray"),
                 align="center",
                 spacing="2",

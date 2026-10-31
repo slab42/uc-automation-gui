@@ -1,6 +1,7 @@
 import reflex as rx
 
 from ..components.layout import page
+from ..components.org_box import org_box
 from ..state.cube import CubeState
 from ..state.cucm import CucmState
 from ..state.cuc import CucState
@@ -29,10 +30,6 @@ def _org_field(S) -> rx.Component:
                   placeholder="Choose an organization", width="100%"),
         "The customer this belongs to. Create organizations on the Organizations tab.",
     )
-
-
-def _org_heading(c) -> rx.Component:
-    return rx.text(c["org"], size="2", weight="bold", color="var(--gray-11)", padding_top="0.5rem")
 
 
 def _saved_row(c, S) -> rx.Component:
@@ -145,7 +142,7 @@ def _conn_tab(S, placeholder: str, server_hint: str) -> rx.Component:
             rx.cond(
                 S.connections.length() > 0,
                 rx.vstack(
-                    rx.foreach(S.saved_rows, lambda c: rx.cond(c["kind"] == "org", _org_heading(c), _saved_row(c, S))),
+                    rx.foreach(S.saved_groups, lambda g: org_box(g, lambda c: _saved_row(c, S))),
                     spacing="2", width="100%"),
                 rx.text("None yet. Fill in the form and test the connection to save one.",
                         color="var(--gray-11)", size="2"),
@@ -273,7 +270,7 @@ def _redsky_tab() -> rx.Component:
             rx.cond(
                 S.connections.length() > 0,
                 rx.vstack(
-                    rx.foreach(S.saved_rows, lambda c: rx.cond(c["kind"] == "org", _org_heading(c), _redsky_row(c))),
+                    rx.foreach(S.saved_groups, lambda g: org_box(g, _redsky_row)),
                     spacing="2", width="100%"),
                 rx.text("None yet. Fill in the form and test the connection to save one.",
                         color="var(--gray-11)", size="2"),
@@ -369,7 +366,7 @@ def _cube_tab() -> rx.Component:
             rx.cond(
                 S.credentials.length() > 0,
                 rx.vstack(
-                    rx.foreach(S.saved_rows, lambda c: rx.cond(c["kind"] == "org", _org_heading(c), _cube_row(c))),
+                    rx.foreach(S.saved_groups, lambda g: org_box(g, _cube_row)),
                     spacing="2", width="100%"),
                 rx.text("None yet. Fill in the form and save one.", color="var(--gray-11)", size="2"),
             ),
