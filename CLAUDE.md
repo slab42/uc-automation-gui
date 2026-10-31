@@ -33,6 +33,7 @@ Run it with `python3 main.py` from the repo root. It creates `webui/.venv` on fi
 - Menu, sub-menu, tab and segmented-control labels use Title Case: every word starts with a capital letter, including small words ("Phone Count By DP", "Paste Text"). Acronyms stay upper case.
 - Any bulk input that accepts a CSV must offer "Paste Text" as the first (default) tab and CSV second, both routed through the same handler (`paste_csv_tabs` + `PasteMixin`, or `list_input_parts`).
 - Every operation writes a log with `OpLog` (`backend/applog.py`): first line `<Title> - Started`, last line `<Title> - Completed`, closed in `try/finally`. New features must log too.
+- Sidebar (`components/layout.py`) collapsed state: every icon (logo, nav items, toggle) must be centered in the 64px strip. Use plain CSS props (`justify_content`, `align_items`, `flex_direction`) with `rx.cond`, never Radix `justify`/`align`/`direction` with a Var (they do not update at runtime). Nav links stay `display="block"` with `width="100%"`, the sidebar hides its scrollbar (`scrollbar_width="none"`) so it cannot shift icons, and hidden labels use `display="none"`. Verify visually after any sidebar change: temporarily set the `SidebarState.collapsed` default to `"1"`, run on spare ports (e.g. `reflex run --frontend-port 3055 --backend-port 8055`), screenshot with headless Chrome at 1200px wide, then restore the default and stop only that PID.
 - Exports (CSV, HTML reports) are browser downloads, not files on disk.
 
 ## Adding Things

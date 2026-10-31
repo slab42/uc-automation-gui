@@ -119,6 +119,8 @@ def sidebar() -> rx.Component:
         padding=rx.cond(COLLAPSED, "1rem 0.5rem", "1rem 0.75rem"),
         transition="width 0.15s ease",
         overflow_x="hidden",
+        overflow_y="auto",
+        scrollbar_width="none",
         background="var(--gray-2)",
         border_right="1px solid var(--gray-5)",
         display=rx.breakpoints(initial="none", md="block"),
