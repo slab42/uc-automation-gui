@@ -3,8 +3,9 @@ import reflex as rx
 from ..backend.webex_groups import POLICIES
 from ..backend.webex_routing import NUMBER_STATES, NUMBER_TYPES, USAGE_TYPES
 from ..components.tool_widgets import code_block, one_multiple_card, csv_dropzone, field, file_dropzone, paste_csv_tabs, run_results
-from ..components.webex_nav import GROUPS, webex_page
+from ..components.webex_nav import GROUPS, IN_DEVELOPMENT, webex_page
 from ..components.webex_picker import picker
+from ..state.settings import SettingsState
 from ..state.webex_groups import CallQueuesState, HuntGroupsState, VirtualLinesState
 from ..state.webex_routing import AddNumbersState, CallForwardState, WebexSession
 
@@ -40,6 +41,12 @@ def _home_card(icon, title, desc, href):
     )
 
 
+def _dev_gated(card: rx.Component, route: str) -> rx.Component:
+    if route not in IN_DEVELOPMENT:
+        return card
+    return rx.cond(SettingsState.experimental == "1", card, rx.fragment())
+
+
 def webex_home() -> rx.Component:
     return webex_page(
         "Webex",
@@ -49,7 +56,7 @@ def webex_home() -> rx.Component:
                 rx.vstack(
                     rx.heading(label, size="4"),
                     rx.grid(
-                        *[_home_card(icon, name, desc, route) for name, route, icon, desc in items],
+                        *[_dev_gated(_home_card(icon, name, desc, route), route) for name, route, icon, desc in items],
                         columns=rx.breakpoints(initial="1", sm="2", lg="3"), spacing="4", width="100%",
                     ),
                     spacing="3", align="start", width="100%",

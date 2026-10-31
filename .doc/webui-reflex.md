@@ -67,6 +67,7 @@ backend/webex_cucm_migrate.py CUCM-Webex Phone Migrate (either direction)
 backend/webex_workspaces.py  Create workspaces, add devices to workspaces, move users to another location (Move Users job)
 backend/webex_locations.py   Location schedules (export/update/copy/remove past) and RedSky E911 status/opt-out
 backend/webex_tools.py       Hardware compatibility check (supported models + validateMacs)
+backend/webex_naming.py      Naming Check: list locations, queues, hunt groups, auto attendants, workspaces, virtual lines; regex check; rename
 backend/webex_auth.py        Webex OAuth login, token storage/refresh ([WEBEX:default]); `ensure_token()` for API code
 backend/applog.py            operation logs: OpLog writer, pruning (`prune_logs`), plus list/read/export helpers for the Logs page
 backend/app_settings.py      `webui/app_settings.json` (git-ignored): log retention days and max size, defaults 90 days / 2048 MB
@@ -76,6 +77,7 @@ state/favorites.py           FavoritesState: favorite and recent function routes
 state/search.py              SearchState: home page search over the GROUPS of the CUCM, CUC and Webex menus (platform, section, link)
 state/run_mixin.py           RunMixin: busy/progress/per-row results for tool pages (CUCM and Webex); `_run_items(..., workers=N)` runs N rows at once
 state/webex_tools.py         Check Hardware Compatibility state
+state/webex_naming.py        Naming Check state
 state/webex_devices.py       Bulk ATA/VG, Webex-Webex Phone Migrate and CUCM-Webex Phone Migrate states
 state/webex_users.py         Delete Users, Reset PIN, Voicemail, Add Workspace, Add Device, Migrate states
 state/webex_locations.py     Schedules and E911 states
@@ -357,6 +359,7 @@ Webex has no username/password token API, so login is the OAuth authorization co
   locations or one), Remove past events (one-time holiday events ended before today; tick what to delete). Locations come from
   the Calling API. E911: status table (2 calls per location, 5 in parallel), export, and opt-out of ticked locations (tick by
   hand or from a CSV of names).
+- **Tools > Naming Check** (`/webex/naming-check`, `NamingCheckState`, `backend/webex_naming.py`; **in development**: `webex_nav.IN_DEVELOPMENT` puts an amber badge on its menu item and the page shows a callout; remove the route from that set when it is finished): one regex per item type (locations, call queues, hunt groups, auto attendants, workspaces, virtual lines; empty skips the type) with a hints select per row (`HINTS`); `{location}` in a regex expands to the item's escaped location name. Run Check lists the items and shows PASS/FAIL with a CSV export. A suggested name for each failure comes from the optional find/replace regex, else from automatic fixes (`suggest`: spacing, odd characters, case variants plus the rule's literal prefix/suffix, first candidate that passes); it is kept only if it changes the name, fits `MAX_LEN` (30 characters for queues, hunt groups and auto attendants, Webex rejects longer) and passes the rule, and the Suggested Name cell is editable (red when it does not pass; `valid` marks renamable rows); Rename Suggested (confirm dialog) renames those: `PUT /locations/{id}` (name), `/workspaces/{id}` (displayName), `/telephony/config/virtualLines/{id}` (displayName), and `/telephony/config/locations/{loc}/{queues|huntGroups|autoAttendants}/{id}` (name). Not tested against a real org.
 - **Tools > Check Hardware Compatibility** (`/webex/hardware-compatibility`): one phone or a CSV (`model,mac`). Model is checked
   against `GET /telephony/config/supportedDevices` (model code or display name), MACs against `validateMacs` in batches of 50
   (a write-scoped call that only validates). Status VALID / WARNING / INVALID with a reason; results export as CSV. The
@@ -583,3 +586,4 @@ built with `one_multiple_card` (`components/tool_widgets.py`): the single input 
 - Both lists are route lists in browser LocalStorage (`FavoritesState`, `state/favorites.py`), so they survive reloads. Tiles come from `state/search.INDEX` (every menu item of every platform, now with an `icon`).
 - Every function page (a route in `INDEX`) gets a star in the top bar (`components/layout.topbar`): grey outline, filled with the theme accent color when a favorite; clicking toggles it. The top bar's `on_mount` calls `FavoritesState.visit`, which records the page as recently used. Not clicked through in a browser.
 - Settings > Home Page > **Hide Platform Cards** (`SettingsState.hide_platform_cards`, browser LocalStorage `hide_platform_cards`, per browser) hides the platform card grid on the home page. The sidebar and search are unaffected.
+- Settings > **Experimental** (`SettingsState.experimental`, browser LocalStorage `experimental`, off by default) shows pages under development. Routes listed in `webex_nav.IN_DEVELOPMENT` (Naming Check, CUCM-Webex Phone Migrate) are hidden from the Webex menu, the Webex home cards and home search while it is off; with it on they show an "In Development" badge in the menu. Direct URLs still open. To mark another page, add its route to that set.

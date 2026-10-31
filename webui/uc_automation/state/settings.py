@@ -11,6 +11,13 @@ class SettingsState(rx.State):
     # "1" hides the platform cards on the home page (browser LocalStorage)
     hide_platform_cards: str = rx.LocalStorage("", name="hide_platform_cards")
 
+    # "1" shows pages marked under development (browser LocalStorage)
+    experimental: str = rx.LocalStorage("", name="experimental")
+
+    @rx.event
+    def set_experimental(self, value: bool):
+        self.experimental = "1" if value else ""
+
     @rx.event
     def set_hide_platform_cards(self, value: bool):
         self.hide_platform_cards = "1" if value else ""

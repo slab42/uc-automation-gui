@@ -36,6 +36,14 @@ def platform_card(p) -> rx.Component:
 
 
 def result_row(r) -> rx.Component:
+    return rx.cond(
+        (r["dev"] == "") | (SettingsState.experimental == "1"),
+        _result_link(r),
+        rx.fragment(),
+    )
+
+
+def _result_link(r) -> rx.Component:
     return rx.link(
         rx.card(
             rx.hstack(

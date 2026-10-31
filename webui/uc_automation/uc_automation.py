@@ -37,6 +37,7 @@ from .pages.system import codec_lists, device_pools, locations, regions
 from .pages.webex_routing import add_numbers, call_forward, call_queues, hunt_groups as webex_hunt_groups, virtual_lines, webex_home
 from .pages.webex_locations import e911, schedules
 from .pages.webex_tools import hardware_compatibility
+from .pages.webex_naming import naming_check
 from .pages.webex_devices import bulk_ata, cucm_migrate, device_migrate
 from .pages.webex_users import add_workspace, copy_workspace, create_workspace, delete_users, migrate, reset_pin, voicemail
 from .pages.pickup_groups import pickup_groups
@@ -73,6 +74,7 @@ from .state.webex_devices import BulkAtaState, CucmMigrateState, DeviceMigrateSt
 from .state.webex_groups import CallQueuesState, HuntGroupsState as WebexHuntGroupsState, VirtualLinesState
 from .state.webex_locations import E911State, SchedulesState
 from .state.webex_tools import HardwareCompatState
+from .state.webex_naming import NamingCheckState
 from .state.webex_users import (
     AddWorkspaceState,
     CopyWorkspaceState,
@@ -129,6 +131,7 @@ for _route, _title, _page, _state in [
     ("/webex/schedules", "Schedules", schedules, SchedulesState),
     ("/webex/e911", "E911", e911, E911State),
     ("/webex/hardware-compatibility", "Check Hardware Compatibility", hardware_compatibility, HardwareCompatState),
+    ("/webex/naming-check", "Naming Check", naming_check, NamingCheckState),
 ]:
     app.add_page(_page, route=_route, title=f"{_title} | {APP_NAME}", on_load=_state.load_page)
 for _route, _title, _page, _state in [

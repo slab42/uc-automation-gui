@@ -51,6 +51,20 @@ def _home_card() -> rx.Component:
     )
 
 
+def _experimental_card() -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.heading("Experimental", size="4"),
+            rx.text("Show pages that are still under development. Off by default.",
+                    size="2", color="var(--gray-11)"),
+            row("Experimental",
+                rx.switch(checked=S.experimental == "1", on_change=S.set_experimental)),
+            width="100%",
+        ),
+        size="3",
+    )
+
+
 def settings() -> rx.Component:
     return page(
         "Settings",
@@ -74,5 +88,6 @@ def settings() -> rx.Component:
             size="3",
         ),
         _home_card(),
+        _experimental_card(),
         _log_card(),
     )

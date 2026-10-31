@@ -9,7 +9,8 @@ _SOURCES = [("CUCM", cucm_nav.GROUPS), ("CUC", cuc_nav.GROUPS), ("UCCX", uccx_na
             ("RedSky", redsky_nav.GROUPS)]
 
 INDEX: list[dict[str, str]] = [
-    {"platform": platform, "section": section, "label": label, "description": desc, "route": route, "icon": icon}
+    {"platform": platform, "section": section, "label": label, "description": desc, "route": route, "icon": icon,
+     "dev": "1" if route in webex_nav.IN_DEVELOPMENT else ""}
     for platform, groups in _SOURCES
     for section, items in groups
     for label, route, icon, desc in items
@@ -18,14 +19,14 @@ _OTHER_ROUTES = {item["route"] for item in INDEX}
 
 # Tools platform entries, except those already listed under another platform
 INDEX += [
-    {"platform": "Tools", "section": "Tools", "label": label, "description": desc, "route": route, "icon": icon}
+    {"platform": "Tools", "section": "Tools", "label": label, "description": desc, "route": route, "icon": icon, "dev": ""}
     for label, route, icon, desc in tools_nav.TOOLS
     if route not in _OTHER_ROUTES
 ]
 
 
 def _haystack(item: dict[str, str]) -> str:
-    return " ".join(v for k, v in item.items() if k not in ("route", "icon")).lower()
+    return " ".join(v for k, v in item.items() if k not in ("route", "icon", "dev")).lower()
 
 
 class SearchState(rx.State):

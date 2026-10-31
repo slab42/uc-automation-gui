@@ -2,6 +2,7 @@
 
 import reflex as rx
 
+from ..state.settings import SettingsState
 from ..state.webex_routing import WebexSession
 from .layout import page
 from .org_picker import instance_select, org_select
@@ -25,6 +26,10 @@ MIGRATE = "/webex/migrate"
 SCHEDULES = "/webex/schedules"
 E911 = "/webex/e911"
 HARDWARE = "/webex/hardware-compatibility"
+NAMING = "/webex/naming-check"
+
+# Routes still under development: the menu item shows a badge
+IN_DEVELOPMENT = {NAMING, CUCM_MIGRATE}
 
 # (menu label, [(item label, route, icon, description)])
 GROUPS = [
@@ -65,6 +70,8 @@ GROUPS = [
     ("Tools", [
         ("Check Hardware Compatibility", HARDWARE, "shield-check",
          "Check phone models and MAC addresses against Webex before onboarding."),
+        ("Naming Check", NAMING, "spell-check",
+         "In development. Validate item names against a regex per type, and rename the ones that fail."),
     ]),
     ("Reports", [
         ("Voicemail", VOICEMAIL, "voicemail",
@@ -105,13 +112,25 @@ def _status(show_org: bool = True) -> rx.Component:
     )
 
 
+def _menu_item(name: str, route: str) -> rx.Component:
+    if route not in IN_DEVELOPMENT:
+        return rx.menu.item(name, on_click=rx.redirect(route))
+    return rx.cond(
+        SettingsState.experimental == "1",
+        rx.menu.item(
+            rx.hstack(name, rx.badge("In Development", color_scheme="amber", size="1"), align="center", spacing="2"),
+            on_click=rx.redirect(route)),
+        rx.fragment(),
+    )
+
+
 def menubar(show_org: bool = True) -> rx.Component:
     return rx.hstack(
         *[
             rx.menu.root(
                 rx.menu.trigger(rx.button(label, rx.icon("chevron-down", size=15), variant="ghost", size="2")),
                 rx.menu.content(
-                    *[rx.menu.item(name, on_click=rx.redirect(route)) for name, route, _icon, _desc in items],
+                    *[_menu_item(name, route) for name, route, _icon, _desc in items],
                 ),
             )
             for label, items in GROUPS
