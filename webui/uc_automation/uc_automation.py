@@ -11,6 +11,8 @@ from .pages.cuc_users import remove_empty, status_check, usage_check
 from .pages.cucm_home import cucm_home
 from .pages import redsky_tools as rs_pages
 from .pages.tools_home import tools_home
+from .pages.cube_lgw import lgw_config
+from .pages.cucm_home_cluster import home_cluster_locator
 from .pages.cube_tools import config_compare, cube_home, mem_status
 from .pages.dn import alternate_numbers, move_partition, orphans
 from .pages.devices import (
@@ -75,6 +77,7 @@ from .state.webex_users import (
 from .state.webex_routing import AddNumbersState, CallForwardState, WebexSession
 from .state.hunt_groups import HuntGroupsState
 from .state.partitions import PartitionsState
+from .state.cucm_home import HomeClusterState
 from .state.tools import EmBulkState, PhoneCountState, SetPinState
 from .state.system import CodecListsState, DevicePoolsState, LocationsState, RegionsState
 from .state.pickup_groups import PickupGroupsState
@@ -98,6 +101,7 @@ app.add_page(mem_status, route="/cube/mem-status", title=f"CUBE Mem Status | {AP
              on_load=MemStatusState.load_page)
 app.add_page(config_compare, route="/cube/config-compare", title=f"CUBE Config Compare | {APP_NAME}",
              on_load=ConfigCompareState.load_page)
+app.add_page(lgw_config, route="/cube/lgw-config", title=f"CUBE Webex LGW Config | {APP_NAME}")
 app.add_page(webex_home, route="/webex", title=f"Webex | {APP_NAME}", on_load=WebexSession.on_page_load)
 app.add_page(add_numbers, route="/webex/add-numbers", title=f"Add Numbers | {APP_NAME}",
              on_load=AddNumbersState.load_page)
@@ -225,5 +229,7 @@ for _route, _title, _page, _state in [
 ]:
     app.add_page(_page, route=_route, title=f"{_title} | {APP_NAME}", on_load=_state.load_connections)
 
+app.add_page(home_cluster_locator, route="/cucm/home-cluster-locator", title=f"Home Cluster Locator | {APP_NAME}",
+             on_load=HomeClusterState.load_connections)
 app.add_page(phone_count, route="/cucm/phone-count-by-dp", title=f"Phone Count By DP | {APP_NAME}",
              on_load=PhoneCountState.on_page_load)

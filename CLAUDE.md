@@ -27,7 +27,7 @@ Run it with `python3 main.py` from the repo root. It creates `webui/.venv` on fi
 
 ## Hard Rules
 
-- **Passwords never reach the browser and are never logged.** Keep them in backend (`_`-prefixed) state vars and in `.env/credentials.env`. The UI only shows "Stored".
+- **Passwords never reach the browser and are never logged** (one exception, by request: the Webex Local Gateway Config Generator output shows the passwords the user typed). Keep them in backend (`_`-prefixed) state vars and in `.env/credentials.env`. The UI only shows "Stored".
 - Manual credential entry (CUBE "Enter Manually") is never saved.
 - Three layers: `backend/` (no Reflex imports), `state/` (calls the backend in a thread), `pages/` + `components/` (layout only).
 - Menu, sub-menu, tab and segmented-control labels use Title Case: every word starts with a capital letter, including small words ("Phone Count By DP", "Paste Text"). Acronyms stay upper case.

@@ -24,6 +24,7 @@ backend/cucm_routing.py      advertised patterns, partitions, calling search spa
 backend/cucm_hunt.py         hunt pilots, plus hunt list / line group cleanup and the line group dependency check
 backend/cucm_system.py       System: audio codec preference lists, regions, locations, device pools (+ SQL dependency checks)
 backend/cucm_dn.py           directory numbers: move partition, alternate numbers, orphans (SQL)
+backend/cucm_home.py         Home Cluster Locator: UDS clusterUser lookup per cluster
 backend/cucm_tools.py        tools: EM bulk login/logout/check, phone count by device pool, set user PIN
 backend/keys.py              composite row keys (pattern + partition) shared by backend and state
 backend/cucm_devices.py      phones, CTI route points (delete cleans up orphaned DNs), softkey templates, common device configs, button templates, MPP workflows
@@ -34,6 +35,7 @@ backend/cuc_api.py           CUC REST plumbing: CucError, schema pick, `detect_v
 backend/cube_ssh.py          CubeError, Router, parse_routers (router_ip,hostname CSV), run_command (netmiko, cisco_ios, port 22)
 backend/cube_mem.py          Mem Status parsing (free % of RP0/RP1, memory section), CSV export
 backend/cube_config.py       Config Compare: voice section parser, comparator, HTML report
+backend/cube_lgw.py          Webex LGW Config Generator: validation and config text (port of the Flask LGW tool)
 backend/cube_credentials.py  named router credential sets ([CUBE:<name>]: username, password)
 backend/redsky_connections.py  saved RedSky connections ([REDSKY:<name>]: username, password, org_id)
 backend/redsky_api.py        RedskyError, RedskyClient (login, 15 min token renewal, geography/networking/alert calls; raises RedskyError), `check_login`
@@ -72,10 +74,14 @@ state/webex_groups.py        PickerMixin (searchable list + selection) and the C
 state/webex_routing.py       WebexSession (login status in the menu bar, checked on page load) + Add Numbers / Call Forward states
 state/webex.py               WebexState: Webex tab on the credentials page and the /webex/callback page
 state/org.py                 OrgState: parent of every platform state (organization list, active organization, organization window)
+state/cucm_home.py           HomeClusterState: user lookup across the organization's CUCM connections
+pages/cucm_home_cluster.py   Home Cluster Locator page
 state/cucm.py                CucmState: connection list, active connection, credentials form, Test button
 state/cube_tools.py          CubeRun mixin (router list, credential set picker) + MemStatusState, ConfigCompareState
 components/cube_nav.py       CUBE top menu bar (GROUPS), cred_picker, cube_page()
 pages/cube_tools.py          CUBE home cards, Mem Status and Config Compare pages
+state/cube_lgw.py            LgwState: LGW form, generate, TXT export
+pages/cube_lgw.py            Webex Local Gateway Config Generator page
 state/cube.py                CubeState: credential set list and form (Credentials > CUBE)
 state/redsky.py              RedskyState: connection list, active connection, credentials form, Test button
 state/redsky_tools.py        RedskyBulk / RedskyCheck mixins (all handlers) + one tiny state per tool
@@ -162,7 +168,12 @@ uc_automation.py             app + every add_page()
 
 ### CUBE features
 
-- Menu (`components/cube_nav.GROUPS`, also the `/cube` home cards): **Health** = Mem Status; **Configuration** = Config Compare.
+- **Webex Local Gateway Config Generator** (`/cube/lgw-config`): form for the Webex trunk (tenant ID, OTG/DTG, proxy, registrar, line/port,
+  credentials, interfaces, public gateway) and up to 6 CUCM nodes; Generate shows the CUBE config on screen, Export TXT downloads it.
+  No router access. Deliberate exception to the passwords rule: the generated config shows the trunk and STUN passwords on screen and in the TXT (the inputs are not saved or logged).
+  Port of the Flask LGW tool; the template lives in `backend/cube_lgw.py`. Untested on a real CUBE.
+
+- Menu (`components/cube_nav.GROUPS`, also the `/cube` home cards): **Health** = Mem Status; **Configuration** = Config Compare, Webex Local Gateway Config Generator.
   Port of `cube/check_router_mem_status.py` and `cube/compare_router_config.py` (reference only).
 - No router list is stored. Each run takes routers from Paste Text (first) or CSV (`router_ip,hostname`, header optional, same layout
   as the old `routers.csv`) and one saved credential set picked in a dropdown (`default` preselected), or **Enter Manually** (username and password fields, held in
@@ -491,3 +502,17 @@ Schedules (update), E911 (select locations), Check Hardware Compatibility.
 Pages with a one-item pane and a multiple-item pane (Add Numbers, Call Forward, Reset PIN, Add Workspace, Add Device, Voicemail,
 Check Hardware Compatibility) use `collapsible_card` (`components/tool_widgets.py`) with `PanesMixin` (`state/run_mixin.py`):
 clicking a card header toggles it, and running one pane calls `_focus_pane` to collapse the other once the input is valid.
+
+### Home Cluster Locator (CUCM > Tools)
+
+- `/cucm/home-cluster-locator`, `HomeClusterState`, `backend/cucm_home.py`. Port of the old Home Cluster Manager GUI (its "Check AXL User" is not
+  included). No instance dropdown: the menu bar shows only the Org picker (`cucm_page(show_instance=False)`)
+  and every saved CUCM connection of that organization is searched, replacing the old `CUCMs.csv`.
+- Enter a user ID, Find User. Each cluster is asked `https://<server>:8443/cucm-uds/clusterUser?username=<id>` (UDS, no login, 5 s timeout, 10 at a time).
+  The table shows Found (with the home cluster the cluster reports), Not Found or Unreachable. The summary lists the distinct home clusters
+  (orange when clusters disagree). Export CSV is a browser download. Logged as "Home Cluster Locator". Not tested against a real CUCM.
+- **Move**: each result row has a Home checkbox, pre-ticked on every cluster where the user was found (status Found). Several can be ticked until **Edit Home Cluster** is pressed; then only one box can be
+  ticked (more than one on entry clears the selection). The panel takes an AXL username and password (backend var, used on every cluster, never saved or
+  logged) and a confirm dialog guards **Update Home Cluster**. `set_home` reads `enduser.islocaluser`, runs `executeSQLUpdate` (`'t'` on the ticked
+  cluster, `'f'` on every other cluster that has the user) and reads it back. The ticked cluster is done first; if it fails nothing else is changed.
+  A cluster without the user is skipped (an error only for the ticked one). The search then re-runs to show the new state. Log: "Move Home Cluster".

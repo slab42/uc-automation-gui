@@ -25,6 +25,7 @@ DN_ORPHANS = "/cucm/dn-orphans"
 EM_BULK = "/cucm/em-bulk-login"
 PHONE_COUNT = "/cucm/phone-count-by-dp"
 SET_PIN = "/cucm/set-user-pin"
+HOME_CLUSTER = "/cucm/home-cluster-locator"
 
 # (menu label, [(item label, route, icon, description)])
 GROUPS = [
@@ -60,11 +61,14 @@ GROUPS = [
         ("EM Bulk Login", EM_BULK, "log-in", "Log Extension Mobility users in or out, or check sessions, from a CSV."),
         ("Phone Count By DP", PHONE_COUNT, "chart-column", "Count phones per device pool and export the result."),
         ("Set User PIN", SET_PIN, "key-round", "Set Extension Mobility PINs for one user or from a CSV."),
+        ("Home Cluster Locator", HOME_CLUSTER, "locate", "Find which cluster of the organization a user is marked as home on."),
     ]),
 ]
 
 
-def _connection_picker(on_change, on_org_change) -> rx.Component:
+def _connection_picker(on_change, on_org_change, show_instance: bool = True) -> rx.Component:
+    if not show_instance:
+        return org_select(CucmState, on_org_change)
     return rx.hstack(
         org_select(CucmState, on_org_change),
         rx.cond(
@@ -82,8 +86,9 @@ def _connection_picker(on_change, on_org_change) -> rx.Component:
     )
 
 
-def menubar(on_connection_change=None, on_org_change=None) -> rx.Component:
-    picker = _connection_picker(on_connection_change or CucmState.select_active, on_org_change or CucmState.select_org)
+def menubar(on_connection_change=None, on_org_change=None, show_instance: bool = True) -> rx.Component:
+    picker = _connection_picker(on_connection_change or CucmState.select_active, on_org_change or CucmState.select_org,
+                                show_instance)
     return rx.hstack(
         *[
             rx.menu.root(
@@ -107,6 +112,7 @@ def menubar(on_connection_change=None, on_org_change=None) -> rx.Component:
     )
 
 
-def cucm_page(title: str, *children: rx.Component, on_connection_change=None, on_org_change=None) -> rx.Component:
+def cucm_page(title: str, *children: rx.Component, on_connection_change=None, on_org_change=None,
+              show_instance: bool = True) -> rx.Component:
     heading = title if title == "CUCM" else f"CUCM - {title}"
-    return page(heading, *children, subnav=menubar(on_connection_change, on_org_change))
+    return page(heading, *children, subnav=menubar(on_connection_change, on_org_change, show_instance))

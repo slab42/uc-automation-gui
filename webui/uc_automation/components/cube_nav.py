@@ -8,6 +8,7 @@ from .org_picker import org_select
 CUBE_HOME = "/cube"
 MEM_STATUS = "/cube/mem-status"
 CONFIG_COMPARE = "/cube/config-compare"
+LGW_CONFIG = "/cube/lgw-config"
 
 # (menu label, [(item label, route, icon, description)])
 GROUPS = [
@@ -18,6 +19,8 @@ GROUPS = [
     ("Configuration", [
         ("Config Compare", CONFIG_COMPARE, "file-diff",
          "Compare the voice sections of each running config to a template and get an HTML report."),
+        ("Webex Local Gateway Config Generator", LGW_CONFIG, "file-cog",
+         "Generate the CUBE config for a Webex Calling local gateway with a CUCM trunk. Shown on screen, export to TXT."),
     ]),
 ]
 
