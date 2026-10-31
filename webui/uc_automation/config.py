@@ -22,5 +22,5 @@ PLATFORMS = [
     Platform("cube", "CUBE", "Cisco Unified Border Element", "router", available=True),
     Platform("webex", "Webex", "Webex Calling / Control Hub", "message-square", available=True),
     Platform("redsky", "RedSky", "RedSky E911 location management", "map-pin", available=True),
-    Platform("tools", "Tools", "Cross platform tools and automations", "wrench"),
+    Platform("tools", "Tools", "Cross platform tools and automations", "wrench", available=True),
 ]

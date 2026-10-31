@@ -4,6 +4,7 @@
 Usage:
     python3 main.py             start the app (UI on http://localhost:3000, backend on :8000)
     python3 main.py --setup     create or refresh webui/.venv from webui/requirements.txt, then exit
+    python3 main.py --update    install new requirements and upgrade existing ones in webui/.venv, then exit
 
 The first run creates webui/.venv and installs the requirements. Credentials live in
 .env/credentials.env (see webui/credentials.env.EXAMPLE); the Credentials page edits that file.
@@ -45,8 +46,8 @@ def find_python() -> str | None:
     return None
 
 
-def setup() -> int:
-    """Create webui/.venv if needed and install the requirements into it."""
+def setup(upgrade: bool = False) -> int:
+    """Create webui/.venv if needed and install the requirements into it (upgrading them if asked)."""
     if not PYTHON.exists():
         python = find_python()
         if python is None:
@@ -54,15 +55,17 @@ def setup() -> int:
             return 1
         print(f"Creating {VENV} with {python} ...")
         subprocess.run([python, "-m", "venv", str(VENV)], check=True)
-    print("Installing requirements ...")
-    subprocess.run([str(PYTHON), "-m", "pip", "install", "-q", "-r", str(REQUIREMENTS)], check=True)
+    print("Updating requirements ..." if upgrade else "Installing requirements ...")
+    cmd = [str(PYTHON), "-m", "pip", "install", "-q", *(["--upgrade"] if upgrade else []), "-r", str(REQUIREMENTS)]
+    subprocess.run(cmd, check=True)
     return 0
 
 
 def main() -> int:
-    if "--setup" in sys.argv[1:] or not REFLEX.exists():
-        code = setup()
-        if code or "--setup" in sys.argv[1:]:
+    args = sys.argv[1:]
+    if "--setup" in args or "--update" in args or not REFLEX.exists():
+        code = setup(upgrade="--update" in args)
+        if code or "--setup" in args or "--update" in args:
             return code
     os.chdir(WEBUI)
     os.execv(str(REFLEX), [str(REFLEX), "run"])
