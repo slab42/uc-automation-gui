@@ -19,6 +19,8 @@ CREATE_WORKSPACE = "/webex/create-workspace"
 ADD_WORKSPACE = "/webex/add-workspace"
 COPY_WORKSPACE = "/webex/copy-workspace"
 BULK_ATA = "/webex/bulk-ata"
+DEVICE_MIGRATE = "/webex/webex-phone-migrate"
+CUCM_MIGRATE = "/webex/cucm-phone-migrate"
 MIGRATE = "/webex/migrate"
 SCHEDULES = "/webex/schedules"
 E911 = "/webex/e911"
@@ -55,6 +57,10 @@ GROUPS = [
     ("Devices", [
         ("Bulk ATA/VG", BULK_ATA, "cable",
          "Add an ATA or voice gateway with a workspace on every port."),
+        ("Webex-Webex Phone Migrate", DEVICE_MIGRATE, "arrow-right-left",
+         "Move a physical phone from one Webex org to another."),
+        ("CUCM-Webex Phone Migrate", CUCM_MIGRATE, "arrow-right-left",
+         "Move a physical phone between CUCM and Webex."),
     ]),
     ("Tools", [
         ("Check Hardware Compatibility", HARDWARE, "shield-check",
