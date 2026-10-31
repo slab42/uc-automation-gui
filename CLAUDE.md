@@ -51,4 +51,4 @@ Run it with `python3 main.py` from the repo root. It creates `webui/.venv` on fi
 
 ## Dependencies
 
-`webui/requirements.txt`: `reflex`, `zeep`, `requests`, `lxml`, `urllib3`, `openpyxl` (CUC call tree workbook), `netmiko` (CUBE SSH). Python 3.10 or newer.
+`webui/requirements.txt`: `reflex`, `zeep`, `requests`, `lxml`, `urllib3`, `openpyxl` (CUC call tree workbook), `netmiko` (CUBE SSH), `gTTS` and `av` (Text To U-Law Audio: speech plus in-process MP3 decode and u-law encode, no SoX or LAME). Python 3.10 or newer.

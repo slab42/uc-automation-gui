@@ -24,6 +24,7 @@ backend/cucm_routing.py      advertised patterns, partitions, calling search spa
 backend/cucm_hunt.py         hunt pilots, plus hunt list / line group cleanup and the line group dependency check
 backend/cucm_system.py       System: audio codec preference lists, regions, locations, device pools (+ SQL dependency checks)
 backend/cucm_dn.py           directory numbers: move partition, alternate numbers, orphans (SQL)
+backend/tts_ulaw.py          Text To U-Law Audio: gTTS speech, PyAV decode/resample/u-law WAV (all in memory), prompt CSV parsing
 backend/cucm_home.py         Home Cluster Locator: UDS clusterUser lookup per cluster
 backend/cucm_tools.py        tools: EM bulk login/logout/check, phone count by device pool, set user PIN
 backend/keys.py              composite row keys (pattern + partition) shared by backend and state
@@ -74,6 +75,8 @@ state/webex_groups.py        PickerMixin (searchable list + selection) and the C
 state/webex_routing.py       WebexSession (login status in the menu bar, checked on page load) + Add Numbers / Call Forward states
 state/webex.py               WebexState: Webex tab on the credentials page and the /webex/callback page
 state/org.py                 OrgState: parent of every platform state (organization list, active organization, organization window)
+state/tts.py                 TtsState: Text To U-Law Audio
+pages/tts.py                 Text To U-Law Audio page (Tools platform)
 state/cucm_home.py           HomeClusterState: user lookup across the organization's CUCM connections
 pages/cucm_home_cluster.py   Home Cluster Locator page
 state/cucm.py                CucmState: connection list, active connection, credentials form, Test button
@@ -487,7 +490,7 @@ None of this proves the behavior on a real cluster. Say so when reporting, and t
 - Template CSVs are embedded in code (Download Template buttons); there is no examples folder.
 - Phone delete does not clean up orphaned directory numbers.
 - Phone button template list cannot show the base template (AXL does not return it).
-- Ported: CUCM, CUC (users and call handlers), CUBE (Mem Status, Config Compare), Webex and RedSky. The `Tools` platform (`/tools`, `pages/tools_home.py`) is a card page driven by `components/tools_nav.TOOLS` (empty for now; the home search skips a tool already listed under another platform).
+- Ported: CUCM, CUC (users and call handlers), CUBE (Mem Status, Config Compare), Webex and RedSky. The `Tools` platform (`/tools`, `pages/tools_home.py`) is a card page driven by `components/tools_nav.TOOLS` (Text To U-Law Audio so far; the home search skips a tool already listed under another platform).
 
 ## Paste text input
 
@@ -516,3 +519,12 @@ clicking a card header toggles it, and running one pane calls `_focus_pane` to c
   logged) and a confirm dialog guards **Update Home Cluster**. `set_home` reads `enduser.islocaluser`, runs `executeSQLUpdate` (`'t'` on the ticked
   cluster, `'f'` on every other cluster that has the user) and reads it back. The ticked cluster is done first; if it fails nothing else is changed.
   A cluster without the user is skipped (an error only for the ticked one). The search then re-runs to show the new state. Log: "Move Home Cluster".
+
+### Text To U-Law Audio (Tools platform)
+
+- `/tools/text-to-ulaw`, `TtsState`, `backend/tts_ulaw.py`. Port of `text-to-u-law-for-uc/tts.py`, which needed LAME and SoX installed. Now `gTTS` makes the
+  MP3 (the text goes to Google Translate TTS, so internet access is required) and `av` (PyAV, bundled FFmpeg libraries, pip only) decodes, resamples and
+  writes a G.711 u-law WAV, 8000 Hz, 8 bit, mono, in memory. Nothing is written to disk and nothing is installed on the machine.
+- One Prompt card (file name and text) and Several Prompts (Paste Text first, then CSV, both through `_from_data`). Paste lines are `name, text` (name ends at the
+  first tab, pipe or comma); CSV is `Prompt Number,Verbiage` with an optional header. File names are reduced to letters, digits, `.`, `_`, `-`. Text limit 5000 characters.
+- Results use `RunMixin`. Download gives the WAV (one prompt) or a ZIP (several): browser downloads. Log: "Text To U-Law Audio" (names and sizes, never the text).

@@ -11,6 +11,7 @@ from .pages.cuc_users import remove_empty, status_check, usage_check
 from .pages.cucm_home import cucm_home
 from .pages import redsky_tools as rs_pages
 from .pages.tools_home import tools_home
+from .pages.tts import text_to_ulaw
 from .pages.cube_lgw import lgw_config
 from .pages.cucm_home_cluster import home_cluster_locator
 from .pages.cube_tools import config_compare, cube_home, mem_status
@@ -96,6 +97,7 @@ for _p in PLATFORMS:
         continue
     app.add_page(platform_page(_p), route=f"/{_p.slug}", title=f"{_p.label} | {APP_NAME}")
 app.add_page(tools_home, route="/tools", title=f"Tools | {APP_NAME}")
+app.add_page(text_to_ulaw, route="/tools/text-to-ulaw", title=f"Text To U-Law Audio | {APP_NAME}")
 app.add_page(cube_home, route="/cube", title=f"CUBE | {APP_NAME}")
 app.add_page(mem_status, route="/cube/mem-status", title=f"CUBE Mem Status | {APP_NAME}",
              on_load=MemStatusState.load_page)
