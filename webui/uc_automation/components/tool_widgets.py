@@ -12,6 +12,23 @@ def field(label: str, control: rx.Component, hint: str = "") -> rx.Component:
     )
 
 
+def collapsible_card(title: str, is_open, toggle, *children) -> rx.Component:
+    """A card whose header toggles the body. Pairs with PanesMixin (single_open, multi_open)."""
+    return rx.card(
+        rx.vstack(
+            rx.hstack(
+                rx.heading(title, size="4"),
+                rx.spacer(),
+                rx.icon(rx.cond(is_open, "chevron-up", "chevron-down"), size=18),
+                align="center", width="100%", cursor="pointer", on_click=toggle,
+            ),
+            rx.cond(is_open, rx.vstack(*children, spacing="3", align="start", width="100%")),
+            spacing="3", align="start", width="100%",
+        ),
+        size="3", width="100%",
+    )
+
+
 def file_dropzone(upload_id: str, accept: dict, label: str) -> rx.Component:
     return rx.vstack(
         rx.upload(

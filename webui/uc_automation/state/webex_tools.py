@@ -7,10 +7,11 @@ import reflex as rx
 
 from ..backend import webex_tools as t
 from ..backend.errors import UserError
+from .run_mixin import PanesMixin
 from .webex_routing import PasteMixin, WebexSession
 
 
-class HardwareCompatState(WebexSession, PasteMixin):
+class HardwareCompatState(WebexSession, PanesMixin, PasteMixin):
     form_model: str = ""
     form_mac: str = ""
     model_names: list[str] = []
@@ -85,6 +86,7 @@ class HardwareCompatState(WebexSession, PasteMixin):
         if not model or not mac:
             yield rx.toast.error("Enter the model and the MAC address.")
             return
+        self._focus_pane(True)
         log = self._webex_log("Check hardware compatibility", "webex-hardware-check")
         try:
             async for ev in self._check([{"row": "1", "model": model, "mac": mac}], log):
@@ -115,6 +117,7 @@ class HardwareCompatState(WebexSession, PasteMixin):
         if not rows:
             yield rx.toast.error("The CSV has no data rows.")
             return
+        self._focus_pane(False)
         self.file_name = files[0].filename or ""
         log = self._webex_log("Check hardware compatibility from CSV", "webex-hardware-check-csv")
         try:

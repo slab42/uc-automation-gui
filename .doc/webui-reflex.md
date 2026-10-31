@@ -63,6 +63,7 @@ state/logs.py                LogsState: Logs page (search, read, export; no dele
 state/search.py              SearchState: home page search over the GROUPS of the CUCM, CUC and Webex menus (platform, section, link)
 state/run_mixin.py           RunMixin: busy/progress/per-row results for tool pages (CUCM and Webex); `_run_items(..., workers=N)` runs N rows at once
 state/webex_tools.py         Check Hardware Compatibility state
+state/webex_devices.py       Bulk ATA/VG state
 state/webex_users.py         Delete Users, Reset PIN, Voicemail, Add Workspace, Add Device, Migrate states
 state/webex_locations.py     Schedules and E911 states
 state/webex_groups.py        PickerMixin (searchable list + selection) and the Call Queues / Hunt Groups / Virtual Lines states
@@ -92,7 +93,7 @@ components/search_input.py   search_input(value, on_change, placeholder): every 
 components/org_picker.py     org_select(): the organization dropdown beside each platform's connection dropdown
 pages/organizations.py       Credentials > Organizations tab and organization window
 components/cucm_nav.py       CUCM top menu bar. GROUPS drives the menu and the CUCM home cards
-components/layout.py         sidebar, top bar, page() wrapper
+components/layout.py         sidebar, top bar, page() wrapper (sidebar collapses to icons via the toggle by the version, flag in state/sidebar.py, kept in browser LocalStorage)
 pages/<resource>.py          one config per resource (columns, add form)
 uc_automation.py             app + every add_page()
 ```
@@ -258,7 +259,7 @@ Webex has no username/password token API, so login is the OAuth authorization co
 
 ### Webex features
 
-- Menu: `components/webex_nav.GROUPS` drives the Webex menu bar and the `/webex` home cards. Section **Call Routing**:
+- Menu: `components/webex_nav.GROUPS` drives the Webex menu bar and the `/webex` home cards. Menu order: Call Routing, Locations, Users, Workspaces, Devices, Tools, Reports. Section **Call Routing**:
   Add Numbers (`/webex/add-numbers`, single number plus a CSV | Paste text tab pair for bulk) and Call Forward (`/webex/call-forward`, Set or Remove switch).
 - A feature is backend functions taking a `WebexClient` (`webex_api.py`), a state `class X(_WebexRun)` that builds
   `(label, callable)` items and runs them with `_run_items` (per-row results, one log per operation), and a page using
@@ -296,6 +297,7 @@ Webex has no username/password token API, so login is the OAuth authorization co
   intent: add a device (`POST /v1/devices`: model, MAC, workspace) to an existing workspace found by display name. CSV is
   `workspace,model,mac[,location]`. It does not create workspaces. An info popover beside Model lists the org's
   supported models (`GET /telephony/config/supportedDevices`, loaded on page load): the model text to import and the display name.
+- Bulk ATA/VG (`/webex/bulk-ata`, `BulkAtaState` in `state/webex_devices.py`, menu group **Devices**): one form (location, model, MAC, one line per port: workspace, extension, optional number) or Paste Text / CSV with one line per port (`mac,model,location,workspace,extension,number`; the same MAC groups ports into one device, file order is port order). Per device (`add_ata`): everything is checked first (names unique and not existing, extension or number per port), then a Webex Calling workspace per port (`POST /workspaces`), `POST /devices` on the first workspace, and `PUT /telephony/config/devices/{id}/members` with workspace n on port n (port 1 primary owner). A failure part way leaves what was already created. Not tested against a real org.
 - Migrate moves users (PRIMARY number, owner type PEOPLE) with the Move Users job (validate, run, poll up to 180 s).
   Workspaces are skipped: the API cannot change a workspace location.
 - Schedules (one page, four modes): Export (CSV download), Update from CSV (review plan, then apply), Copy (to all other
@@ -481,3 +483,7 @@ handler logic is shared: each "from CSV" handler delegates to a `_x(files)` help
 Delimiters: tab, pipe, semicolon, comma; the header row is optional (columns are then taken by position).
 Pages with it: Add Numbers, Call Forward, Call Queues and Hunt Groups (create, replace agents), Delete Users, Add Workspace, Add Device,
 Schedules (update), E911 (select locations), Check Hardware Compatibility.
+
+Pages with a one-item pane and a multiple-item pane (Add Numbers, Call Forward, Reset PIN, Add Workspace, Add Device, Voicemail,
+Check Hardware Compatibility) use `collapsible_card` (`components/tool_widgets.py`) with `PanesMixin` (`state/run_mixin.py`):
+clicking a card header toggles it, and running one pane calls `_focus_pane` to collapse the other once the input is valid.

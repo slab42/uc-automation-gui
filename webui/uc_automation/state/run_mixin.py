@@ -8,6 +8,25 @@ from ..backend.applog import OpLog
 from ..backend.errors import UserError
 
 
+class PanesMixin(rx.State, mixin=True):
+    """Open state of the one-item and multiple-item panes of a tool page (see collapsible_card)."""
+
+    single_open: bool = True
+    multi_open: bool = True
+
+    @rx.event
+    def toggle_single(self):
+        self.single_open = not self.single_open
+
+    @rx.event
+    def toggle_multi(self):
+        self.multi_open = not self.multi_open
+
+    def _focus_pane(self, single: bool):
+        """Keep the pane being run open and collapse the other."""
+        self.single_open, self.multi_open = single, not single
+
+
 class RunMixin(rx.State, mixin=True):
     """busy / progress / per-row results shared by the tools that run a list of items."""
 

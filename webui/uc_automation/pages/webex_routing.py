@@ -2,7 +2,7 @@ import reflex as rx
 
 from ..backend.webex_groups import POLICIES
 from ..backend.webex_routing import NUMBER_STATES, NUMBER_TYPES, USAGE_TYPES
-from ..components.tool_widgets import code_block, csv_dropzone, field, file_dropzone, paste_csv_tabs, run_results
+from ..components.tool_widgets import code_block, collapsible_card, csv_dropzone, field, file_dropzone, paste_csv_tabs, run_results
 from ..components.webex_nav import GROUPS, webex_page
 from ..components.webex_picker import picker
 from ..state.webex_groups import CallQueuesState, HuntGroupsState, VirtualLinesState
@@ -66,81 +66,73 @@ def add_numbers() -> rx.Component:
     return webex_page(
         "Add Numbers",
         need_login(rx.vstack(
-            rx.card(
-                rx.vstack(
-                    rx.heading("One number", size="4"),
-                    rx.grid(
-                        field("Location name", rx.fragment(
-                            rx.input(value=S.form_location, on_change=S.set_form_location, width="100%",
-                                     list="number-locations", placeholder="Start typing to search",
-                                     auto_complete="off"),
-                            rx.el.datalist(rx.foreach(S.location_names, lambda n: rx.el.option(value=n)),
-                                           id="number-locations"),
-                        ), "Click the field to see every location, or type to narrow the list. "
-                           "Also used for pasted numbers that have no location."),
-                        field("Phone number", rx.input(value=S.form_number, on_change=S.set_form_number,
-                                                       width="100%", placeholder="12704435531"),
-                              "10 digit US numbers get a leading 1; the + is added for you."),
-                        columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%",
-                    ),
-                    rx.grid(
-                        field("Number type", rx.select(list(NUMBER_TYPES), value=S.form_type,
-                                                       on_change=S.set_form_type)),
-                        field("Usage", rx.select(list(USAGE_TYPES), value=S.form_usage, on_change=S.set_form_usage)),
-                        field("State", rx.select(list(NUMBER_STATES), value=S.form_state,
-                                                 on_change=S.set_form_state)),
-                        columns="3", spacing="4", width="100%",
-                    ),
-                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add number",
-                              on_click=S.add_single, disabled=S.busy),
-                    spacing="3", align="start", width="100%",
+            collapsible_card(
+                "One number", S.single_open, S.toggle_single,
+                rx.grid(
+                    field("Location name", rx.fragment(
+                        rx.input(value=S.form_location, on_change=S.set_form_location, width="100%",
+                                 list="number-locations", placeholder="Start typing to search",
+                                 auto_complete="off"),
+                        rx.el.datalist(rx.foreach(S.location_names, lambda n: rx.el.option(value=n)),
+                                       id="number-locations"),
+                    ), "Click the field to see every location, or type to narrow the list. "
+                       "Also used for pasted numbers that have no location."),
+                    field("Phone number", rx.input(value=S.form_number, on_change=S.set_form_number,
+                                                   width="100%", placeholder="12704435531"),
+                          "10 digit US numbers get a leading 1; the + is added for you."),
+                    columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%",
                 ),
-                size="3", width="100%",
+                rx.grid(
+                    field("Number type", rx.select(list(NUMBER_TYPES), value=S.form_type,
+                                                   on_change=S.set_form_type)),
+                    field("Usage", rx.select(list(USAGE_TYPES), value=S.form_usage, on_change=S.set_form_usage)),
+                    field("State", rx.select(list(NUMBER_STATES), value=S.form_state,
+                                             on_change=S.set_form_state)),
+                    columns="3", spacing="4", width="100%",
+                ),
+                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add number",
+                          on_click=S.add_single, disabled=S.busy),
             ),
-            rx.card(
-                rx.vstack(
-                    rx.heading("Multiple numbers", size="4"),
-                    rx.tabs.root(
-                        rx.tabs.list(
-                            rx.tabs.trigger("Paste Text", value="text"),
-                            rx.tabs.trigger("CSV", value="csv"),
-                        ),
-                        rx.tabs.content(
-                            rx.vstack(
-                                rx.text("Header row required. Only locationId and phoneNumber are needed (DID, "
-                                        "NONE, ACTIVE are then assumed); the other columns are optional.",
-                                        size="2", color="var(--gray-11)"),
-                                code_block("locationId,phoneNumber,numberType,numberUsageType,state\n"
-                                           "Location1,12704435531,DID,NONE,ACTIVE\n"),
-                                csv_dropzone("numbers_upload"),
-                                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
-                                          "Add numbers",
-                                          on_click=S.add_from_csv(rx.upload_files(upload_id="numbers_upload")),
-                                          disabled=S.busy),
-                                spacing="3", align="start", width="100%", padding_top="1rem",
-                            ),
-                            value="csv",
-                        ),
-                        rx.tabs.content(
-                            rx.vstack(
-                                rx.text("Paste one number per line; lines with only a number use the location chosen above. Columns can be separated by tabs (straight "
-                                        "from Excel), commas, semicolons or pipes. The header row is optional; "
-                                        "without it the order is locationId, phoneNumber, numberType, "
-                                        "numberUsageType, state, and only the first two are needed.",
-                                        size="2", color="var(--gray-11)"),
-                                rx.text_area(value=S.paste_text, on_change=S.set_paste_text, width="100%",
-                                             rows="8", placeholder="Location1,12704435531\n12704435532"),
-                                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)),
-                                          "Add numbers", on_click=S.add_from_text, disabled=S.busy),
-                                spacing="3", align="start", width="100%", padding_top="1rem",
-                            ),
-                            value="text",
-                        ),
-                        default_value="text", width="100%",
+            collapsible_card(
+                "Multiple numbers", S.multi_open, S.toggle_multi,
+                rx.tabs.root(
+                    rx.tabs.list(
+                        rx.tabs.trigger("Paste Text", value="text"),
+                        rx.tabs.trigger("CSV", value="csv"),
                     ),
-                    spacing="3", align="start", width="100%",
+                    rx.tabs.content(
+                        rx.vstack(
+                            rx.text("Header row required. Only locationId and phoneNumber are needed (DID, "
+                                    "NONE, ACTIVE are then assumed); the other columns are optional.",
+                                    size="2", color="var(--gray-11)"),
+                            code_block("locationId,phoneNumber,numberType,numberUsageType,state\n"
+                                       "Location1,12704435531,DID,NONE,ACTIVE\n"),
+                            csv_dropzone("numbers_upload"),
+                            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
+                                      "Add numbers",
+                                      on_click=S.add_from_csv(rx.upload_files(upload_id="numbers_upload")),
+                                      disabled=S.busy),
+                            spacing="3", align="start", width="100%", padding_top="1rem",
+                        ),
+                        value="csv",
+                    ),
+                    rx.tabs.content(
+                        rx.vstack(
+                            rx.text("Paste one number per line; lines with only a number use the location chosen above. Columns can be separated by tabs (straight "
+                                    "from Excel), commas, semicolons or pipes. The header row is optional; "
+                                    "without it the order is locationId, phoneNumber, numberType, "
+                                    "numberUsageType, state, and only the first two are needed.",
+                                    size="2", color="var(--gray-11)"),
+                            rx.text_area(value=S.paste_text, on_change=S.set_paste_text, width="100%",
+                                         rows="8", placeholder="Location1,12704435531\n12704435532"),
+                            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)),
+                                      "Add numbers", on_click=S.add_from_text, disabled=S.busy),
+                            spacing="3", align="start", width="100%", padding_top="1rem",
+                        ),
+                        value="text",
+                    ),
+                    default_value="text", width="100%",
                 ),
-                size="3", width="100%",
             ),
             run_results(S, "Number"),
             spacing="4", align="start", width="100%",
@@ -159,57 +151,50 @@ def call_forward() -> rx.Component:
                 rx.segmented_control.item("Remove Call Forward All", value="remove"),
                 value=S.cf_mode, on_change=S.set_cf_mode,
             ),
-            rx.card(
-                rx.vstack(
-                    rx.text(
-                        rx.cond(
-                            setting,
-                            "Looks up each number's owner (person, workspace, virtual line, hunt group, call queue "
-                            "or auto attendant) and forwards all calls to the prefix followed by the number.",
-                            "Looks up each number's owner and switches Call Forward All off.",
-                        ),
-                        size="2", color="var(--gray-11)",
-                    ),
+            collapsible_card(
+                "One number", S.single_open, S.toggle_single,
+                rx.text(
                     rx.cond(
                         setting,
-                        field("Forward prefix", rx.input(value=S.cf_prefix, on_change=S.set_cf_prefix, width="16rem"),
-                              "Added in front of the number to make the destination."),
-                        rx.fragment(),
+                        "Looks up each number's owner (person, workspace, virtual line, hunt group, call queue "
+                        "or auto attendant) and forwards all calls to the prefix followed by the number.",
+                        "Looks up each number's owner and switches Call Forward All off.",
                     ),
-                    field("Phone number", rx.input(value=S.cf_number, on_change=S.set_cf_number, width="100%",
-                                                   placeholder="12704435531 or an extension")),
-                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("play", size=16)),
-                              rx.cond(setting, "Set forward", "Remove forward"),
-                              on_click=S.run_single, disabled=S.busy),
-                    spacing="3", align="start", width="100%",
+                    size="2", color="var(--gray-11)",
                 ),
-                size="3", width="100%",
+                rx.cond(
+                    setting,
+                    field("Forward prefix", rx.input(value=S.cf_prefix, on_change=S.set_cf_prefix, width="16rem"),
+                          "Added in front of the number to make the destination."),
+                    rx.fragment(),
+                ),
+                field("Phone number", rx.input(value=S.cf_number, on_change=S.set_cf_number, width="100%",
+                                               placeholder="12704435531 or an extension")),
+                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("play", size=16)),
+                          rx.cond(setting, "Set forward", "Remove forward"),
+                          on_click=S.run_single, disabled=S.busy),
             ),
-            rx.card(
-                rx.vstack(
-                    rx.heading("Multiple numbers", size="4"),
-                    paste_csv_tabs(
-                        S.paste_forward, lambda v: S.set_paste("forward", v),
-                        "Paste one number per line (or separated by commas, tabs, semicolons or pipes). "
-                        "A header row is optional.",
-                        "12704435531\n12704435532",
-                        rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("play", size=16)),
+            collapsible_card(
+                "Multiple numbers", S.multi_open, S.toggle_multi,
+                paste_csv_tabs(
+                    S.paste_forward, lambda v: S.set_paste("forward", v),
+                    "Paste one number per line (or separated by commas, tabs, semicolons or pipes). "
+                    "A header row is optional.",
+                    "12704435531\n12704435532",
+                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("play", size=16)),
+                              rx.cond(setting, "Set forward for all", "Remove forward for all"),
+                              on_click=S.run_text, disabled=S.busy),
+                    [
+                        rx.text("Header row required. The column named phoneNumber or pattern is used, "
+                                "otherwise the first column.", size="2", color="var(--gray-11)"),
+                        code_block("phoneNumber\n12704435531\n12704435532\n"),
+                        csv_dropzone("forward_upload"),
+                        rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
                                   rx.cond(setting, "Set forward for all", "Remove forward for all"),
-                                  on_click=S.run_text, disabled=S.busy),
-                        [
-                            rx.text("Header row required. The column named phoneNumber or pattern is used, "
-                                    "otherwise the first column.", size="2", color="var(--gray-11)"),
-                            code_block("phoneNumber\n12704435531\n12704435532\n"),
-                            csv_dropzone("forward_upload"),
-                            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
-                                      rx.cond(setting, "Set forward for all", "Remove forward for all"),
-                                      on_click=S.run_csv(rx.upload_files(upload_id="forward_upload")),
-                                      disabled=S.busy),
-                        ],
-                    ),
-                    spacing="3", align="start", width="100%",
+                                  on_click=S.run_csv(rx.upload_files(upload_id="forward_upload")),
+                                  disabled=S.busy),
+                    ],
                 ),
-                size="3", width="100%",
             ),
             run_results(S, "Number"),
             spacing="4", align="start", width="100%",

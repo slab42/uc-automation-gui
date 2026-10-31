@@ -13,7 +13,7 @@ from ..backend.paste import PastedFile, no_at_or_digit
 from ..backend.webex_locations import list_locations
 from ..backend.webex_api import WebexClient
 from .org import OrgState
-from .run_mixin import RunMixin
+from .run_mixin import PanesMixin, RunMixin
 
 WEBEX_WORKERS = 4  # bulk rows sent to Webex at once (429 responses are retried by WebexClient)
 
@@ -143,7 +143,7 @@ def _one(value: str | list[str]) -> str:
     return value if isinstance(value, str) else value[0]
 
 
-class AddNumbersState(WebexSession, RunMixin):
+class AddNumbersState(WebexSession, PanesMixin, RunMixin):
     form_location: str = ""
     form_number: str = ""
     form_type: str = "DID"
@@ -217,6 +217,7 @@ class AddNumbersState(WebexSession, RunMixin):
         if self.location_names and row["locationId"].lower() not in {n.lower() for n in self.location_names}:
             yield rx.toast.error("Pick the location from the list.")
             return
+        self._focus_pane(True)
         log = self._webex_log("Add number to location", "webex-add-number")
         try:
             async for ev in self._add([row], log):
@@ -239,6 +240,7 @@ class AddNumbersState(WebexSession, RunMixin):
         if not rows:
             yield rx.toast.error("The CSV has no data rows.")
             return
+        self._focus_pane(False)
         log = self._webex_log("Add numbers to locations from CSV", "webex-add-numbers-csv")
         try:
             log.info(f"CSV file: {files[0].filename}")
@@ -258,6 +260,7 @@ class AddNumbersState(WebexSession, RunMixin):
         if not rows:
             yield rx.toast.error("The pasted text has no data rows.")
             return
+        self._focus_pane(False)
         log = self._webex_log("Add numbers to locations from pasted text", "webex-add-numbers-text")
         try:
             async for ev in self._add(rows, log):
@@ -268,7 +271,7 @@ class AddNumbersState(WebexSession, RunMixin):
             log.close()
 
 
-class CallForwardState(WebexSession, RunMixin, PasteMixin):
+class CallForwardState(WebexSession, PanesMixin, RunMixin, PasteMixin):
     cf_mode: str = "set"
     cf_prefix: str = r.DEFAULT_FORWARD_PREFIX
     cf_number: str = ""
@@ -313,6 +316,7 @@ class CallForwardState(WebexSession, RunMixin, PasteMixin):
         if not number:
             yield rx.toast.error("Enter a phone number.")
             return
+        self._focus_pane(True)
         log = self._log()
         try:
             async for ev in self._forward([number], log):
@@ -345,6 +349,7 @@ class CallForwardState(WebexSession, RunMixin, PasteMixin):
         if not numbers:
             yield rx.toast.error("The CSV has no data rows.")
             return
+        self._focus_pane(False)
         log = self._log()
         try:
             log.info(f"CSV file: {files[0].filename}")

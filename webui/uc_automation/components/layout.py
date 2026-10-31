@@ -3,8 +3,11 @@
 import reflex as rx
 
 from ..config import APP_NAME, PLATFORMS, VERSION
+from ..state.sidebar import SidebarState
 
-SIDEBAR_WIDTH = "264px"
+SIDEBAR_WIDTH = "216px"
+SIDEBAR_WIDTH_COLLAPSED = "64px"
+COLLAPSED = SidebarState.collapsed == "1"
 
 
 def nav_item(label: str, href: str, icon: str) -> rx.Component:
@@ -12,18 +15,21 @@ def nav_item(label: str, href: str, icon: str) -> rx.Component:
     return rx.link(
         rx.hstack(
             rx.icon(icon, size=18),
-            rx.text(label, size="3", weight="medium"),
+            rx.text(label, size="3", weight="medium", display=rx.cond(COLLAPSED, "none", "block")),
             align="center",
+            justify_content=rx.cond(COLLAPSED, "center", "flex-start"),
             spacing="3",
             width="100%",
-            padding="0.55rem 0.75rem",
+            padding=rx.cond(COLLAPSED, "0.55rem 0", "0.55rem 0.75rem"),
             border_radius="var(--radius-3)",
             background=rx.cond(active, "var(--accent-4)", "transparent"),
             color=rx.cond(active, "var(--accent-11)", "var(--gray-11)"),
             _hover={"background": rx.cond(active, "var(--accent-4)", "var(--gray-3)")},
         ),
         href=href,
+        title=label,
         underline="none",
+        display="block",
         width="100%",
     )
 
@@ -36,27 +42,39 @@ def nav_heading(text: str) -> rx.Component:
         color="var(--gray-9)",
         style={"text-transform": "uppercase", "letter-spacing": "0.08em"},
         padding="0.9rem 0.75rem 0.3rem",
+        display=rx.cond(COLLAPSED, "none", "block"),
     )
 
 
 def sidebar() -> rx.Component:
     return rx.box(
         rx.vstack(
-            rx.link(
-                rx.hstack(
-                    rx.image(
-                        src="/slab42.jpg",
-                        width="36px",
-                        height="36px",
-                        border_radius="var(--radius-3)",
+            rx.flex(
+                rx.link(
+                    rx.hstack(
+                        rx.image(
+                            src="/slab42.jpg",
+                            width="36px",
+                            height="36px",
+                            border_radius="var(--radius-3)",
+                        ),
+                        rx.text(
+                            APP_NAME,
+                            size="3",
+                            weight="bold",
+                            color="var(--gray-12)",
+                            display=rx.cond(COLLAPSED, "none", "block"),
+                        ),
+                        align="center",
+                        spacing="3",
                     ),
-                    rx.text(APP_NAME, size="3", weight="bold", color="var(--gray-12)"),
-                    align="center",
-                    spacing="3",
+                    href="/",
+                    underline="none",
                 ),
-                href="/",
-                underline="none",
-                padding="0.25rem 0.5rem 0.75rem",
+                align_items="center",
+                justify_content=rx.cond(COLLAPSED, "center", "flex-start"),
+                width="100%",
+                padding=rx.cond(COLLAPSED, "0.25rem 0 0.75rem", "0.25rem 0.5rem 0.75rem"),
             ),
             nav_item("Home", "/", "house"),
             nav_heading("Platforms"),
@@ -66,7 +84,28 @@ def sidebar() -> rx.Component:
             nav_item("Logs", "/logs", "scroll-text"),
             nav_item("Credentials", "/credentials", "key-round"),
             nav_item("Settings", "/settings", "settings"),
-            rx.text(f"v{VERSION}", size="1", color="var(--gray-9)", padding="0.25rem 0.75rem"),
+            rx.flex(
+                rx.text(
+                    f"v{VERSION}",
+                    size="1",
+                    color="var(--gray-9)",
+                    display=rx.cond(COLLAPSED, "none", "block"),
+                ),
+                rx.tooltip(
+                    rx.icon_button(
+                        rx.icon(rx.cond(COLLAPSED, "panel-left-open", "panel-left-close"), size=20),
+                        variant="ghost",
+                        size="2",
+                        on_click=SidebarState.toggle,
+                        cursor="pointer",
+                    ),
+                    content="Collapse Or Expand Menu",
+                ),
+                align_items="center",
+                justify_content=rx.cond(COLLAPSED, "center", "space-between"),
+                width="100%",
+                padding=rx.cond(COLLAPSED, "0.25rem 0", "0.25rem 0.75rem"),
+            ),
             spacing="1",
             align="start",
             height="100%",
@@ -76,8 +115,10 @@ def sidebar() -> rx.Component:
         top="0",
         left="0",
         height="100vh",
-        width=SIDEBAR_WIDTH,
-        padding="1rem 0.75rem",
+        width=rx.cond(COLLAPSED, SIDEBAR_WIDTH_COLLAPSED, SIDEBAR_WIDTH),
+        padding=rx.cond(COLLAPSED, "1rem 0.5rem", "1rem 0.75rem"),
+        transition="width 0.15s ease",
+        overflow_x="hidden",
         background="var(--gray-2)",
         border_right="1px solid var(--gray-5)",
         display=rx.breakpoints(initial="none", md="block"),
@@ -111,7 +152,8 @@ def page(title: str, *children: rx.Component, subnav: rx.Component | None = None
             topbar(title),
             subnav if subnav is not None else rx.fragment(),
             rx.box(*children, padding="1.5rem", max_width="1100px", margin="0 auto"),
-            margin_left=rx.breakpoints(initial="0", md=SIDEBAR_WIDTH),
+            margin_left=rx.breakpoints(initial="0", md=rx.cond(COLLAPSED, SIDEBAR_WIDTH_COLLAPSED, SIDEBAR_WIDTH)),
+            transition="margin-left 0.15s ease",
             min_height="100vh",
         ),
     )

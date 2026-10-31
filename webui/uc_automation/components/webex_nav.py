@@ -18,6 +18,7 @@ VOICEMAIL = "/webex/voicemail"
 CREATE_WORKSPACE = "/webex/create-workspace"
 ADD_WORKSPACE = "/webex/add-workspace"
 COPY_WORKSPACE = "/webex/copy-workspace"
+BULK_ATA = "/webex/bulk-ata"
 MIGRATE = "/webex/migrate"
 SCHEDULES = "/webex/schedules"
 E911 = "/webex/e911"
@@ -34,6 +35,11 @@ GROUPS = [
          "Create hunt groups from a CSV, replace agents, or migrate a hunt group to a call queue."),
         ("Virtual Lines", VIRTUAL_LINES, "voicemail", "Upload a busy and unanswered voicemail greeting."),
     ]),
+    ("Locations", [
+        ("Schedules", SCHEDULES, "calendar-days",
+         "Export, update, copy and clean up location holiday schedules."),
+        ("E911", E911, "siren", "RedSky E911 status of every location, and opt-out."),
+    ]),
     ("Users", [
         ("Delete Users", DELETE_USERS, "user-x", "Delete users listed in a Control Hub CSV export."),
         ("Reset PIN", RESET_PIN, "key-round", "Reset the voicemail PIN of one user or of users in a CSV."),
@@ -46,10 +52,9 @@ GROUPS = [
         ("Add Device", ADD_WORKSPACE, "monitor-smartphone", "Add devices to workspaces by MAC address."),
         ("Migrate", MIGRATE, "arrow-right-left", "Move users to another location by phone number."),
     ]),
-    ("Locations", [
-        ("Schedules", SCHEDULES, "calendar-days",
-         "Export, update, copy and clean up location holiday schedules."),
-        ("E911", E911, "siren", "RedSky E911 status of every location, and opt-out."),
+    ("Devices", [
+        ("Bulk ATA/VG", BULK_ATA, "cable",
+         "Add an ATA or voice gateway with a workspace on every port."),
     ]),
     ("Tools", [
         ("Check Hardware Compatibility", HARDWARE, "shield-check",

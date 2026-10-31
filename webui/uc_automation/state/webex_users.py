@@ -10,7 +10,7 @@ from ..backend.paste import no_at
 from ..backend.webex_locations import list_locations
 from ..backend.webex_routing import find_location_id
 from ..backend.webex_tools import get_supported_devices, model_import_rows
-from .run_mixin import RunMixin
+from .run_mixin import PanesMixin, RunMixin
 from .webex_groups import PickerMixin
 from .webex_routing import PasteMixin, WebexSession
 
@@ -86,7 +86,7 @@ class DeleteUsersState(WebexSession, RunMixin, PasteMixin):
             log.close()
 
 
-class ResetPinState(WebexSession, RunMixin, PasteMixin):
+class ResetPinState(WebexSession, PanesMixin, RunMixin, PasteMixin):
     email: str = ""
     paste_pin: str = ""
 
@@ -108,6 +108,7 @@ class ResetPinState(WebexSession, RunMixin, PasteMixin):
         if not self.email:
             yield rx.toast.error("Enter the user's email address.")
             return
+        self._focus_pane(True)
         log = self._webex_log("Reset user PIN", "webex-reset-pin")
         try:
             async for ev in self._reset([self.email], log):
@@ -140,6 +141,7 @@ class ResetPinState(WebexSession, RunMixin, PasteMixin):
         if not emails:
             yield rx.toast.error("No email addresses were found in the CSV.")
             return
+        self._focus_pane(False)
         log = self._webex_log("Reset user PINs from CSV", "webex-reset-pin-csv")
         try:
             log.info(f"CSV file: {files[0].filename}")
@@ -352,7 +354,7 @@ class WorkspaceCreateMixin(rx.State, mixin=True):
 
 
 
-class CreateWorkspaceState(WebexSession, RunMixin, PasteMixin, WorkspaceCreateMixin):
+class CreateWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin, WorkspaceCreateMixin):
     form_type: str = ""
     form_capacity: str = ""
 
@@ -367,6 +369,7 @@ class CreateWorkspaceState(WebexSession, RunMixin, PasteMixin, WorkspaceCreateMi
         if row["location"] and self.location_names and row["location"].lower() not in {n.lower() for n in self.location_names}:
             yield rx.toast.error("Pick the location from the list, or clear it.")
             return
+        self._focus_pane(True)
         async for ev in self._begin([row], "Add workspace", "webex-add-workspace", single=True):
             yield ev
 
@@ -393,6 +396,7 @@ class CreateWorkspaceState(WebexSession, RunMixin, PasteMixin, WorkspaceCreateMi
         if not rows:
             yield rx.toast.error("The CSV has no data rows.")
             return
+        self._focus_pane(False)
         async for ev in self._begin(rows, "Add workspaces from CSV", "webex-add-workspaces-csv"):
             yield ev
 
@@ -487,18 +491,24 @@ class CopyWorkspaceState(WebexSession, RunMixin, PasteMixin, WorkspaceCreateMixi
         return lambda r: w.copy_workspace(client, source, r, cache, settings, unread)
 
 
-class AddWorkspaceState(WebexSession, RunMixin, PasteMixin):
+class AddWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin):
     form_workspace: str = ""
     form_model: str = ""
     form_mac: str = ""
     form_location: str = ""
     location_names: list[str] = []
     model_rows: list[dict[str, str]] = []
+    workspace_names: list[str] = []
+    workspace_locations: dict[str, str] = {}
     paste_device: str = ""
 
     @rx.event
     def set_form(self, field: str, value: str):
         setattr(self, f"form_{field}", value)
+        if field == "workspace":
+            location = self.workspace_locations.get(value.strip())
+            if location:
+                self.form_location = location
 
     @rx.event
     async def load_page(self):
@@ -518,6 +528,12 @@ class AddWorkspaceState(WebexSession, RunMixin, PasteMixin):
                 return
             self.location_names = [r["name"] for r in rows]
             log.info(f"{len(rows)} location(s)")
+            try:
+                self.workspace_locations = await asyncio.to_thread(w.workspace_location_map, client, rows)
+                self.workspace_names = sorted(self.workspace_locations, key=str.lower)
+                log.info(f"{len(self.workspace_names)} workspace(s)")
+            except UserError as e:
+                log.warning(f"Workspaces not loaded: {e}")
             try:
                 devices = await asyncio.to_thread(get_supported_devices, client)
                 self.model_rows = model_import_rows(devices)
@@ -547,6 +563,7 @@ class AddWorkspaceState(WebexSession, RunMixin, PasteMixin):
         if row["location"] and self.location_names and row["location"].lower() not in {n.lower() for n in self.location_names}:
             yield rx.toast.error("Pick the location from the list, or clear it.")
             return
+        self._focus_pane(True)
         log = self._webex_log("Add device to workspace", "webex-add-device")
         try:
             async for ev in self._add([row], log):
@@ -579,6 +596,7 @@ class AddWorkspaceState(WebexSession, RunMixin, PasteMixin):
         if not rows:
             yield rx.toast.error("The CSV has no data rows.")
             return
+        self._focus_pane(False)
         log = self._webex_log("Add devices to workspaces from CSV", "webex-add-devices-csv")
         try:
             log.info(f"CSV file: {files[0].filename}")
@@ -687,7 +705,7 @@ class MigrateState(WebexSession, RunMixin, PickerMixin):
             log.close()
 
 
-class VoicemailState(WebexSession, RunMixin):
+class VoicemailState(WebexSession, PanesMixin, RunMixin):
     form_email: str = ""
     form_location: str = ""
     location_names: list[str] = []
@@ -756,6 +774,7 @@ class VoicemailState(WebexSession, RunMixin):
         if not self.form_email:
             yield rx.toast.error("Enter the user's email address.")
             return
+        self._focus_pane(True)
         log = self._webex_log("Voicemail report (user)", "webex-voicemail-user")
         try:
             client = await self._connect(log)
@@ -780,6 +799,7 @@ class VoicemailState(WebexSession, RunMixin):
         if not name:
             yield rx.toast.error("Choose a location.")
             return
+        self._focus_pane(False)
         log = self._webex_log("Voicemail report (location)", "webex-voicemail-location")
         try:
             client = await self._connect(log)

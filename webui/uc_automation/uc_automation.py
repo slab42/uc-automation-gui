@@ -30,6 +30,7 @@ from .pages.system import codec_lists, device_pools, locations, regions
 from .pages.webex_routing import add_numbers, call_forward, call_queues, hunt_groups as webex_hunt_groups, virtual_lines, webex_home
 from .pages.webex_locations import e911, schedules
 from .pages.webex_tools import hardware_compatibility
+from .pages.webex_devices import bulk_ata
 from .pages.webex_users import add_workspace, copy_workspace, create_workspace, delete_users, migrate, reset_pin, voicemail
 from .pages.pickup_groups import pickup_groups
 from .pages.route_patterns import route_patterns
@@ -58,6 +59,7 @@ from .state.devices import (
 from .state.logs import LogsState
 from .state.settings import SettingsState
 from .state.webex import WebexState
+from .state.webex_devices import BulkAtaState
 from .state.webex_groups import CallQueuesState, HuntGroupsState as WebexHuntGroupsState, VirtualLinesState
 from .state.webex_locations import E911State, SchedulesState
 from .state.webex_tools import HardwareCompatState
@@ -117,10 +119,11 @@ for _route, _title, _page, _state in [
     ("/webex/create-workspace", "Add Workspace", create_workspace, CreateWorkspaceState),
     ("/webex/copy-workspace", "Copy Workspace", copy_workspace, CopyWorkspaceState),
     ("/webex/add-workspace", "Add Device", add_workspace, AddWorkspaceState),
+    ("/webex/bulk-ata", "Bulk ATA/VG", bulk_ata, BulkAtaState),
     ("/webex/voicemail", "Voicemail", voicemail, VoicemailState),
 ]:
     app.add_page(_page, route=_route, title=f"{_title} | {APP_NAME}",
-                 on_load=_state.load_page if _state in (AddWorkspaceState, CopyWorkspaceState, CreateWorkspaceState, VoicemailState) else _state.on_page_load)
+                 on_load=_state.load_page if _state in (AddWorkspaceState, BulkAtaState, CopyWorkspaceState, CreateWorkspaceState, VoicemailState) else _state.on_page_load)
 app.add_page(logs, route="/logs", title=f"Logs | {APP_NAME}", on_load=LogsState.on_page_load)
 app.add_page(settings, route="/settings", title=f"Settings | {APP_NAME}", on_load=SettingsState.on_page_load)
 

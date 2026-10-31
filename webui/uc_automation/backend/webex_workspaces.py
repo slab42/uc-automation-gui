@@ -143,6 +143,17 @@ def list_workspace_names(c: WebexClient) -> list[str]:
     return sorted(names - {""}, key=str.lower)
 
 
+def workspace_location_map(c: WebexClient, locations: list[dict[str, str]]) -> dict[str, str]:
+    """Workspace display name to its location name. Blank when two workspaces share the name in different locations."""
+    by_id = {l["id"]: l["name"] for l in locations}
+    found: dict[str, set[str]] = {}
+    for i in _list(c, "/workspaces", "items"):
+        name = (i.get("displayName") or "").strip()
+        if name:
+            found.setdefault(name, set()).add(by_id.get(i.get("locationId", ""), ""))
+    return {n: (next(iter(locs)) if len(locs) == 1 else "") for n, locs in found.items()}
+
+
 # Per-workspace Webex Calling settings that are copied: (label, path under the workspace id). A "/features/..."
 # path is under /workspaces/{id}, the others under /telephony/config/workspaces/{id}. Not copied: numbers,
 # emergency callback number, devices, monitoring members, billing plan and audio greetings (they are specific to
@@ -295,6 +306,103 @@ def add_device(c: WebexClient, row: dict[str, str], cache: dict[str, str]) -> st
     workspace_id = find_workspace_id(c, row["workspace"], location_id)
     c.call("POST", "/devices", body={"mac": mac, "model": row["model"], "workspaceId": workspace_id})
     return f"Added {row['model']} {mac} to {row['workspace']}"
+
+
+# --- Bulk ATA / VG: one device, one workspace per port ---
+
+ATA_COLUMNS = ("mac", "model", "location", "workspace", "extension", "number")
+MAX_PORTS = 48
+
+
+def parse_ata_csv(data: bytes) -> list[dict[str, str]]:
+    """One row per port. Header row required: mac, workspace and extension; model, location and number are optional.
+
+    Rows with the same MAC are the ports of one device, in file order (the first row is port 1)."""
+    reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig", errors="replace")))
+    if not reader.fieldnames:
+        raise ValueError("The CSV file is empty.")
+    lookup = {(h or "").strip().lower(): h for h in reader.fieldnames}
+    missing = [f for f in ("mac", "workspace", "extension") if f not in lookup]
+    if missing:
+        raise ValueError("The CSV needs a header row with the columns mac, workspace and extension "
+                         "(model, location and number are optional).")
+    rows = []
+    for raw in reader:
+        row = {f: (raw.get(lookup[f]) or "").strip() if f in lookup else "" for f in ATA_COLUMNS}
+        if any(row.values()):
+            rows.append(row)
+    return rows
+
+
+def port_rows_from_text(text: str, mac: str, model: str, location: str) -> list[dict[str, str]]:
+    """Lines of 'workspace, extension, number' (number optional) to port rows for one device."""
+    rows = []
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        parts = [p.strip() for p in re.split(r"[\t|;,]", line)]
+        parts += [""] * (3 - len(parts))
+        rows.append({"mac": mac, "model": model, "location": location,
+                     "workspace": parts[0], "extension": parts[1], "number": parts[2]})
+    return rows
+
+
+def group_ata_rows(rows: list[dict[str, str]]) -> list[dict]:
+    """Port rows to devices: {mac, model, location, ports: [{workspace, extension, number}]}, in first-seen order."""
+    devices: dict[str, dict] = {}
+    for r in rows:
+        key = re.sub(r"[^0-9A-Fa-f]", "", r.get("mac", "")).upper() or r.get("mac", "")
+        d = devices.setdefault(key, {"mac": r.get("mac", ""), "model": "", "location": "", "ports": []})
+        for f in ("model", "location"):
+            if r.get(f) and not d[f]:
+                d[f] = r[f]
+        d["ports"].append({f: r.get(f, "") for f in ("workspace", "extension", "number")})
+    return list(devices.values())
+
+
+def member_body(workspace_ids: list[str]) -> dict:
+    """PUT members body: workspace n is on port n, port 1 is the device owner."""
+    return {"members": [{"port": n, "id": wid, "primaryOwner": n == 1, "lineType": "PRIMARY", "lineWeight": 1,
+                         "hotlineEnabled": False, "hotlineDestination": "", "allowCallDeclineEnabled": True}
+                        for n, wid in enumerate(workspace_ids, 1)]}
+
+
+def add_ata(c: WebexClient, device: dict, cache: dict[str, str]) -> str:
+    """Create a workspace per port, add the device to the first one, then give every port its workspace.
+
+    Everything is checked before the first call. A failure part way leaves what was already created."""
+    model, location = device.get("model", "").strip(), device.get("location", "").strip()
+    ports = device["ports"]
+    if not (device.get("mac") and model and location):
+        raise WebexError("mac, model and location are required.")
+    if not ports:
+        raise WebexError("At least one port is required.")
+    if len(ports) > MAX_PORTS:
+        raise WebexError(f"{len(ports)} ports is more than the {MAX_PORTS} allowed.")
+    mac = normalize_mac(device["mac"])
+    location_id = find_location_id(c, location, cache)
+    names: set[str] = set()
+    bodies = []
+    for n, p in enumerate(ports, 1):
+        name = p["workspace"].strip()
+        if not (name and (p["extension"].strip() or p["number"].strip())):
+            raise WebexError(f"Port {n} needs a workspace name and an extension or a number.")
+        if name.lower() in names:
+            raise WebexError(f"Workspace {name} is listed more than once.")
+        names.add(name.lower())
+        if workspace_exists(c, {"workspace": name, "location": location}, cache):
+            raise WebexError(f"Workspace {name} already exists in {location}.")
+        bodies.append(build_workspace_body({"workspace": name, "number": p["number"], "extension": p["extension"]},
+                                           location_id))
+    ids = [c.call("POST", "/workspaces", body=b)["id"] for b in bodies]
+    made = c.call("POST", "/devices", body={"mac": mac, "model": model, "workspaceId": ids[0]})
+    device_id = made.get("id")
+    if not device_id:
+        raise WebexError(f"The device {mac} was added but Webex did not return its id, so ports 2 to {len(ids)} "
+                         "were not assigned.")
+    if len(ids) > 1:
+        c.call("PUT", f"/telephony/config/devices/{device_id}/members", body=member_body(ids))
+    return f"Added {model} {mac} with {len(ids)} port(s): " + ", ".join(p["workspace"] for p in ports)
 
 
 # --- Move users to another location (by phone number) ---
