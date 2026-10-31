@@ -5,6 +5,7 @@ from ..components.search_input import search_input
 from ..config import APP_NAME, PLATFORMS, VERSION
 from ..state.favorites import FavoritesState
 from ..state.search import SearchState
+from ..state.settings import SettingsState
 
 
 def platform_card(p) -> rx.Component:
@@ -152,11 +153,15 @@ def home() -> rx.Component:
             ),
             search_box(),
             favorites_and_recent(),
-            rx.grid(
-                *[platform_card(p) for p in PLATFORMS],
-                columns=rx.breakpoints(initial="1", sm="2", lg="3"),
-                spacing="4",
-                width="100%",
+            rx.cond(
+                SettingsState.hide_platform_cards == "1",
+                rx.fragment(),
+                rx.grid(
+                    *[platform_card(p) for p in PLATFORMS],
+                    columns=rx.breakpoints(initial="1", sm="2", lg="3"),
+                    spacing="4",
+                    width="100%",
+                ),
             ),
             rx.text(f"Version {VERSION}", size="1", color="var(--gray-9)"),
             spacing="6",

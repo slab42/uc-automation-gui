@@ -96,15 +96,33 @@ paste_csv_tabs(
     )
 
 
+def _login_badge(status, message) -> rx.Component:
+    """Login status of the org picked on one side (status is "", "checking", "ok" or "fail")."""
+    return rx.match(
+        status,
+        ("checking", rx.badge("Checking", color_scheme="gray", flex_shrink="0")),
+        ("ok", rx.badge("Logged in", color_scheme="green", flex_shrink="0")),
+        ("fail", rx.tooltip(rx.badge("Login required", color_scheme="red", flex_shrink="0"), content=message)),
+        rx.fragment(),
+    )
+
+
 def _side(S, org, user, mac, key: str, names=None, label: str = "Org", pick: str = "org",
           user_hint: str = "Email or display name. Where the phone goes, or, on the source side, who has it now "
-                           "(optional).") -> rx.Component:
+                           "(optional).", status=None, status_msg=None) -> rx.Component:
     """One side of a migrate page: Org (or CUCM connection), User and MAC (key is "l" or "r")."""
     return rx.card(
         rx.vstack(
-            field(label, rx.select(S.all_org_names if names is None else names, value=org,
-                                   on_change=lambda v: S.set_side(f"{pick}_{key}", v),
-                                   width="100%", placeholder=f"Pick a {'connection' if pick == 'conn' else 'org'}")),
+            field(label, rx.hstack(
+                rx.box(
+                    rx.select(S.all_org_names if names is None else names, value=org,
+                              on_change=lambda v: S.set_side(f"{pick}_{key}", v),
+                              width="100%", placeholder=f"Pick a {'connection' if pick == 'conn' else 'org'}"),
+                    flex="1", min_width="0",
+                ),
+                *([_login_badge(status, status_msg)] if status is not None else []),
+                spacing="2", align="center", width="100%",
+            )),
             field("User", rx.input(value=user, width="100%", placeholder="user@example.com",
                                    on_change=lambda v: S.set_side(f"user_{key}", v)), user_hint),
             field("MAC", rx.input(value=mac, width="100%", placeholder="AA:BB:CC:DD:EE:FF",
@@ -141,13 +159,13 @@ def device_migrate() -> rx.Component:
                 ),
             ),
             rx.grid(
-                _side(S, S.org_l, S.user_l, S.mac_l, "l"),
+                _side(S, S.org_l, S.user_l, S.mac_l, "l", status=S.login_l, status_msg=S.login_msg_l),
                 rx.vstack(
                     arrow("arrow-right", "Move the phone from the left org to the right org", "r"),
                     arrow("arrow-left", "Move the phone from the right org to the left org", "l"),
                     spacing="3", align="center", justify="center",
                 ),
-                _side(S, S.org_r, S.user_r, S.mac_r, "r"),
+                _side(S, S.org_r, S.user_r, S.mac_r, "r", status=S.login_r, status_msg=S.login_msg_r),
                 columns=rx.breakpoints(initial="1", md="minmax(0, 1fr) auto minmax(0, 1fr)"),
                 spacing="4", align="center", width="100%",
             ),
@@ -185,6 +203,7 @@ def device_migrate() -> rx.Component:
             run_results(S, "MAC"),
             spacing="4", align="start", width="100%",
         )),
+        show_org=False,
     )
 
 

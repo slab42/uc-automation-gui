@@ -73,33 +73,39 @@ GROUPS = [
 ]
 
 
-def _status() -> rx.Component:
+def _status(show_org: bool = True) -> rx.Component:
     return rx.hstack(
-        org_select(WebexSession),
-        rx.cond(
-            WebexSession.webex_org_names.length() > 0,
-            instance_select(WebexSession.webex_org_names, WebexSession.webex_active, WebexSession.select_webex_org),
-            rx.link(rx.button("Add an org", size="1", variant="soft"), href="/credentials?tab=webex"),
-        ),
-        rx.cond(
-            WebexSession.webex_login != "",
-            rx.badge("Login " + WebexSession.webex_login, variant="soft", color_scheme="gray"),
-            rx.fragment(),
-        ),
-        rx.link(
+        *([
+            org_select(WebexSession),
             rx.cond(
-                WebexSession.webex_ok,
-                rx.badge("Logged in", color_scheme="green"),
-                rx.badge("Login required", color_scheme="red"),
+                WebexSession.webex_org_names.length() > 0,
+                instance_select(WebexSession.webex_org_names, WebexSession.webex_active, WebexSession.select_webex_org),
+                rx.link(rx.button("Add an org", size="1", variant="soft"), href="/credentials?tab=webex"),
             ),
-            href="/credentials?tab=webex",
-        ),
+        ] if show_org else []),
+        *([
+            rx.cond(
+                WebexSession.webex_login != "",
+                rx.badge("Login " + WebexSession.webex_login, variant="soft", color_scheme="gray"),
+                rx.fragment(),
+            ),
+        ] if show_org else []),
+        *([
+            rx.link(
+                rx.cond(
+                    WebexSession.webex_ok,
+                    rx.badge("Logged in", color_scheme="green"),
+                    rx.badge("Login required", color_scheme="red"),
+                ),
+                href="/credentials?tab=webex",
+            ),
+        ] if show_org else []),
         align="center",
         spacing="2",
     )
 
 
-def menubar() -> rx.Component:
+def menubar(show_org: bool = True) -> rx.Component:
     return rx.hstack(
         *[
             rx.menu.root(
@@ -111,7 +117,7 @@ def menubar() -> rx.Component:
             for label, items in GROUPS
         ],
         rx.spacer(),
-        _status(),
+        _status(show_org),
         align="center",
         spacing="3",
         padding="0.4rem 1.5rem",
@@ -121,6 +127,6 @@ def menubar() -> rx.Component:
     )
 
 
-def webex_page(title: str, *children: rx.Component) -> rx.Component:
+def webex_page(title: str, *children: rx.Component, show_org: bool = True) -> rx.Component:
     heading = title if title == "Webex" else f"Webex - {title}"
-    return page(heading, *children, subnav=menubar())
+    return page(heading, *children, subnav=menubar(show_org))

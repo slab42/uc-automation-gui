@@ -39,6 +39,18 @@ def _log_card() -> rx.Component:
     )
 
 
+def _home_card() -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.heading("Home Page", size="4"),
+            row("Hide Platform Cards",
+                rx.switch(checked=S.hide_platform_cards == "1", on_change=S.set_hide_platform_cards)),
+            width="100%",
+        ),
+        size="3",
+    )
+
+
 def settings() -> rx.Component:
     return page(
         "Settings",
@@ -61,5 +73,6 @@ def settings() -> rx.Component:
             ),
             size="3",
         ),
+        _home_card(),
         _log_card(),
     )

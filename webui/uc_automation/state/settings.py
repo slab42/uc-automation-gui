@@ -1,4 +1,4 @@
-"""State for the Settings page: log retention."""
+"""State for the Settings page: log retention and home page options."""
 
 import reflex as rx
 
@@ -8,6 +8,12 @@ from ..backend import app_settings, applog
 class SettingsState(rx.State):
     retention_days: str = ""
     max_mb: str = ""
+    # "1" hides the platform cards on the home page (browser LocalStorage)
+    hide_platform_cards: str = rx.LocalStorage("", name="hide_platform_cards")
+
+    @rx.event
+    def set_hide_platform_cards(self, value: bool):
+        self.hide_platform_cards = "1" if value else ""
 
     @rx.event
     def on_page_load(self):

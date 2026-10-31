@@ -4,7 +4,7 @@ import asyncio
 
 import reflex as rx
 
-from ..backend import cucm_connections, webex_cucm_migrate as cm, webex_devices as d, webex_workspaces as w
+from ..backend import cucm_connections, webex_auth, webex_cucm_migrate as cm, webex_devices as d, webex_workspaces as w
 from ..backend.applog import OpLog
 from ..backend.errors import UserError
 from ..backend.webex_api import WebexClient
@@ -129,6 +129,10 @@ class DeviceMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
     mac_r: str = rx.LocalStorage("")
     bulk_dir: str = rx.LocalStorage("Left To Right")
     paste_phone: str = rx.LocalStorage("")
+    login_l: str = ""  # login status of each side's org: "", "checking", "ok" or "fail"
+    login_r: str = ""
+    login_msg_l: str = ""
+    login_msg_r: str = ""
     confirm_open: bool = False
     confirm_text: str = ""
     _pending: list[dict[str, str]] = []
@@ -142,8 +146,25 @@ class DeviceMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
         return [o["name"] for o in self.webex_orgs]
 
     @rx.event
-    def set_side(self, field: str, value: str):
+    async def set_side(self, field: str, value: str):
         setattr(self, field, value)
+        if field in ("org_l", "org_r"):
+            async for ev in self._check_side(field[-1]):
+                yield ev
+
+    async def _check_side(self, side: str):
+        """Check the login of the org on one side ("l" or "r") and set its status badge."""
+        org = getattr(self, f"org_{side}")
+        if not org:
+            setattr(self, f"login_{side}", "")
+            return
+        setattr(self, f"login_{side}", "checking")
+        yield
+        ok, msg = await asyncio.to_thread(webex_auth.check_org, org)
+        if getattr(self, f"org_{side}") != org:  # the org changed while checking: that check owns the badge
+            return
+        setattr(self, f"login_{side}", "ok" if ok else "fail")
+        setattr(self, f"login_msg_{side}", msg)
 
     @rx.event
     def set_bulk_dir(self, value: str | list[str]):
@@ -156,6 +177,9 @@ class DeviceMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
     @rx.event
     async def load_page(self):
         await self._refresh_session()
+        for side in ("l", "r"):
+            async for ev in self._check_side(side):
+                yield ev
 
     def _stage(self, rows: list[dict[str, str]], src_org: str, dst_org: str, side: str):
         """Check the two orgs, then ask for confirmation. Returns an error toast, or None when the dialog opens."""
