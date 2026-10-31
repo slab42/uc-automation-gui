@@ -1,6 +1,6 @@
 import reflex as rx
 
-from ..components.tool_widgets import code_block, collapsible_card, confirm_dialog, csv_dropzone, field, paste_csv_tabs, run_results
+from ..components.tool_widgets import code_block, one_multiple_card, confirm_dialog, csv_dropzone, field, paste_csv_tabs, run_results
 from ..components.webex_nav import webex_page
 from ..components.webex_picker import picker
 from ..state.webex_users import (
@@ -90,17 +90,15 @@ def reset_pin() -> rx.Component:
     return webex_page(
         "Reset PIN",
         need_login(rx.vstack(
-            collapsible_card(
-                "One user", S.single_open, S.toggle_single,
-                field("Email", rx.input(value=S.email, on_change=S.set_email, width="100%",
+            one_multiple_card(
+"One User", [
+field("Email", rx.input(value=S.email, on_change=S.set_email, width="100%",
                                         placeholder="jane.doe@example.com"),
                       "The user needs a Webex Calling - Professional license; others are skipped."),
-                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("key-round", size=16)),
+rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("key-round", size=16)),
                           "Reset voicemail PIN", on_click=S.reset_single, disabled=S.busy),
-            ),
-            collapsible_card(
-                "Multiple users", S.multi_open, S.toggle_multi,
-                paste_csv_tabs(
+], "Multiple Users", [
+paste_csv_tabs(
                     S.paste_pin, lambda v: S.set_paste("pin", v),
                     "Paste one email address per line (or separated by commas, tabs, semicolons or pipes). "
                     "A header row is optional.",
@@ -118,7 +116,7 @@ def reset_pin() -> rx.Component:
                                   disabled=S.busy),
                     ],
                 ),
-            ),
+]),
             run_results(S, "Email"),
             spacing="4", align="start", width="100%",
         )),
@@ -131,9 +129,9 @@ def create_workspace() -> rx.Component:
     return webex_page(
         "Add Workspace",
         need_login(rx.vstack(
-            collapsible_card(
-                "Single Workspace", S.single_open, S.toggle_single,
-                rx.grid(
+            one_multiple_card(
+"Single Workspace", [
+rx.grid(
                     field("Workspace name", rx.input(value=S.form_workspace, width="100%",
                                                      on_change=lambda v: S.set_form("workspace", v))),
                     field("Location (optional)", rx.fragment(
@@ -155,12 +153,10 @@ def create_workspace() -> rx.Component:
                                                            on_change=lambda v: S.set_form("extension", v))),
                     columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%",
                 ),
-                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add Workspace",
+rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add Workspace",
                           on_click=S.create_single, disabled=S.busy),
-            ),
-            collapsible_card(
-                "Multiple Workspaces", S.multi_open, S.toggle_multi,
-                paste_csv_tabs(
+], "Multiple Workspaces", [
+paste_csv_tabs(
                     S.paste_workspace, lambda v: S.set_paste("workspace", v),
                     "One workspace per line, columns separated by tabs (straight from Excel), pipes, semicolons "
                     "or commas. The header row is optional; without it the order is workspace, location, type, "
@@ -180,7 +176,7 @@ def create_workspace() -> rx.Component:
                                   disabled=S.busy),
                     ],
                 ),
-            ),
+]),
             confirm_dialog(S, "Check The Phone Numbers", S.number_prompt, S.number_action,
                            S.confirm_numbers, open_var=S.number_open, set_open=S.set_number_open),
             run_results(S, "Workspace"),
@@ -326,9 +322,9 @@ def add_workspace() -> rx.Component:
     return webex_page(
         "Add Device",
         need_login(rx.vstack(
-            collapsible_card(
-                "Add a device to a workspace", S.single_open, S.toggle_single,
-                rx.grid(
+            one_multiple_card(
+"Add A Device To A Workspace", [
+rx.grid(
                     field("Workspace name", rx.fragment(
                         rx.input(
                             rx.input.slot(
@@ -378,12 +374,10 @@ def add_workspace() -> rx.Component:
                           "Any separators are fine; it must have 12 hex digits."),
                     columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%",
                 ),
-                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add device",
+rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add device",
                           on_click=S.add_single, disabled=S.busy),
-            ),
-            collapsible_card(
-                "Multiple devices", S.multi_open, S.toggle_multi,
-                paste_csv_tabs(
+], "Multiple Devices", [
+paste_csv_tabs(
                     S.paste_device, lambda v: S.set_paste("device", v),
                     "One device per line, columns separated by tabs (straight from Excel), pipes, semicolons "
                     "or commas. The header row is optional; without it the order is workspace, model, mac, "
@@ -403,7 +397,7 @@ def add_workspace() -> rx.Component:
                                   disabled=S.busy),
                     ],
                 ),
-            ),
+]),
             run_results(S, "Workspace / MAC"),
             spacing="4", align="start", width="100%",
         )),
@@ -481,16 +475,14 @@ def voicemail() -> rx.Component:
     return webex_page(
         "Voicemail",
         need_login(rx.vstack(
-            collapsible_card(
-                "One user", S.single_open, S.toggle_single,
-                field("Email", rx.input(value=S.form_email, on_change=S.set_form_email, width="100%",
+            one_multiple_card(
+"One User", [
+field("Email", rx.input(value=S.form_email, on_change=S.set_form_email, width="100%",
                                         placeholder="jane.doe@example.com")),
-                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("voicemail", size=16)),
+rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("voicemail", size=16)),
                           "Check user", on_click=S.report_user, disabled=S.busy),
-            ),
-            collapsible_card(
-                "Every user in a location", S.multi_open, S.toggle_multi,
-                field("Location name", rx.fragment(
+], "Every User In A Location", [
+field("Location name", rx.fragment(
                     rx.input(
                         rx.input.slot(
                             rx.cond(S.form_location != "",
@@ -505,9 +497,9 @@ def voicemail() -> rx.Component:
                     rx.el.datalist(rx.foreach(S.location_names, lambda n: rx.el.option(value=n)),
                                    id="voicemail-locations"),
                 ), "Click the field to see every location, or type to narrow the list."),
-                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("voicemail", size=16)),
+rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("voicemail", size=16)),
                           "Check location", on_click=S.report_location, disabled=S.busy),
-            ),
+]),
             rx.cond(S.busy, rx.hstack(rx.spinner(size="2"), rx.text(S.progress, size="2"), align="center",
                                       spacing="2"), rx.fragment()),
             rx.cond(

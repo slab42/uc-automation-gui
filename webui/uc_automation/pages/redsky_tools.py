@@ -5,7 +5,7 @@ import reflex as rx
 from ..backend import redsky_alerts as alerts, redsky_geography as geo, redsky_networking as net, redsky_precheck as pre
 from ..backend.redsky_common import AddSpec, CheckSpec, Field
 from ..components.redsky_nav import GROUPS, need_connection, redsky_page
-from ..components.tool_widgets import code_block, csv_dropzone, field, paste_csv_tabs, run_results
+from ..components.tool_widgets import code_block, csv_dropzone, one_multiple_card, field, paste_csv_tabs, run_results
 from ..state.redsky_tools import (AddAlertsState, AddBuildingsState, AddLocationsState, AlertsCheckState,
                                   BssidState, EntireSiteState, LldpState, PrecheckState, PrivateIpState,
                                   PublicIpState)
@@ -57,20 +57,13 @@ def add_page(S, spec: AddSpec) -> rx.Component:
         spec.title,
         need_connection(rx.vstack(
             rx.text(spec.blurb, size="2", color="var(--gray-11)"),
-            rx.card(
-                rx.vstack(
-                    rx.heading(f"One {spec.noun}", size="4"),
-                    rx.grid(*fields, columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%"),
-                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add",
+            one_multiple_card(
+f"One {spec.noun.title()}", [
+rx.grid(*fields, columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%"),
+rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add",
                               on_click=S.add_single, disabled=S.busy),
-                    spacing="3", align="start", width="100%",
-                ),
-                size="3", width="100%",
-            ),
-            rx.card(
-                rx.vstack(
-                    rx.heading(f"Multiple {spec.noun}s", size="4"),
-                    paste_csv_tabs(
+], f"Multiple {spec.noun.title()}s", [
+paste_csv_tabs(
                         S.paste_rows, lambda v: S.set_paste("rows", v),
                         f"One per line. Columns, in order: {columns}. A header row is optional. {spec.csv_note}",
                         spec.example.splitlines()[1] if len(spec.example.splitlines()) > 1 else "",
@@ -91,10 +84,7 @@ def add_page(S, spec: AddSpec) -> rx.Component:
                             ),
                         ],
                     ),
-                    spacing="3", align="start", width="100%",
-                ),
-                size="3", width="100%",
-            ),
+]),
             run_results(S, spec.noun.capitalize()),
             spacing="4", align="start", width="100%",
         )),

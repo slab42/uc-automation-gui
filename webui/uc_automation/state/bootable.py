@@ -20,19 +20,31 @@ class BootableState(rx.State):
     download_url: str = ""
 
     @rx.event
+    def begin(self, selected: list[str]):
+        """First step of the button click: show the upload at once (the upload itself starts in the same click)."""
+        if self.busy:
+            return
+        if not selected:
+            return rx.toast.error("Choose an ISO file first.")
+        self.busy = True
+        self.error = self.done_message = self.download_url = ""
+        self.upload_pct = 0
+        self.progress = f"Uploading {selected[0]}"
+
+    @rx.event
+    def cancel(self):
+        """Stop an upload in progress (the page also stops the browser upload)."""
+        self.busy = False
+        self.progress = ""
+        self.upload_pct = 0
+
+    @rx.event
     def on_upload_progress(self, p: dict):
         value = float(p.get("progress", 0) or 0)
         self.upload_pct = int(value * 100) if value <= 1 else int(value)
 
     @rx.event(background=True)
     async def make(self, chunks: rx.UploadChunkIterator):
-        async with self:
-            if self.busy:
-                return
-            self.busy = True
-            self.error = self.done_message = self.download_url = ""
-            self.upload_pct = 0
-            self.progress = "Receiving the ISO"
         log = OpLog("Make ISO Bootable", "tools-make-bootable")
         job = boot.new_job_dir()
         registered = False
@@ -55,7 +67,8 @@ class BootableState(rx.State):
             out_name = boot.output_name(name)
             out = job / out_name
             async with self:
-                self.progress = "Adding the boot record and writing the new ISO"
+                self.upload_pct = 100
+                self.progress = "Upload finished. Adding the boot record and writing the new ISO"
             await asyncio.to_thread(boot.make_bootable, src, out)
             src.unlink()
             if not await asyncio.to_thread(boot.verify_bootable, out):

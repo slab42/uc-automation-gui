@@ -36,15 +36,32 @@ def make_bootable() -> rx.Component:
                     rx.foreach(rx.selected_files("iso_upload"), lambda f: rx.badge(f, variant="soft")),
                     rx.button(
                         rx.cond(S.busy, rx.spinner(size="2"), rx.icon("disc", size=16)), "Make Bootable",
-                        on_click=S.make(rx.upload_files_chunk(upload_id="iso_upload",
-                                                              on_upload_progress=S.on_upload_progress)),
+                        on_click=[
+                            S.begin(rx.selected_files("iso_upload")),
+                            S.make(rx.upload_files_chunk(upload_id="iso_upload",
+                                                         on_upload_progress=S.on_upload_progress)),
+                        ],
                         disabled=S.busy,
                     ),
                     rx.cond(
                         S.busy,
                         rx.vstack(
-                            rx.text(S.progress, size="2"),
-                            rx.cond(S.upload_pct < 100, rx.progress(value=S.upload_pct, width="100%"), rx.fragment()),
+                            rx.hstack(
+                                rx.text(S.progress, size="2"),
+                                rx.cond(S.upload_pct < 100, rx.text(S.upload_pct.to_string() + "%", size="2", weight="medium"),
+                                        rx.fragment()),
+                                spacing="2",
+                            ),
+                            rx.cond(
+                                S.upload_pct < 100,
+                                rx.vstack(
+                                    rx.progress(value=S.upload_pct, width="100%"),
+                                    rx.button("Cancel Upload", variant="soft", color_scheme="gray", size="1",
+                                              on_click=[rx.cancel_upload("iso_upload"), S.cancel]),
+                                    spacing="2", width="100%",
+                                ),
+                                rx.fragment(),
+                            ),
                             spacing="2", width="100%",
                         ),
                         rx.fragment(),

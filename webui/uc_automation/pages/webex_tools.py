@@ -1,6 +1,6 @@
 import reflex as rx
 
-from ..components.tool_widgets import code_block, collapsible_card, csv_dropzone, field, paste_csv_tabs
+from ..components.tool_widgets import code_block, one_multiple_card, csv_dropzone, field, paste_csv_tabs
 from ..components.webex_nav import webex_page
 from ..state.webex_tools import HardwareCompatState
 from .webex_routing import need_login
@@ -50,9 +50,9 @@ def hardware_compatibility() -> rx.Component:
             rx.text("Checks that each phone model is supported for this org and that each MAC address is valid and "
                     "not already used in Webex, before you try to onboard the phones.",
                     size="2", color="var(--gray-11)"),
-            collapsible_card(
-                "One phone", S.single_open, S.toggle_single,
-                rx.grid(
+            one_multiple_card(
+"One Phone", [
+rx.grid(
                     field("Model", rx.fragment(
                         rx.input(value=S.form_model, width="100%", list="hardware-models", auto_complete="off",
                                  placeholder="Cisco 8845", on_change=lambda v: S.set_form("model", v)),
@@ -65,12 +65,10 @@ def hardware_compatibility() -> rx.Component:
                           "Any separators are fine."),
                     columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%",
                 ),
-                rx.button(rx.cond(S.checking, rx.spinner(size="2"), rx.icon("shield-check", size=16)), "Check",
+rx.button(rx.cond(S.checking, rx.spinner(size="2"), rx.icon("shield-check", size=16)), "Check",
                           on_click=S.check_single, disabled=S.checking),
-            ),
-            collapsible_card(
-                "Multiple phones", S.multi_open, S.toggle_multi,
-                paste_csv_tabs(
+], "Multiple Phones", [
+paste_csv_tabs(
                     S.paste_hardware, lambda v: S.set_paste("hardware", v),
                     "One phone per line: model, then mac, separated by a tab (straight from Excel), pipe, "
                     "semicolon or comma. A header row is optional.",
@@ -88,7 +86,7 @@ def hardware_compatibility() -> rx.Component:
                                   disabled=S.checking),
                     ],
                 ),
-            ),
+]),
             results,
             spacing="4", align="start", width="100%",
         )),

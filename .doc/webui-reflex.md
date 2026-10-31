@@ -536,9 +536,10 @@ Delimiters: tab, pipe, semicolon, comma; the header row is optional (columns are
 Pages with it: Add Numbers, Call Forward, Call Queues and Hunt Groups (create, replace agents), Delete Users, Add Workspace, Add Device,
 Schedules (update), E911 (select locations), Check Hardware Compatibility.
 
-Pages with a one-item pane and a multiple-item pane (Add Numbers, Call Forward, Reset PIN, Add Workspace, Add Device, Voicemail,
-Check Hardware Compatibility) use `collapsible_card` (`components/tool_widgets.py`) with `PanesMixin` (`state/run_mixin.py`):
-clicking a card header toggles it, and running one pane calls `_focus_pane` to collapse the other once the input is valid.
+Pages with a one-item input and a multiple-item input (Add Numbers, Call Forward, Reset PIN, Add Workspace, Add Device, Voicemail,
+Check Hardware Compatibility, Bulk ATA/VG, Text To U-Law Audio, Set User PIN, RedSky add pages) show them as two tabs of one card,
+built with `one_multiple_card` (`components/tool_widgets.py`): the single input is the first (default) tab, the bulk input the second.
+`PanesMixin` (`state/run_mixin.py`) and `collapsible_card` remain for the Migrate pages' multiple-phones card.
 
 ### Home Cluster Locator (CUCM > Tools)
 

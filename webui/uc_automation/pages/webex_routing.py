@@ -2,7 +2,7 @@ import reflex as rx
 
 from ..backend.webex_groups import POLICIES
 from ..backend.webex_routing import NUMBER_STATES, NUMBER_TYPES, USAGE_TYPES
-from ..components.tool_widgets import code_block, collapsible_card, csv_dropzone, field, file_dropzone, paste_csv_tabs, run_results
+from ..components.tool_widgets import code_block, one_multiple_card, csv_dropzone, field, file_dropzone, paste_csv_tabs, run_results
 from ..components.webex_nav import GROUPS, webex_page
 from ..components.webex_picker import picker
 from ..state.webex_groups import CallQueuesState, HuntGroupsState, VirtualLinesState
@@ -66,9 +66,9 @@ def add_numbers() -> rx.Component:
     return webex_page(
         "Add Numbers",
         need_login(rx.vstack(
-            collapsible_card(
-                "One number", S.single_open, S.toggle_single,
-                rx.grid(
+            one_multiple_card(
+"One Number", [
+rx.grid(
                     field("Location name", rx.fragment(
                         rx.input(value=S.form_location, on_change=S.set_form_location, width="100%",
                                  list="number-locations", placeholder="Start typing to search",
@@ -82,7 +82,7 @@ def add_numbers() -> rx.Component:
                           "10 digit US numbers get a leading 1; the + is added for you."),
                     columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%",
                 ),
-                rx.grid(
+rx.grid(
                     field("Number type", rx.select(list(NUMBER_TYPES), value=S.form_type,
                                                    on_change=S.set_form_type)),
                     field("Usage", rx.select(list(USAGE_TYPES), value=S.form_usage, on_change=S.set_form_usage)),
@@ -90,12 +90,10 @@ def add_numbers() -> rx.Component:
                                              on_change=S.set_form_state)),
                     columns="3", spacing="4", width="100%",
                 ),
-                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add number",
+rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add number",
                           on_click=S.add_single, disabled=S.busy),
-            ),
-            collapsible_card(
-                "Multiple numbers", S.multi_open, S.toggle_multi,
-                rx.tabs.root(
+], "Multiple Numbers", [
+rx.tabs.root(
                     rx.tabs.list(
                         rx.tabs.trigger("Paste Text", value="text"),
                         rx.tabs.trigger("CSV", value="csv"),
@@ -133,7 +131,7 @@ def add_numbers() -> rx.Component:
                     ),
                     default_value="text", width="100%",
                 ),
-            ),
+]),
             run_results(S, "Number"),
             spacing="4", align="start", width="100%",
         )),
@@ -151,9 +149,9 @@ def call_forward() -> rx.Component:
                 rx.segmented_control.item("Remove Call Forward All", value="remove"),
                 value=S.cf_mode, on_change=S.set_cf_mode,
             ),
-            collapsible_card(
-                "One number", S.single_open, S.toggle_single,
-                rx.text(
+            one_multiple_card(
+"One Number", [
+rx.text(
                     rx.cond(
                         setting,
                         "Looks up each number's owner (person, workspace, virtual line, hunt group, call queue "
@@ -162,21 +160,19 @@ def call_forward() -> rx.Component:
                     ),
                     size="2", color="var(--gray-11)",
                 ),
-                rx.cond(
+rx.cond(
                     setting,
                     field("Forward prefix", rx.input(value=S.cf_prefix, on_change=S.set_cf_prefix, width="16rem"),
                           "Added in front of the number to make the destination."),
                     rx.fragment(),
                 ),
-                field("Phone number", rx.input(value=S.cf_number, on_change=S.set_cf_number, width="100%",
+field("Phone number", rx.input(value=S.cf_number, on_change=S.set_cf_number, width="100%",
                                                placeholder="12704435531 or an extension")),
-                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("play", size=16)),
+rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("play", size=16)),
                           rx.cond(setting, "Set forward", "Remove forward"),
                           on_click=S.run_single, disabled=S.busy),
-            ),
-            collapsible_card(
-                "Multiple numbers", S.multi_open, S.toggle_multi,
-                paste_csv_tabs(
+], "Multiple Numbers", [
+paste_csv_tabs(
                     S.paste_forward, lambda v: S.set_paste("forward", v),
                     "Paste one number per line (or separated by commas, tabs, semicolons or pipes). "
                     "A header row is optional.",
@@ -195,7 +191,7 @@ def call_forward() -> rx.Component:
                                   disabled=S.busy),
                     ],
                 ),
-            ),
+]),
             run_results(S, "Number"),
             spacing="4", align="start", width="100%",
         )),

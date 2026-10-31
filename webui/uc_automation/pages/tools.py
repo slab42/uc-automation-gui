@@ -3,7 +3,7 @@ import reflex as rx
 from ..backend.cucm_tools import EM_MODES
 from ..components.cucm_nav import cucm_page
 from ..components.search_input import search_input
-from ..components.tool_widgets import code_block, csv_dropzone, field, run_results
+from ..components.tool_widgets import code_block, csv_dropzone, one_multiple_card, field, run_results
 from ..state.tools import EmBulkState, PhoneCountState, SetPinState
 
 
@@ -127,33 +127,23 @@ def set_user_pin() -> rx.Component:
     return cucm_page(
         "Set User PIN",
         _need_connection(S, rx.vstack(
-            rx.card(
-                rx.vstack(
-                    rx.heading("One user", size="4"),
-                    rx.grid(
+            one_multiple_card(
+"One User", [
+rx.grid(
                         field("User ID", rx.input(value=S.pin_user, on_change=S.set_pin_user, width="100%")),
                         field("PIN", rx.input(type="password", key=S.pin_key.to_string(), on_change=S.set_pin_value,
                                               auto_complete="new-password", width="100%")),
                         columns="2", spacing="3", width="100%",
                     ),
-                    rx.button(rx.icon("key-round", size=16), "Set PIN", on_click=S.set_single, disabled=S.busy),
-                    spacing="3", align="start", width="100%",
-                ),
-                size="3", width="100%",
-            ),
-            rx.card(
-                rx.vstack(
-                    rx.heading("From CSV", size="4"),
-                    rx.text("Header row required. The device column is allowed and ignored.", size="2",
+rx.button(rx.icon("key-round", size=16), "Set PIN", on_click=S.set_single, disabled=S.busy),
+], "Multiple Users", [
+rx.text("Header row required. The device column is allowed and ignored.", size="2",
                             color="var(--gray-11)"),
-                    code_block("user,pin\njsmith,159357\nadoe,753951\n"),
-                    csv_dropzone("pin_upload"),
-                    rx.button(rx.icon("key-round", size=16), "Set PINs",
+code_block("user,pin\njsmith,159357\nadoe,753951\n"),
+csv_dropzone("pin_upload"),
+rx.button(rx.icon("key-round", size=16), "Set PINs",
                               on_click=S.set_from_csv(rx.upload_files(upload_id="pin_upload")), disabled=S.busy),
-                    spacing="3", align="start", width="100%",
-                ),
-                size="3", width="100%",
-            ),
+]),
             run_results(S, "User"),
             spacing="4", align="start", width="100%",
         )),
