@@ -3,8 +3,8 @@
 
 Usage:
     python3 main.py             start the app (UI on http://localhost:3000, backend on :8000)
-    python3 main.py --setup     create or refresh webui/.venv from webui/requirements.txt, then exit
-    python3 main.py --update    install new requirements and upgrade existing ones in webui/.venv, then exit
+    python3 main.py --setup     create or refresh webui/.venv from webui/requirements.txt, then start the app
+    python3 main.py --update    install new requirements and upgrade existing ones in webui/.venv, then start the app
 
 The first run creates webui/.venv and installs the requirements. Credentials live in
 .env/credentials.env (see webui/credentials.env.EXAMPLE); the Credentials page edits that file.
@@ -65,7 +65,7 @@ def main() -> int:
     args = sys.argv[1:]
     if "--setup" in args or "--update" in args or not REFLEX.exists():
         code = setup(upgrade="--update" in args)
-        if code or "--setup" in args or "--update" in args:
+        if code:
             return code
     os.chdir(WEBUI)
     os.execv(str(REFLEX), [str(REFLEX), "run"])

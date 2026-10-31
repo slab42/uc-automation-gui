@@ -10,8 +10,8 @@ RedSky E911 (REST). There is no CLI. The old CLI scripts and the `gui/` wrapper 
 
 Run it with `python3 main.py` from the repo root. It creates `webui/.venv` on first run, installs
 `webui/requirements.txt` and starts `reflex run` (UI http://localhost:3000, backend :8000, localhost only).
-`python3 main.py --setup` only creates or refreshes the venv. `python3 main.py --update` also installs new
-requirements and upgrades existing ones (`pip install --upgrade`), then exits.
+`python3 main.py --setup` creates or refreshes the venv, then starts the app. `python3 main.py --update` also
+installs new requirements and upgrades existing ones (`pip install --upgrade`), then starts the app.
 
 ## Repository Layout
 
