@@ -56,6 +56,15 @@ def model_names(devices: dict[str, dict]) -> list[str]:
     return sorted({d["displayName"] or d["model"] for d in devices.values()})
 
 
+def model_import_rows(devices: dict[str, dict]) -> list[dict[str, str]]:
+    """One row per supported model: the text to put in the model column and the display name."""
+    seen: dict[str, dict[str, str]] = {}
+    for d in devices.values():
+        code = d["model"] or d["displayName"]
+        seen[code] = {"model": code, "name": d["displayName"] if d["displayName"] != code else ""}
+    return [seen[k] for k in sorted(seen, key=str.lower)]
+
+
 def validate_macs(c: WebexClient, macs: list[str]) -> dict[str, dict[str, str]]:
     """MAC to {state, message}. States: AVAILABLE, UNAVAILABLE (in use), DUPLICATE_IN_LIST, INVALID, UNKNOWN (call failed)."""
     states: dict[str, dict[str, str]] = {}

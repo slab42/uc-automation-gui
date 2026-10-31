@@ -294,7 +294,8 @@ Webex has no username/password token API, so login is the OAuth authorization co
   Workspace through `WorkspaceCreateMixin`. Not tested against a real org.
 - Add Device: `AddDevicesWorkspaces.py` is an unfinished draft (it never runs the CSV loop), so the page implements its
   intent: add a device (`POST /v1/devices`: model, MAC, workspace) to an existing workspace found by display name. CSV is
-  `workspace,model,mac[,location]`. It does not create workspaces.
+  `workspace,model,mac[,location]`. It does not create workspaces. An info popover beside Model lists the org's
+  supported models (`GET /telephony/config/supportedDevices`, loaded on page load): the model text to import and the display name.
 - Migrate moves users (PRIMARY number, owner type PEOPLE) with the Move Users job (validate, run, poll up to 180 s).
   Workspaces are skipped: the API cannot change a workspace location.
 - Schedules (one page, four modes): Export (CSV download), Update from CSV (review plan, then apply), Copy (to all other

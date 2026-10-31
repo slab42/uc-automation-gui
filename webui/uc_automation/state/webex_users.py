@@ -9,6 +9,7 @@ from ..backend.errors import UserError
 from ..backend.paste import no_at
 from ..backend.webex_locations import list_locations
 from ..backend.webex_routing import find_location_id
+from ..backend.webex_tools import get_supported_devices, model_import_rows
 from .run_mixin import RunMixin
 from .webex_groups import PickerMixin
 from .webex_routing import PasteMixin, WebexSession
@@ -492,6 +493,7 @@ class AddWorkspaceState(WebexSession, RunMixin, PasteMixin):
     form_mac: str = ""
     form_location: str = ""
     location_names: list[str] = []
+    model_rows: list[dict[str, str]] = []
     paste_device: str = ""
 
     @rx.event
@@ -516,6 +518,12 @@ class AddWorkspaceState(WebexSession, RunMixin, PasteMixin):
                 return
             self.location_names = [r["name"] for r in rows]
             log.info(f"{len(rows)} location(s)")
+            try:
+                devices = await asyncio.to_thread(get_supported_devices, client)
+                self.model_rows = model_import_rows(devices)
+                log.info(f"{len(self.model_rows)} supported model(s)")
+            except UserError as e:
+                log.warning(f"Supported models not loaded: {e}")
         finally:
             log.close()
 

@@ -306,6 +306,36 @@ def copy_workspace() -> rx.Component:
     )
 
 
+def _models_info(S) -> rx.Component:
+    return rx.popover.root(
+        rx.popover.trigger(rx.icon_button(rx.icon("info", size=16), variant="ghost", size="1",
+                                          aria_label="Supported models")),
+        rx.popover.content(
+            rx.vstack(
+                rx.text("Supported models", weight="bold", size="2"),
+                rx.text("Enter the text in the Model column exactly as shown, in the form or in the paste and CSV "
+                        "input.", size="1", color="var(--gray-11)"),
+                rx.cond(
+                    S.model_rows.length() > 0,
+                    rx.scroll_area(
+                        rx.table.root(
+                            rx.table.header(rx.table.row(rx.table.column_header_cell("Model Text"),
+                                                         rx.table.column_header_cell("Display Name"))),
+                            rx.table.body(rx.foreach(S.model_rows, lambda r: rx.table.row(
+                                rx.table.cell(rx.code(r["model"])), rx.table.cell(r["name"])))),
+                            size="1",
+                        ),
+                        max_height="20rem", type="auto",
+                    ),
+                    rx.text("No models loaded. Check the Webex login and reload the page.", size="2"),
+                ),
+                spacing="2",
+            ),
+            max_width="34rem",
+        ),
+    )
+
+
 def add_workspace() -> rx.Component:
     S = AddWorkspaceState
     return webex_page(
@@ -326,8 +356,18 @@ def add_workspace() -> rx.Component:
                                            id="workspace-locations"),
                         ), "Click the field to see every location, or type to narrow the list. "
                            "Only needed when two workspaces share a name."),
-                        field("Model", rx.input(value=S.form_model, width="100%", placeholder="Cisco 8845",
-                                                on_change=lambda v: S.set_form("model", v))),
+                        rx.vstack(
+                            rx.hstack(rx.text("Model", size="2", weight="medium"), _models_info(S),
+                                      spacing="2", align="center"),
+                            rx.input(value=S.form_model, width="100%", placeholder="Cisco 8845",
+                                     list="workspace-models", auto_complete="off",
+                                     on_change=lambda v: S.set_form("model", v)),
+                            rx.el.datalist(rx.foreach(S.model_rows, lambda r: rx.el.option(r["name"], value=r["model"])),
+                                           id="workspace-models"),
+                            rx.text("Click the field to see the supported models, or type to narrow the list. "
+                                    "Any text is accepted, for a model not listed.", size="1", color="var(--gray-10)"),
+                            spacing="1", align="start", width="100%",
+                        ),
                         field("MAC address", rx.input(value=S.form_mac, width="100%",
                                                       placeholder="AA:BB:CC:DD:EE:FF",
                                                       on_change=lambda v: S.set_form("mac", v)),
