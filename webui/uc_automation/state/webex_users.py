@@ -1,4 +1,4 @@
-"""States for Webex > Users (Delete Users, Reset PIN) and Webex > Workspaces (Add Workspace, Migrate)."""
+"""States for Webex > Users (Delete Users, Reset PIN) and Webex > Workspaces (Add Workspace, Add Device, Migrate)."""
 
 import asyncio
 
@@ -145,6 +145,106 @@ class ResetPinState(WebexSession, RunMixin, PasteMixin):
             async for ev in self._reset(emails, log):
                 yield ev
             yield rx.clear_selected_files("pin_upload")
+        finally:
+            log.close()
+
+
+class CreateWorkspaceState(WebexSession, RunMixin, PasteMixin):
+    form_workspace: str = ""
+    form_location: str = ""
+    form_type: str = ""
+    form_capacity: str = ""
+    form_number: str = ""
+    form_extension: str = ""
+    location_names: list[str] = []
+    paste_workspace: str = ""
+
+    @rx.event
+    def set_form(self, field: str, value: str):
+        setattr(self, f"form_{field}", value)
+
+    @rx.event
+    async def load_page(self):
+        """Page load: check the login, then list the locations for the dropdown."""
+        await self._refresh_session()
+        if not self.webex_ok:
+            return
+        log = self._webex_log("List locations", "webex-list-locations")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                return
+            try:
+                rows = await asyncio.to_thread(list_locations, client)
+            except UserError as e:
+                log.error(str(e))
+                return
+            self.location_names = [r["name"] for r in rows]
+            log.info(f"{len(rows)} location(s)")
+        finally:
+            log.close()
+
+    async def _create(self, rows: list[dict[str, str]], log):
+        client = await self._connect(log)
+        if client is None:
+            yield rx.toast.error(self.webex_message)
+            return
+        cache: dict[str, str] = {}
+        items = [(r["workspace"], lambda r=r: w.create_workspace(client, r, cache)) for r in rows]
+        async for ev in self._run_items(items, "Creating", log):
+            yield ev
+
+    @rx.event
+    async def create_single(self):
+        row = {"workspace": self.form_workspace.strip(), "location": self.form_location.strip(),
+               "type": "" if self.form_type == "notSet" else self.form_type, "capacity": self.form_capacity.strip(),
+               "number": self.form_number.strip(), "extension": self.form_extension.strip()}
+        if not row["workspace"]:
+            yield rx.toast.error("Enter the workspace name.")
+            return
+        if row["location"] and self.location_names and row["location"] not in self.location_names:
+            yield rx.toast.error("Pick the location from the list, or clear it.")
+            return
+        log = self._webex_log("Add workspace", "webex-add-workspace")
+        try:
+            async for ev in self._create([row], log):
+                yield ev
+            if self.result_fail_count == 0 and self.results:
+                self.form_workspace = ""
+                self.form_number = ""
+                self.form_extension = ""
+        finally:
+            log.close()
+
+    @rx.event
+    async def create_from_csv(self, files: list[rx.UploadFile]):
+        async for ev in self._create_from_csv(files):
+            yield ev
+
+    @rx.event
+    async def create_from_text(self):
+        async for ev in self._from_paste(self._create_from_csv, "workspace", columns=w.WORKSPACE_COLUMNS,
+                                         markers=("workspace",)):
+            yield ev
+
+    async def _create_from_csv(self, files: list[rx.UploadFile]):
+        if not files:
+            yield rx.toast.error("Choose a CSV file first.")
+            return
+        try:
+            rows = w.parse_workspace_csv(await files[0].read())
+        except ValueError as e:
+            yield rx.toast.error(str(e))
+            return
+        if not rows:
+            yield rx.toast.error("The CSV has no data rows.")
+            return
+        log = self._webex_log("Add workspaces from CSV", "webex-add-workspaces-csv")
+        try:
+            log.info(f"CSV file: {files[0].filename}")
+            async for ev in self._create(rows, log):
+                yield ev
+            yield rx.clear_selected_files("workspace_upload")
         finally:
             log.close()
 

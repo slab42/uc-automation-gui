@@ -44,7 +44,7 @@ def _connection_picker() -> rx.Component:
                 align="center",
                 spacing="2",
             ),
-            rx.link(rx.button("Add a connection", size="1", variant="soft"), href="/credentials"),
+            rx.link(rx.button("Add a connection", size="1", variant="soft"), href="/credentials?tab=cuc"),
         ),
         align="center",
         spacing="2",
@@ -84,7 +84,7 @@ def need_connection(body: rx.Component) -> rx.Component:
         body,
         rx.callout(
             rx.hstack(rx.text("No CUC connection is set up yet."),
-                      rx.link("Add one on the Credentials page", href="/credentials"), spacing="2"),
+                      rx.link("Add one on the Credentials page", href="/credentials?tab=cuc"), spacing="2"),
             icon="info", width="100%",
         ),
     )

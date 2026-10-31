@@ -1,4 +1,4 @@
-"""Webex workspaces: add devices to workspaces, move users to another location by phone number.
+"""Webex workspaces: create workspaces, add devices to workspaces, move users to another location by phone number.
 
 Ported from webex/AddDevicesWorkspaces.py (an unfinished draft: the CSV is workspace, model, MAC here) and
 webex/migration_userWorkspace_location.py (reference only). Not tested against a real org.
@@ -15,6 +15,69 @@ from .webex_routing import find_location_id
 JOB_TIMEOUT_SECONDS = 180
 JOB_POLL_SECONDS = 5
 MOVE_PATH = "/telephony/config/jobs/person/moveLocation"
+
+
+# --- Create workspaces ---
+
+WORKSPACE_COLUMNS = ("workspace", "location", "type", "capacity", "number", "extension")
+WORKSPACE_TYPES = ("notSet", "focus", "huddle", "meetingRoom", "open", "desk", "other")
+
+
+def parse_workspace_csv(data: bytes) -> list[dict[str, str]]:
+    """Header row required: workspace (display name). location, type, capacity, number and extension are optional."""
+    reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig", errors="replace")))
+    if not reader.fieldnames:
+        raise ValueError("The CSV file is empty.")
+    lookup = {(h or "").strip().lower(): h for h in reader.fieldnames}
+    if "workspace" not in lookup:
+        raise ValueError("The CSV needs a header row with a workspace column "
+                         "(location, type, capacity, number and extension are optional).")
+    rows = []
+    for raw in reader:
+        row = {f: (raw.get(lookup[f]) or "").strip() if f in lookup else "" for f in WORKSPACE_COLUMNS}
+        if any(row.values()):
+            rows.append(row)
+    return rows
+
+
+def build_workspace_body(row: dict[str, str], location_id: str) -> dict:
+    name = row.get("workspace", "").strip()
+    if not name:
+        raise WebexError("The workspace name is required.")
+    body: dict = {"displayName": name}
+    wtype = row.get("type", "").strip()
+    if wtype:
+        match = next((t for t in WORKSPACE_TYPES if t.lower() == wtype.replace(" ", "").lower()), None)
+        if not match:
+            raise WebexError(f"Type '{wtype}' must be one of: {', '.join(WORKSPACE_TYPES)}.")
+        body["type"] = match
+    capacity = row.get("capacity", "").strip()
+    if capacity:
+        if not capacity.isdigit():
+            raise WebexError(f"Capacity '{capacity}' must be a whole number.")
+        body["capacity"] = int(capacity)
+    number = normalize_e164(row.get("number", ""))
+    extension = row.get("extension", "").strip()
+    if number or extension:
+        if not location_id:
+            raise WebexError("A location is required to give the workspace a number or extension.")
+        calling = {"locationId": location_id}
+        if number:
+            calling["phoneNumber"] = number
+        if extension:
+            calling["extension"] = extension
+        body["calling"] = {"type": "webexCalling", "webexCalling": calling}
+        body["supportedDevices"] = "phones"
+    if location_id:
+        body["locationId"] = location_id
+    return body
+
+
+def create_workspace(c: WebexClient, row: dict[str, str], cache: dict[str, str]) -> str:
+    location_id = find_location_id(c, row["location"], cache) if row.get("location") else ""
+    body = build_workspace_body(row, location_id)
+    c.call("POST", "/workspaces", body=body)
+    return f"Created workspace {body['displayName']}"
 
 
 # --- Add devices to workspaces ---

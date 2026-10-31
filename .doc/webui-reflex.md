@@ -52,7 +52,7 @@ backend/webex_groups.py      Call queues and hunt groups: lists, create from CSV
 backend/webex_virtual_lines.py  Virtual line busy/unanswered voicemail greeting upload
 backend/webex_users.py       Delete users, reset voicemail PIN
 backend/webex_voicemail.py   Voicemail report: internal vs external mailbox per user (single user or a location)
-backend/webex_workspaces.py  Add devices to workspaces, move users to another location (Move Users job)
+backend/webex_workspaces.py  Create workspaces, add devices to workspaces, move users to another location (Move Users job)
 backend/webex_locations.py   Location schedules (export/update/copy/remove past) and RedSky E911 status/opt-out
 backend/webex_tools.py       Hardware compatibility check (supported models + validateMacs)
 backend/webex_auth.py        Webex OAuth login, token storage/refresh ([WEBEX:default]); `ensure_token()` for API code
@@ -63,7 +63,7 @@ state/logs.py                LogsState: Logs page (search, read, export; no dele
 state/search.py              SearchState: home page search over the GROUPS of the CUCM, CUC and Webex menus (platform, section, link)
 state/run_mixin.py           RunMixin: busy/progress/per-row results for tool pages (CUCM and Webex); `_run_items(..., workers=N)` runs N rows at once
 state/webex_tools.py         Check Hardware Compatibility state
-state/webex_users.py         Delete Users, Reset PIN, Voicemail, Add Device, Migrate states
+state/webex_users.py         Delete Users, Reset PIN, Voicemail, Add Workspace, Add Device, Migrate states
 state/webex_locations.py     Schedules and E911 states
 state/webex_groups.py        PickerMixin (searchable list + selection) and the Call Queues / Hunt Groups / Virtual Lines states
 state/webex_routing.py       WebexSession (login status in the menu bar, checked on page load) + Add Numbers / Call Forward states
@@ -246,6 +246,7 @@ Webex has no username/password token API, so login is the OAuth authorization co
   `WebexSession.webex_active` (browser LocalStorage, picker in the Webex menu bar; switching reloads the page). `WebexState` is a child
   of `WebexSession` so both lists and the active org are shared. The OAuth `state` remembers which login started it. Older
   `[WEBEX:x]` sections that held an `org_id` are turned into an org `x` using login `x` the first time orgs are listed.
+- `/credentials?tab=<cucm|cuc|cube|webex|redsky>` opens that tab; each platform's menu bar login/connection links use it.
 - `webex_auth.ensure_token(login)` is what every Webex feature must call before an API request. It checks expiry, confirms the
   token live with `GET /v1/people/me`, and silently refreshes when needed. It raises `WebexAuthError` (message is
   user-ready) when a new login is required. The Credentials page runs the same check on every load.
@@ -277,10 +278,13 @@ Webex has no username/password token API, so login is the OAuth authorization co
 - Create CSVs are header based (`name,location,firstName,lastName,phoneNumber,extension,policy,destination,agent1,agent2,...`),
   unlike the scripts' fixed column positions. The queue create no longer sends the script's hardcoded org-specific announcement
   file id: all greetings are DEFAULT.
-- **Users** (Delete Users, Reset PIN), **Reports** (Voicemail: `/webex/voicemail`, one email or every Calling user of a location via the Add Numbers style location datalist; reads `GET /people/{id}/features/voicemail`, shows internal/external and, for external, the destination email; internal message counts are not available to an admin login), **Workspaces** (Add Device, Migrate), **Locations** (Schedules, E911) are menu groups
+- **Users** (Delete Users, Reset PIN), **Reports** (Voicemail: `/webex/voicemail`, one email or every Calling user of a location via the Add Numbers style location datalist; reads `GET /people/{id}/features/voicemail`, shows internal/external and, for external, the destination email; internal message counts are not available to an admin login), **Workspaces** (Add Workspace, Add Device, Migrate), **Locations** (Schedules, E911) are menu groups
   in `webex_nav.GROUPS`. Destructive actions (delete users, migrate, copy/update/remove schedule events, RedSky opt-out) go
   through `tool_widgets.confirm_dialog` (`S.confirm_open`). Delete Users and Migrate are two-step: load/review a plan first,
   then confirm.
+- Add Workspace (`/webex/create-workspace`, `CreateWorkspaceState`): Single Workspace form or Multiple Workspaces (Paste Text / CSV;
+  columns workspace, location, type, capacity, number, extension). `POST /workspaces`; a number or extension adds Webex Calling
+  at the location (`supportedDevices` phones). Not tested against a real org.
 - Add Device: `AddDevicesWorkspaces.py` is an unfinished draft (it never runs the CSV loop), so the page implements its
   intent: add a device (`POST /v1/devices`: model, MAC, workspace) to an existing workspace found by display name. CSV is
   `workspace,model,mac[,location]`. It does not create workspaces.
@@ -467,5 +471,5 @@ The text is turned into CSV bytes by `backend/paste.py` (`PastedFile`, same `rea
 handler logic is shared: each "from CSV" handler delegates to a `_x(files)` helper and a `x_text` event calls it through
 `WebexSession._from_paste(handler, field, ...)`. The box text lives in a `paste_<field>` var set with `S.set_paste("<field>", v)`.
 Delimiters: tab, pipe, semicolon, comma; the header row is optional (columns are then taken by position).
-Pages with it: Add Numbers, Call Forward, Call Queues and Hunt Groups (create, replace agents), Delete Users, Add Device,
+Pages with it: Add Numbers, Call Forward, Call Queues and Hunt Groups (create, replace agents), Delete Users, Add Workspace, Add Device,
 Schedules (update), E911 (select locations), Check Hardware Compatibility.

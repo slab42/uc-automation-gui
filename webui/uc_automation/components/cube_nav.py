@@ -60,7 +60,7 @@ def cred_picker(S) -> rx.Component:
             rx.select(S.cred_options, value=S.cred_name, on_change=S.set_cred_name),
             rx.cond(
                 S.cred_names.length() == 0,
-                rx.link("Save a set on the Credentials page", href="/credentials", size="2"),
+                rx.link("Save a set on the Credentials page", href="/credentials?tab=cube", size="2"),
                 rx.fragment(),
             ),
             align="center", spacing="3", wrap="wrap",
