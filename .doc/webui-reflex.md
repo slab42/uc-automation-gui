@@ -72,6 +72,7 @@ backend/applog.py            operation logs: OpLog writer, pruning (`prune_logs`
 backend/app_settings.py      `webui/app_settings.json` (git-ignored): log retention days and max size, defaults 90 days / 2048 MB
 backend/ini_store.py         comment-preserving credentials.env editor
 state/logs.py                LogsState: Logs page (search, read, export; no delete or import)
+state/favorites.py           FavoritesState: favorite and recent function routes (browser LocalStorage `favorite_routes`, `recent_routes`)
 state/search.py              SearchState: home page search over the GROUPS of the CUCM, CUC and Webex menus (platform, section, link)
 state/run_mixin.py           RunMixin: busy/progress/per-row results for tool pages (CUCM and Webex); `_run_items(..., workers=N)` runs N rows at once
 state/webex_tools.py         Check Hardware Compatibility state
@@ -575,3 +576,9 @@ built with `one_multiple_card` (`components/tool_widgets.py`): the single input 
   the token is random and unguessable), and `rx.download(url=...)` starts the browser download. The folder is deleted 60 seconds after that download finishes (so a repeated request, which React dev mode can cause, still works), after 15 minutes if it never
   starts, on any error, and at app startup (`clean_leftovers`). The upload is deleted as soon as the new ISO is written. Log: "Make ISO Bootable" (sizes, never content).
 - Tested: pycdlib on synthetic ISOs (plain, Rock Ridge, Rock Ridge + Joliet), the download route and its delete, and that the page and route load. Not tested with a real Cisco ISO or a multi-GB upload, and not booted in a VM.
+
+### Home Favorites And Recently Used
+
+- The home page (`pages/home.py`) shows two tile columns above the search box and platform cards: **Favorites** and **Recently Used** (last 10, newest first). An empty column prints "Nothing to show here."
+- Both lists are route lists in browser LocalStorage (`FavoritesState`, `state/favorites.py`), so they survive reloads. Tiles come from `state/search.INDEX` (every menu item of every platform, now with an `icon`).
+- Every function page (a route in `INDEX`) gets a star in the top bar (`components/layout.topbar`): grey outline, filled with the theme accent color when a favorite; clicking toggles it. The top bar's `on_mount` calls `FavoritesState.visit`, which records the page as recently used. Not clicked through in a browser.

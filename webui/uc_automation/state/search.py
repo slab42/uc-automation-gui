@@ -9,23 +9,23 @@ _SOURCES = [("CUCM", cucm_nav.GROUPS), ("CUC", cuc_nav.GROUPS), ("UCCX", uccx_na
             ("RedSky", redsky_nav.GROUPS)]
 
 INDEX: list[dict[str, str]] = [
-    {"platform": platform, "section": section, "label": label, "description": desc, "route": route}
+    {"platform": platform, "section": section, "label": label, "description": desc, "route": route, "icon": icon}
     for platform, groups in _SOURCES
     for section, items in groups
-    for label, route, _icon, desc in items
+    for label, route, icon, desc in items
 ]
 _OTHER_ROUTES = {item["route"] for item in INDEX}
 
 # Tools platform entries, except those already listed under another platform
 INDEX += [
-    {"platform": "Tools", "section": "Tools", "label": label, "description": desc, "route": route}
-    for label, route, _icon, desc in tools_nav.TOOLS
+    {"platform": "Tools", "section": "Tools", "label": label, "description": desc, "route": route, "icon": icon}
+    for label, route, icon, desc in tools_nav.TOOLS
     if route not in _OTHER_ROUTES
 ]
 
 
 def _haystack(item: dict[str, str]) -> str:
-    return " ".join(v for k, v in item.items() if k != "route").lower()
+    return " ".join(v for k, v in item.items() if k not in ("route", "icon")).lower()
 
 
 class SearchState(rx.State):

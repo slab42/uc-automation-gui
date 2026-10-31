@@ -3,6 +3,7 @@ import reflex as rx
 from ..components.layout import page
 from ..components.search_input import search_input
 from ..config import APP_NAME, PLATFORMS, VERSION
+from ..state.favorites import FavoritesState
 from ..state.search import SearchState
 
 
@@ -59,6 +60,54 @@ def result_row(r) -> rx.Component:
     )
 
 
+def function_tile(r) -> rx.Component:
+    return rx.link(
+        rx.card(
+            rx.hstack(
+                rx.icon(r["icon"], size=18),
+                rx.vstack(
+                    rx.text(r["label"], weight="medium"),
+                    rx.text(r["platform"] + " - " + r["section"], size="1", color="var(--gray-11)"),
+                    spacing="0",
+                    align="start",
+                ),
+                align="center",
+                spacing="3",
+                width="100%",
+            ),
+            width="100%",
+            _hover={"border_color": "var(--accent-8)"},
+        ),
+        href=r["route"],
+        underline="none",
+        width="100%",
+    )
+
+
+def tile_column(title: str, items) -> rx.Component:
+    return rx.vstack(
+        rx.heading(title, size="4"),
+        rx.cond(
+            items.length() > 0,
+            rx.vstack(rx.foreach(items, function_tile), spacing="2", width="100%"),
+            rx.text("Nothing to show here.", size="2", color="var(--gray-11)"),
+        ),
+        spacing="3",
+        align="start",
+        width="100%",
+    )
+
+
+def favorites_and_recent() -> rx.Component:
+    return rx.grid(
+        tile_column("Favorites", FavoritesState.favorite_items),
+        tile_column("Recently Used", FavoritesState.recent_items),
+        columns=rx.breakpoints(initial="1", sm="2"),
+        spacing="6",
+        width="100%",
+    )
+
+
 def search_box() -> rx.Component:
     return rx.vstack(
         search_input(
@@ -102,6 +151,7 @@ def home() -> rx.Component:
                 wrap="wrap",
             ),
             search_box(),
+            favorites_and_recent(),
             rx.grid(
                 *[platform_card(p) for p in PLATFORMS],
                 columns=rx.breakpoints(initial="1", sm="2", lg="3"),

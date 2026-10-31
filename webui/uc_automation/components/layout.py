@@ -3,6 +3,7 @@
 import reflex as rx
 
 from ..config import APP_NAME, PLATFORMS, VERSION
+from ..state.favorites import FavoritesState
 from ..state.sidebar import SidebarState
 
 SIDEBAR_WIDTH = "216px"
@@ -131,6 +132,22 @@ def sidebar() -> rx.Component:
 def topbar(title: str) -> rx.Component:
     return rx.hstack(
         rx.heading(title, size="5"),
+        rx.cond(
+            FavoritesState.is_function,
+            rx.tooltip(
+                rx.icon(
+                    "star",
+                    width="14px",
+                    height="14px",
+                    color=rx.cond(FavoritesState.is_favorite, "var(--accent-9)", "var(--gray-9)"),
+                    fill=rx.cond(FavoritesState.is_favorite, "var(--accent-9)", "none"),
+                    on_click=FavoritesState.toggle_favorite,
+                    cursor="pointer",
+                    flex_shrink="0",
+                ),
+                content=rx.cond(FavoritesState.is_favorite, "Remove From Favorites", "Add To Favorites"),
+            ),
+        ),
         rx.spacer(),
         rx.badge(f"v{VERSION}", variant="soft", radius="full"),
         rx.color_mode.button(variant="ghost", size="2"),
@@ -144,6 +161,7 @@ def topbar(title: str) -> rx.Component:
         backdrop_filter="blur(8px)",
         border_bottom="1px solid var(--gray-5)",
         width="100%",
+        on_mount=FavoritesState.visit,
     )
 
 
