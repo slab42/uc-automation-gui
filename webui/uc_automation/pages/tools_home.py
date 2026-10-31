@@ -11,7 +11,7 @@ def tools_home() -> rx.Component:
     return page(
         "Tools",
         rx.vstack(
-            rx.text("Utilities (log search, etc.)", color="var(--gray-11)"),
+            rx.text("Cross platform tools and automations", color="var(--gray-11)"),
             rx.grid(
                 *[_card(icon, name, desc, route) for name, route, icon, desc in TOOLS],
                 columns=rx.breakpoints(initial="1", sm="2", lg="3"),

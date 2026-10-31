@@ -7,3 +7,4 @@ openpyxl
 netmiko
 gTTS
 av
+pycdlib

@@ -11,6 +11,7 @@ venv/
 reflex.lock/
 webui/uploaded_files/
 webui/assets/external/
+webui/uccx_download/
 
 # Secrets and per-machine files (the whole .env/ folder holds credentials.env)
 .env/

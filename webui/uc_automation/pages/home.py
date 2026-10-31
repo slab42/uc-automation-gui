@@ -90,7 +90,7 @@ def home() -> rx.Component:
                 rx.vstack(
                     rx.heading(f"Welcome to {APP_NAME}", size="7"),
                     rx.text(
-                        "Unified Communications automation for CUCM, Unity Connection, "
+                        "Unified Communications automation for CUCM, Unity Connection, UCCX, "
                         "CUBE, Webex and RedSky. Pick a platform to get started.",
                         color="var(--gray-11)",
                     ),

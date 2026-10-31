@@ -1,6 +1,6 @@
 import reflex as rx
 
-from .backend import applog
+from .backend import applog, uc_bootable, uccx_store
 from .config import APP_NAME, PLATFORMS
 from .pages.advertised_patterns import advertised_patterns
 from .pages.css import css
@@ -9,9 +9,13 @@ from .pages.cuc_handlers import call_map, delete_handlers, list_handlers
 from .pages.cuc_home import cuc_home
 from .pages.cuc_users import remove_empty, status_check, usage_check
 from .pages.cucm_home import cucm_home
+from .pages.uccx_home import uccx_home
+from .pages.uccx_migrate import migrate as uccx_migrate
+from .pages.uccx_script import script_report as uccx_script_report
 from .pages import redsky_tools as rs_pages
 from .pages.tools_home import tools_home
 from .pages.tts import text_to_ulaw
+from .pages.bootable import make_bootable
 from .pages.cube_lgw import lgw_config
 from .pages.cucm_home_cluster import home_cluster_locator
 from .pages.cube_tools import config_compare, cube_home, mem_status
@@ -44,6 +48,9 @@ from .state.advertised_patterns import AdvertisedPatternsState
 from .state.css import CssState
 from .state.cucm import CucmState
 from .state.cuc import CucState
+from .state.uccx import UccxState
+from .state.uccx_migrate import UccxMigrateState
+from .state.uccx_script import UccxScriptState
 from .state import redsky_tools as rs_state
 from .state.cube import CubeState
 from .state.cube_tools import ConfigCompareState, MemStatusState
@@ -86,17 +93,22 @@ from .state.route_patterns import RoutePatternsState
 from .state.translation_patterns import TranslationPatternsState
 
 applog.prune_if_due()  # apply the log retention settings at startup
+uc_bootable.clean_leftovers()  # temp ISO folders from an earlier crashed run
+uccx_store.clean_leftovers()  # zip export folders from an earlier crashed run
+uccx_store.prune()  # the stored UCCX download, once it is older than a week
 
 app = rx.App(
     head_components=[rx.el.link(rel="icon", href="/slab42.jpg")],
+    api_transformer=[uc_bootable.download_app(), uccx_store.download_app()],  # one-time download routes (Make ISO Bootable, UCCX zip export)
 )
 
 app.add_page(home, route="/", title=APP_NAME)
 for _p in PLATFORMS:
-    if _p.slug in ("cucm", "cuc", "cube", "webex", "redsky", "tools"):
+    if _p.slug in ("cucm", "cuc", "uccx", "cube", "webex", "redsky", "tools"):
         continue
     app.add_page(platform_page(_p), route=f"/{_p.slug}", title=f"{_p.label} | {APP_NAME}")
 app.add_page(tools_home, route="/tools", title=f"Tools | {APP_NAME}")
+app.add_page(make_bootable, route="/tools/make-bootable", title=f"Make ISO Bootable | {APP_NAME}")
 app.add_page(text_to_ulaw, route="/tools/text-to-ulaw", title=f"Text To U-Law Audio | {APP_NAME}")
 app.add_page(cube_home, route="/cube", title=f"CUBE | {APP_NAME}")
 app.add_page(mem_status, route="/cube/mem-status", title=f"CUBE Mem Status | {APP_NAME}",
@@ -150,6 +162,11 @@ for _route, _title, _page, _state in [
                  on_load=[CucState.load_connections, _state.auto_load])
 app.add_page(list_handlers, route="/cuc/list-handlers", title=f"CUC Search | {APP_NAME}",
              on_load=[CucState.load_connections, ListHandlersState.auto_load])
+app.add_page(uccx_home, route="/uccx", title=f"UCCX | {APP_NAME}", on_load=UccxState.load_connections)
+app.add_page(uccx_migrate, route="/uccx/migrate", title=f"UCCX Migrate | {APP_NAME}",
+             on_load=[UccxState.load_connections, UccxMigrateState.load_page])
+app.add_page(uccx_script_report, route="/uccx/script-report", title=f"UCCX Script Report | {APP_NAME}",
+             on_load=[UccxState.load_connections, UccxScriptState.load_page])
 app.add_page(rs_pages.redsky_home, route="/redsky", title=f"RedSky | {APP_NAME}", on_load=RedskyState.load_connections)
 for _route, _title, _page, _state in [
     ("/redsky/buildings-add", "Add Buildings", rs_pages.buildings_add, rs_state.AddBuildingsState),
@@ -179,7 +196,8 @@ app.add_page(
     credentials,
     route="/credentials",
     title=f"Credentials | {APP_NAME}",
-    on_load=[CucmState.load_connections, CucState.load_connections, RedskyState.load_connections,
+    on_load=[CucmState.load_connections, CucState.load_connections, UccxState.load_connections,
+             RedskyState.load_connections,
              CubeState.load_credentials,
              WebexState.on_credentials_load],
 )

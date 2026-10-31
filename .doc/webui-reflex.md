@@ -24,6 +24,7 @@ backend/cucm_routing.py      advertised patterns, partitions, calling search spa
 backend/cucm_hunt.py         hunt pilots, plus hunt list / line group cleanup and the line group dependency check
 backend/cucm_system.py       System: audio codec preference lists, regions, locations, device pools (+ SQL dependency checks)
 backend/cucm_dn.py           directory numbers: move partition, alternate numbers, orphans (SQL)
+backend/uc_bootable.py       Make ISO Bootable: pycdlib El Torito boot record, temp job folder, one-time download route
 backend/tts_ulaw.py          Text To U-Law Audio: gTTS speech, PyAV decode/resample/u-law WAV (all in memory), prompt CSV parsing
 backend/cucm_home.py         Home Cluster Locator: UDS clusterUser lookup per cluster
 backend/cucm_tools.py        tools: EM bulk login/logout/check, phone count by device pool, set user PIN
@@ -33,6 +34,12 @@ backend/organizations.py     customer organizations ([ORG:<name>]), per-organiza
 backend/cucm_connections.py  saved CUCM connections ([CUCM:<name>] in .env/credentials.env)
 backend/cuc_connections.py   saved CUC connections ([CUC:<name>]), same shape as CUCM
 backend/cuc_api.py           CUC REST plumbing: CucError, schema pick, `detect_version` (GET /vmrest/version), CucClient (paged GET, DELETE, users/mailboxes, call handlers, menu entries)
+backend/uccx_connections.py  saved UCCX connections ([UCCX:<name>]: server, username, password, org)
+backend/uccx_api.py          UccxError, UccxClient (admin API /adminapi and Finesse :8445, one login; reads retry, writes never), `self_href`, `local_name`
+backend/uccx_store.py        the one stored download (`webui/uccx_download/`, git-ignored): start/finish/current/delete/prune, zip export, one-time `/uccx-export/<token>` route
+backend/uccx_backup.py       Migrate download: `AREAS` (admin settings, application/CCG/team details, prompt and script files, Finesse settings, phone books, teams)
+backend/uccx_restore.py      Migrate upload: `STEPS` (18 functions, port of the numbered upload scripts) with `Ctx`, `Options` and `Tally`
+backend/uccx_aef.py          UCCX script (.aef) reader (Java serialization, no Cisco classes) and HTML report
 backend/cube_ssh.py          CubeError, Router, parse_routers (router_ip,hostname CSV), run_command (netmiko, cisco_ios, port 22)
 backend/cube_mem.py          Mem Status parsing (free % of RP0/RP1, memory section), CSV export
 backend/cube_config.py       Config Compare: voice section parser, comparator, HTML report
@@ -75,6 +82,8 @@ state/webex_groups.py        PickerMixin (searchable list + selection) and the C
 state/webex_routing.py       WebexSession (login status in the menu bar, checked on page load) + Add Numbers / Call Forward states
 state/webex.py               WebexState: Webex tab on the credentials page and the /webex/callback page
 state/org.py                 OrgState: parent of every platform state (organization list, active organization, organization window)
+state/bootable.py            BootableState: streamed ISO upload, make bootable, download, delete
+pages/bootable.py            Make ISO Bootable page (Tools platform)
 state/tts.py                 TtsState: Text To U-Law Audio
 pages/tts.py                 Text To U-Law Audio page (Tools platform)
 state/cucm_home.py           HomeClusterState: user lookup across the organization's CUCM connections
@@ -90,6 +99,11 @@ state/redsky.py              RedskyState: connection list, active connection, cr
 state/redsky_tools.py        RedskyBulk / RedskyCheck mixins (all handlers) + one tiny state per tool
 components/redsky_nav.py     RedSky top menu bar (GROUPS), connection picker, redsky_page(), need_connection()
 pages/redsky_tools.py        home cards, generic add_page(S, spec) and check_page(S, spec)
+state/uccx.py                UccxState: connection list, active connection, credentials form, Test button
+state/uccx_migrate.py        UccxMigrateState: stored download prompt, download, upload steps and options
+state/uccx_script.py         UccxScriptState: Script Report (stored scripts or uploads, preview, download)
+components/uccx_nav.py       UCCX top menu bar (GROUPS: Migration, Scripts), uccx_page(title, ..., show_instance)
+pages/uccx_home.py, pages/uccx_migrate.py, pages/uccx_script.py   UCCX home cards, Migrate and Script Report pages
 state/cuc.py                 CucState: same for CUC; plus CucRun (RunMixin + failed_results)
 state/cuc_users.py           Status Check, Usage Check, Remove Empty states
 state/cuc_handlers.py        List, Map, Delete states
@@ -162,6 +176,11 @@ uc_automation.py             app + every add_page()
 - Test calls `GET https://<server>/vmrest/version`, takes the major release, picks the closest schema folder under
   `schemas/cuc/<version>/` (only 15.0 today) and saves both. Port 443, basic auth, TLS not verified.
 - Not tested against a real CUC (the version call was checked against a local fake server only).
+
+### UCCX credentials
+
+- Credentials > UCCX works like CUC: `[UCCX:<name>]` with `server`, `username`, `password`, `org`. The same login is used for the admin API
+  (`https://<server>/adminapi`) and Finesse (`https://<server>:8445/finesse/api`). Test lists the skills (proves the login) and saves. No version is detected.
 
 ### CUBE credentials
 
@@ -244,6 +263,21 @@ uc_automation.py             app + every add_page()
   from the two Search CSVs. **Bulk Delete** takes ObjectIds (paste) or a List CSV, shows the list, confirms, then deletes (Search also has Delete Selected).
 - Tool states are `class X(CucState, CucRun)`; per-row results are shown as failures only (`components/cuc_widgets.failures`).
 - Not tested against a real CUC. The backend and the state handlers were run against a local fake vmrest server only.
+
+### UCCX features
+
+- Menu (`components/uccx_nav.GROUPS`, also the `/uccx` home cards): **Migration** = Migrate; **Scripts** = Script Report. Port of the old `uccxTools` scripts
+  (reference only, in the untracked `temp/uccxTools`) plus a reader for `.aef` scripts.
+- **Migrate** (`/uccx/migrate`, `UccxMigrateState`): origin and destination are two saved UCCX connections of the active organization.
+  - **Stored download**: `backend/uccx_store.py` keeps one download in `webui/uccx_download/` (same layout as the old `backup/`: `xml/`, `finesse/`, `scripts/`, `prompts/`, plus `download.json`).
+    Every time the page opens and one is stored, a dialog asks to **Continue With It**, **Export As Zip** or **Delete It** (no other way out). It is also deleted automatically after 7 days (`prune`, at app start). A new download replaces it (confirm first). The zip is built in a temp folder and sent by the one-time route `/uccx-export/<token>` (second Starlette app in `api_transformer`), deleted a minute after the download or after 15 minutes.
+  - **Download** (`uccx_backup.AREAS`, one result row each): Admin Settings, Application, Call Control Group and Team Details, Prompt Files, Script Files, Finesse Layouts And Codes, Finesse Phone Books, Finesse Team Settings. Folder and file names from the server are checked before they become paths. Documents and grammars are not downloaded (the old script had them commented out).
+  - **Upload** (`uccx_restore.STEPS`, run in this order, one result row each): Delete Existing Triggers (off by default), Call Control Groups, Supervisor Role, Skills, Resource Groups, Resources (Agents), Contact Service Queues, Teams, Calendars, Scripts And Prompts, Applications, Triggers, HTTP Triggers, Finesse Call Variable Layouts, Reason Codes, Wrap-Up Codes, Phone Books, Team Settings. A confirm dialog guards it. Things that already exist by name are skipped. A step fails when anything in it failed; the detail names what and the log has every item.
+    Options: keep skill IDs (placeholder skills walk the ID counter up), update CSQs/teams/calendars in place by ID (old 6.5, 7.5, 8.5), and the LAN confirmation that call control group import needs. Call control groups that get a new ID are recorded in `ccg-id-map-<server>.json` in the stored download and the Triggers step uses the new IDs.
+  - Differences from the old scripts: no prompts or `sys.exit`; XML payloads are built with lxml (names are escaped); missing references on the destination fail or skip that item instead of crashing; a team with a missing primary supervisor is really skipped; endless placeholder loops are bounded; Finesse team files are found from the saved team names, not by parsing file names. The old CUCM clean-up and check scripts (`0_2`, `0_3`) are not ported.
+  - Supervisor Role drives the `/appadmin` web pages (form login, CSRF token, user search), the least reliable step. Agents come from CUCM, so Resources only updates agents already on the destination.
+- **Script Report** (`/uccx/script-report`, `UccxScriptState`, `backend/uccx_aef.py`): reads `.aef` scripts from the stored download (search, tick, Create Report) or from an upload, and builds one HTML report each (step types and properties in editor order, variables with values, labels with goto counts, author comments). View shows it in a sandboxed iframe, Download gives the `.html` (a zip for several). An `.aef` is a Java serialization stream; the reader needs no Cisco classes and runs nothing from the file (25 MB limit). Property names and the wiring between steps are not resolved.
+- Not tested against a real UCCX. The download and upload steps were run against an in-memory fake built from a real old backup (every area and step except Supervisor Role, and Finesse team sub-calls); the script reader ran on one real script.
 
 ### Webex login
 
@@ -490,7 +524,7 @@ None of this proves the behavior on a real cluster. Say so when reporting, and t
 - Template CSVs are embedded in code (Download Template buttons); there is no examples folder.
 - Phone delete does not clean up orphaned directory numbers.
 - Phone button template list cannot show the base template (AXL does not return it).
-- Ported: CUCM, CUC (users and call handlers), CUBE (Mem Status, Config Compare), Webex and RedSky. The `Tools` platform (`/tools`, `pages/tools_home.py`) is a card page driven by `components/tools_nav.TOOLS` (Text To U-Law Audio so far; the home search skips a tool already listed under another platform).
+- Ported: CUCM, CUC (users and call handlers), UCCX (Migrate, Script Report), CUBE (Mem Status, Config Compare), Webex and RedSky. The `Tools` platform (`/tools`, `pages/tools_home.py`) is a card page driven by `components/tools_nav.TOOLS` (Text To U-Law Audio so far; the home search skips a tool already listed under another platform).
 
 ## Paste text input
 
@@ -528,3 +562,15 @@ clicking a card header toggles it, and running one pane calls `_focus_pane` to c
 - One Prompt card (file name and text) and Several Prompts (Paste Text first, then CSV, both through `_from_data`). Paste lines are `name, text` (name ends at the
   first tab, pipe or comma); CSV is `Prompt Number,Verbiage` with an optional header. File names are reduced to letters, digits, `.`, `_`, `-`. Text limit 5000 characters.
 - Results use `RunMixin`. Download gives the WAV (one prompt) or a ZIP (several): browser downloads. Log: "Text To U-Law Audio" (names and sizes, never the text).
+
+### Make ISO Bootable (Tools platform)
+
+- `/tools/make-bootable`, `BootableState`, `backend/uc_bootable.py`. Port of `uc-make-bootable/make-bootable.py` (hdiutil mount, cp, mkisofs from cdrtools). Now
+  `pycdlib` opens the ISO directly and adds an El Torito record on `isolinux/isolinux.bin` (boot catalog `isolinux/boot.cat`, load size 4, boot info table: the old
+  mkisofs options) keeping the ISO's Rock Ridge and Joliet facets. Nothing is mounted or unpacked. An ISO that already has a boot record, or has no `isolinux/isolinux.bin`, is refused.
+- The upload uses Reflex's streaming upload (`rx.upload_files_chunk` with a `background=True` handler taking `rx.UploadChunkIterator`), so a multi-GB ISO goes
+  straight to a private temp folder (`uc-bootable-*` under the system temp dir) and is never held in memory. Needs about 2x the ISO size of free temp space.
+- The result is `Bootable_<name>.iso`. It is sent by a one-time route `/bootable/<token>` (`download_app()`, a Starlette app passed to `rx.App(api_transformer=...)`;
+  the token is random and unguessable), and `rx.download(url=...)` starts the browser download. The folder is deleted 60 seconds after that download finishes (so a repeated request, which React dev mode can cause, still works), after 15 minutes if it never
+  starts, on any error, and at app startup (`clean_leftovers`). The upload is deleted as soon as the new ISO is written. Log: "Make ISO Bootable" (sizes, never content).
+- Tested: pycdlib on synthetic ISOs (plain, Rock Ridge, Rock Ridge + Joliet), the download route and its delete, and that the page and route load. Not tested with a real Cisco ISO or a multi-GB upload, and not booted in a VM.

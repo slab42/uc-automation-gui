@@ -11,6 +11,7 @@ from ..state.cuc import CucState
 from ..state.cucm import CucmState
 from ..state.org import OrgState as O
 from ..state.redsky import RedskyState
+from ..state.uccx import UccxState
 from ..state.webex import WebexState
 
 MUTED = "var(--gray-11)"
@@ -47,6 +48,11 @@ PLATFORMS = (
                      [CucState.edit_connection(c["name"]), O.open_platform("cuc")],
                      CucState.delete_connection(c["name"])),
      [CucState.new_connection]),
+    ("uccx", "UCCX", UccxState.org_items,
+     lambda c: _item(c["name"], c["server"] + "  ·  " + c["username"],
+                     [UccxState.edit_connection(c["name"]), O.open_platform("uccx")],
+                     UccxState.delete_connection(c["name"])),
+     [UccxState.new_connection]),
     ("cube", "CUBE", CubeState.org_items,
      lambda c: _item(c["name"], c["username"],
                      [CubeState.edit_credential(c["name"]), O.open_platform("cube")],
@@ -68,6 +74,7 @@ PLATFORMS = (
 _SET_ORG = {
     "cucm": lambda: CucmState.set_form("org", O.org_view),
     "cuc": lambda: CucState.set_form("org", O.org_view),
+    "uccx": lambda: UccxState.set_form("org", O.org_view),
     "cube": lambda: CubeState.set_form("org", O.org_view),
     "webex": lambda: WebexState.set_org_customer(O.org_view),
     "redsky": lambda: RedskyState.set_form("org", O.org_view),
@@ -207,12 +214,12 @@ def _new_org_dialog() -> rx.Component:
 
 
 def organizations_tab(forms: dict) -> rx.Component:
-    """`forms` maps cucm, cuc, cube, webex and redsky to the platform's form (built in credentials.py)."""
+    """`forms` maps cucm, cuc, uccx, cube, webex and redsky to the platform's form (built in credentials.py)."""
     return rx.vstack(
         rx.hstack(
             rx.vstack(
                 rx.heading("Organizations", size="5"),
-                rx.text("Group each customer's platforms. Open an organization to add or change its CUCM, CUC, CUBE, "
+                rx.text("Group each customer's platforms. Open an organization to add or change its CUCM, CUC, UCCX, CUBE, "
                         "Webex and RedSky entries.", size="2", color=MUTED),
                 spacing="1",
                 align="start",

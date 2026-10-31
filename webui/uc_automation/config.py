@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 APP_NAME = "slab42 UC-Automations"
-VERSION = "0.0.1"
+VERSION = "0.0.2"
 
 
 @dataclass(frozen=True)
@@ -18,8 +18,9 @@ class Platform:
 PLATFORMS = [
     Platform("cucm", "CUCM", "Cisco Unified Communications Manager", "phone", available=True),
     Platform("cuc", "CUC", "Cisco Unity Connection", "voicemail", available=True),
+    Platform("uccx", "UCCX", "Cisco Unified Contact Center Express", "headset", available=True),
     Platform("cube", "CUBE", "Cisco Unified Border Element", "router", available=True),
     Platform("webex", "Webex", "Webex Calling / Control Hub", "message-square", available=True),
     Platform("redsky", "RedSky", "RedSky E911 location management", "map-pin", available=True),
-    Platform("tools", "Tools", "Utilities (log search, etc.)", "wrench"),
+    Platform("tools", "Tools", "Cross platform tools and automations", "wrench"),
 ]

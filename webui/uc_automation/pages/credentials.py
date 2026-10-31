@@ -6,6 +6,7 @@ from ..state.cube import CubeState
 from ..state.cucm import CucmState
 from ..state.cuc import CucState
 from ..state.redsky import RedskyState
+from ..state.uccx import UccxState
 from ..state.webex import WebexState
 from .organizations import organizations_tab
 from .webex_credentials import org_form, webex_tab
@@ -32,7 +33,7 @@ def _org_field(S) -> rx.Component:
     )
 
 
-def _saved_row(c, S) -> rx.Component:
+def _saved_row(c, S, tested: bool = True) -> rx.Component:
     return rx.hstack(
         rx.vstack(
             rx.hstack(
@@ -41,7 +42,7 @@ def _saved_row(c, S) -> rx.Component:
                     c["version"] != "",
                     rx.badge("v" + c["version"], variant="soft", color_scheme="green"),
                     rx.badge("not tested", variant="soft", color_scheme="gray"),
-                ),
+                ) if tested else rx.fragment(),
                 align="center",
                 spacing="2",
             ),
@@ -134,7 +135,7 @@ def _form(S, placeholder: str, server_hint: str) -> rx.Component:
     )
 
 
-def _conn_tab(S, placeholder: str, server_hint: str) -> rx.Component:
+def _conn_tab(S, placeholder: str, server_hint: str, tested: bool = True) -> rx.Component:
     return rx.grid(
         _form(S, placeholder, server_hint),
         rx.vstack(
@@ -142,7 +143,7 @@ def _conn_tab(S, placeholder: str, server_hint: str) -> rx.Component:
             rx.cond(
                 S.connections.length() > 0,
                 rx.vstack(
-                    rx.foreach(S.saved_groups, lambda g: org_box(g, lambda c: _saved_row(c, S))),
+                    rx.foreach(S.saved_groups, lambda g: org_box(g, lambda c: _saved_row(c, S, tested))),
                     spacing="2", width="100%"),
                 rx.text("None yet. Fill in the form and test the connection to save one.",
                         color="var(--gray-11)", size="2"),
@@ -163,6 +164,11 @@ def _cucm_tab() -> rx.Component:
 
 def _cuc_tab() -> rx.Component:
     return _conn_tab(CucState, "e.g. lab-cuc", "The Unity Connection server. The REST API is reached on port 443.")
+
+
+def _uccx_tab() -> rx.Component:
+    return _conn_tab(UccxState, "e.g. lab-uccx", "The UCCX server. The admin API is reached on port 443 and Finesse on 8445.",
+                     tested=False)
 
 
 def _redsky_row(c) -> rx.Component:
@@ -403,6 +409,7 @@ def credentials() -> rx.Component:
                 rx.tabs.trigger("Organizations", value="organizations"),
                 rx.tabs.trigger("CUCM", value="cucm"),
                 rx.tabs.trigger("CUC", value="cuc"),
+                rx.tabs.trigger("UCCX", value="uccx"),
                 rx.tabs.trigger("CUBE", value="cube"),
                 rx.tabs.trigger("Webex", value="webex"),
                 rx.tabs.trigger("RedSky", value="redsky"),
@@ -413,6 +420,8 @@ def credentials() -> rx.Component:
                         "cucm": _form(CucmState, "e.g. lab-cucm", "The publisher. AXL is reached on port 8443."),
                         "cuc": _form(CucState, "e.g. lab-cuc",
                                      "The Unity Connection server. The REST API is reached on port 443."),
+                        "uccx": _form(UccxState, "e.g. lab-uccx",
+                                      "The UCCX server. The admin API is reached on port 443 and Finesse on 8445."),
                         "cube": _cube_form(),
                         "webex": org_form(),
                         "redsky": _redsky_form(),
@@ -423,6 +432,7 @@ def credentials() -> rx.Component:
             ),
             rx.tabs.content(rx.box(_cucm_tab(), padding_top="1rem"), value="cucm"),
             rx.tabs.content(rx.box(_cuc_tab(), padding_top="1rem"), value="cuc"),
+            rx.tabs.content(rx.box(_uccx_tab(), padding_top="1rem"), value="uccx"),
             rx.tabs.content(rx.box(_cube_tab(), padding_top="1rem"), value="cube"),
             rx.tabs.content(rx.box(webex_tab(), padding_top="1rem"), value="webex"),
             rx.tabs.content(rx.box(_redsky_tab(), padding_top="1rem"), value="redsky"),

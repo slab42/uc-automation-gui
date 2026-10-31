@@ -10,3 +10,4 @@ SCHEMA_DIR = Path(__file__).resolve().parents[1] / "schemas"
 CUCM_SCHEMA_DIR = SCHEMA_DIR / "cucm"
 CUC_SCHEMA_DIR = SCHEMA_DIR / "cuc"
 LOG_DIR = WEBUI_ROOT / "logs"
+UCCX_DOWNLOAD_DIR = WEBUI_ROOT / "uccx_download"  # the one stored UCCX download (git-ignored, short lived)

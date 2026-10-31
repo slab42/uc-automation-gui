@@ -4,7 +4,8 @@ A platform entry (CUCM, CUC, CUBE, Webex org, RedSky) belongs to an organization
 Entries saved before organizations existed have no `org` and show as Unassigned.
 """
 
-from . import cube_credentials, cuc_connections, cucm_connections, ini_store, redsky_connections, webex_auth
+from . import (cube_credentials, cuc_connections, cucm_connections, ini_store, redsky_connections, uccx_connections,
+               webex_auth)
 from .paths import CREDENTIALS_PATH
 
 UNASSIGNED = "Unassigned"
@@ -32,7 +33,7 @@ def _all_entries() -> list[dict[str, str]]:
     out = []
     for platform, items in (
         ("CUCM", cucm_connections.list_public()), ("CUC", cuc_connections.list_public()),
-        ("CUBE", cube_credentials.list_public()), ("Webex", webex_auth.list_orgs()),
+        ("UCCX", uccx_connections.list_public()), ("CUBE", cube_credentials.list_public()), ("Webex", webex_auth.list_orgs()),
         ("RedSky", redsky_connections.list_public()),
     ):
         out += [{"platform": platform, "name": i["name"], "org": i.get("org", "")} for i in items]

@@ -5,7 +5,7 @@ Guidance for Claude Code (claude.ai/code) in this repository.
 ## Project Overview
 
 slab42 UC-Automations is a Reflex web app (Python backend, generated React frontend) for Unified Communications
-automation: CUCM and CUC (Cisco AXL SOAP via zeep, CUC REST), CUBE routers (SSH via netmiko), Webex Calling (REST) and
+automation: CUCM and CUC (Cisco AXL SOAP via zeep, CUC REST), UCCX (admin and Finesse REST, `.aef` scripts), CUBE routers (SSH via netmiko), Webex Calling (REST) and
 RedSky E911 (REST). There is no CLI. The old CLI scripts and the `gui/` wrapper were removed; see git history.
 
 Run it with `python3 main.py` from the repo root. It creates `webui/.venv` on first run, installs
@@ -21,6 +21,7 @@ Run it with `python3 main.py` from the repo root. It creates `webui/.venv` on fi
   - `requirements.txt` - the only requirements file, `.venv/` is the only virtual environment
   - `credentials.env.EXAMPLE` - template for `.env/credentials.env`
   - `logs/` - one log file per operation (git-ignored)
+  - `uccx_download/` - the one stored UCCX download (git-ignored, short lived)
 - `.env/credentials.env` - credentials for every platform (git-ignored). The Credentials page edits it.
 - `.doc/webui-reflex.md` - the architecture and feature guide. **Read it before touching `webui/`** and update it in the same commit as any structural or feature change.
 - `uc-automation-gui.code-workspace` - the user's editor workspace (git-ignored, leave it alone)
@@ -40,15 +41,15 @@ Run it with `python3 main.py` from the repo root. It creates `webui/.venv` on fi
 
 - A new CUCM list/add/modify/delete resource is: backend functions + a `ResourceSpec` + `class XState(CucmState, CrudMixin)` + a `build_crud_page(...)` config + one `add_page` + one entry in `GROUPS` (`components/cucm_nav.py`). Do not copy the page code. Custom behavior goes through `CrudPageConfig.extra_toolbar` / `extra_dialogs`.
 - A new platform tool follows its platform's nav (`components/<platform>_nav.py` `GROUPS` drives the menu, home cards and home search), a page in `pages/`, a state in `state/` and an `add_page` in `uc_automation.py`.
-- Credentials per platform live in `[<SERVICE>:<name>]` sections of `.env/credentials.env` (`CUCM`, `CUC`, `CUBE`, `WEBEX`, `REDSKY`) through `backend/ini_store.py`.
+- Credentials per platform live in `[<SERVICE>:<name>]` sections of `.env/credentials.env` (`CUCM`, `CUC`, `UCCX`, `CUBE`, `WEBEX`, `REDSKY`) through `backend/ini_store.py`.
 - Check AXL request shapes against `webui/uc_automation/schemas/cucm/<version>/AXLSoap.xsd` with zeep `create_message`.
 
 ## Verifying Changes
 
 - Compile check (fails on any bad page): `cd webui && .venv/bin/reflex export --frontend-only --no-zip`
 - Boot check: `python3 main.py` and confirm the routes return 200. Do not `pkill -f "reflex run"`: the user may have their own instance running on :3000. Stop only the PID you started.
-- Say plainly that nothing was tested against a real CUCM, CUC, router, Webex org or RedSky tenant unless it was. Parsers and request builders can be run on sample data.
+- Say plainly that nothing was tested against a real CUCM, CUC, UCCX, router, Webex org or RedSky tenant unless it was. Parsers and request builders can be run on sample data.
 
 ## Dependencies
 
-`webui/requirements.txt`: `reflex`, `zeep`, `requests`, `lxml`, `urllib3`, `openpyxl` (CUC call tree workbook), `netmiko` (CUBE SSH), `gTTS` and `av` (Text To U-Law Audio: speech plus in-process MP3 decode and u-law encode, no SoX or LAME). Python 3.10 or newer.
+`webui/requirements.txt`: `reflex`, `zeep`, `requests`, `lxml`, `urllib3`, `openpyxl` (CUC call tree workbook), `netmiko` (CUBE SSH), `gTTS` and `av` (Text To U-Law Audio: speech plus in-process MP3 decode and u-law encode, no SoX or LAME), `pycdlib` (Make ISO Bootable, no cdrtools). Python 3.10 or newer.
