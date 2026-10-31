@@ -149,19 +149,31 @@ class ResetPinState(WebexSession, RunMixin, PasteMixin):
             log.close()
 
 
-class CreateWorkspaceState(WebexSession, RunMixin, PasteMixin):
+class WorkspaceCreateMixin(rx.State, mixin=True):
+    """Shared by Add Workspace and Copy Workspace: location list, number and name review, the confirm dialog and the run."""
     form_workspace: str = ""
     form_location: str = ""
-    form_type: str = ""
-    form_capacity: str = ""
     form_number: str = ""
     form_extension: str = ""
     location_names: list[str] = []
     paste_workspace: str = ""
+    number_open: bool = False
+    number_prompt: str = ""
+    number_action: str = "Continue"
+    _pending_rows: list[dict[str, str]] = []
+    _pending_adds: list[dict[str, str]] = []
+    _pending_blocked: dict[int, str] = {}
+    _pending_title: str = ""
+    _pending_slug: str = ""
+    _pending_single: bool = False
 
     @rx.event
     def set_form(self, field: str, value: str):
         setattr(self, f"form_{field}", value)
+
+    @rx.event
+    def set_number_open(self, value: bool):
+        self.number_open = value
 
     @rx.event
     async def load_page(self):
@@ -184,15 +196,164 @@ class CreateWorkspaceState(WebexSession, RunMixin, PasteMixin):
         finally:
             log.close()
 
-    async def _create(self, rows: list[dict[str, str]], log):
+    async def _make_action(self, client, cache: dict[str, str], log):
+        """The function that creates one workspace from a row, or None (after a toast) when it cannot be prepared."""
+        return lambda r: w.create_workspace(client, r, cache)
+
+    async def _create(self, rows: list[dict[str, str]], log, blocked: dict[int, str] | None = None):
         client = await self._connect(log)
         if client is None:
             yield rx.toast.error(self.webex_message)
             return
         cache: dict[str, str] = {}
-        items = [(r["workspace"], lambda r=r: w.create_workspace(client, r, cache)) for r in rows]
+        blocked = blocked or {}
+        action = await self._make_action(client, cache, log)
+        if action is None:
+            return
+
+        def blocker(msg: str):
+            def fail():
+                raise w.WebexError(msg)
+            return fail
+
+        items = [(r["workspace"], blocker(blocked[i]) if i in blocked
+                  else (lambda r=r: action(r))) for i, r in enumerate(rows)]
         async for ev in self._run_items(items, "Creating", log):
             yield ev
+
+    async def _review_numbers(self, rows: list[dict[str, str]]):
+        """Check each row's workspace name and phone number. Returns (adds, blocked), or an error message when the check failed.
+
+        adds: numbers not configured anywhere, to add to the location. blocked: row index -> reason, for workspace
+        names that already exist and numbers that are in use or belong to a different location (never added anyway)."""
+        log = self._webex_log("Check workspaces", "webex-workspace-check")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                return self.webex_message
+            cache: dict[str, str] = {}
+
+            def review():
+                adds: list[dict[str, str]] = []
+                blocked: dict[int, str] = {}
+                seen: dict[str, str] = {}
+                names: set[str] = set()
+                for i, r in enumerate(rows):
+                    key = r["workspace"].strip().lower()
+                    if key in names:
+                        blocked[i] = f"Workspace {r['workspace']} is listed more than once"
+                        continue
+                    names.add(key)
+                    if w.workspace_exists(client, r, cache):
+                        where = f" in {r['location']}" if r["location"] else ""
+                        blocked[i] = f"Workspace {r['workspace']} already exists{where}"
+                        log.info(f"{r['workspace']}: already exists")
+                        continue
+                    status, detail = w.review_row_number(client, r, cache)
+                    if status == "missing":
+                        key = w.normalize_e164(r["number"])
+                        if key not in seen:
+                            seen[key] = r["location"]
+                            adds.append({"number": key, "location": r["location"]})
+                        elif seen[key].lower() != r["location"].lower():
+                            blocked[i] = f"{key} is being added to {seen[key]}, not {r['location']}"
+                    elif status == "inuse":
+                        blocked[i] = f"{w.normalize_e164(r['number'])} is already in use on {detail}"
+                    elif status == "other":
+                        blocked[i] = f"{w.normalize_e164(r['number'])} is configured in {detail}, not {r['location']}"
+                    log.info(f"{r['workspace']}: {status} {detail}".strip())
+                return adds, blocked
+
+            try:
+                return await asyncio.to_thread(review)
+            except UserError as e:
+                log.error(f"The workspace check failed: {e}")
+                return f"The workspaces could not be checked: {e}"
+        finally:
+            log.close()
+
+    @staticmethod
+    def _shorten(items: list[str], limit: int = 8) -> str:
+        more = f" and {len(items) - limit} more" if len(items) > limit else ""
+        return ", ".join(items[:limit]) + more
+
+    async def _begin(self, rows: list[dict[str, str]], title: str, slug: str, single: bool = False):
+        """Check phone numbers first. Ask the user when numbers need adding or belong to another location."""
+        review = await self._review_numbers(rows)
+        if isinstance(review, str):
+            yield rx.toast.error(review)
+            return
+        adds, blocked = review
+        if adds or blocked:
+            self._pending_rows, self._pending_adds, self._pending_blocked = rows, adds, blocked
+            self._pending_title, self._pending_slug, self._pending_single = title, slug, single
+            parts = []
+            if adds:
+                parts.append("Not configured in their location yet: "
+                             + self._shorten([f"{a['number']} ({a['location']})" for a in adds]) + ". "
+                             "Continue to add them to the location first.")
+            if blocked:
+                parts.append(f"{len(blocked)} workspace(s) will be skipped because the workspace already exists, or its phone "
+                             "number is in use or belongs to a different location (nothing is changed or added): "
+                             + self._shorten([f"{rows[i]['workspace']}: {msg}" for i, msg in blocked.items()],
+                                             4) + ".")
+            self.number_prompt = " ".join(parts)
+            self.number_action = "Add Phone Numbers And Continue" if adds else "Continue"
+            self.number_open = True
+            return
+        async for ev in self._run_create(rows, title, slug, {}, [], single):
+            yield ev
+
+    async def _run_create(self, rows, title: str, slug: str, blocked: dict[int, str], adds: list[dict[str, str]],
+                          single: bool):
+        log = self._webex_log(title, slug)
+        try:
+            if adds:
+                client = await self._connect(log)
+                if client is None:
+                    yield rx.toast.error(self.webex_message)
+                    return
+                cache: dict[str, str] = {}
+                blocked = dict(blocked)
+                failed: set[str] = set()
+
+                def add_all():
+                    for a in adds:
+                        try:
+                            w.add_location_number(client, a["number"], find_location_id(client, a["location"], cache))
+                            log.info(f"Added {a['number']} to {a['location']}")
+                        except UserError as e:
+                            log.error(f"Adding {a['number']} to {a['location']} failed: {e}")
+                            failed.add(a["number"])
+
+                await asyncio.to_thread(add_all)
+                for i, r in enumerate(rows):
+                    if r["number"] and w.normalize_e164(r["number"]) in failed:
+                        blocked.setdefault(i, f"{w.normalize_e164(r['number'])} could not be added to {r['location']}")
+            async for ev in self._create(rows, log, blocked):
+                yield ev
+            if single and self.result_fail_count == 0 and self.results:
+                self.form_workspace = ""
+                self.form_number = ""
+                self.form_extension = ""
+            if not single:
+                yield rx.clear_selected_files("workspace_upload")
+        finally:
+            log.close()
+
+    @rx.event
+    async def confirm_numbers(self):
+        """Dialog confirmed: add the missing numbers, then create the workspaces that are not blocked."""
+        self.number_open = False
+        async for ev in self._run_create(self._pending_rows, self._pending_title, self._pending_slug,
+                                         self._pending_blocked, self._pending_adds, self._pending_single):
+            yield ev
+
+
+
+class CreateWorkspaceState(WebexSession, RunMixin, PasteMixin, WorkspaceCreateMixin):
+    form_type: str = ""
+    form_capacity: str = ""
 
     @rx.event
     async def create_single(self):
@@ -202,19 +363,11 @@ class CreateWorkspaceState(WebexSession, RunMixin, PasteMixin):
         if not row["workspace"]:
             yield rx.toast.error("Enter the workspace name.")
             return
-        if row["location"] and self.location_names and row["location"] not in self.location_names:
+        if row["location"] and self.location_names and row["location"].lower() not in {n.lower() for n in self.location_names}:
             yield rx.toast.error("Pick the location from the list, or clear it.")
             return
-        log = self._webex_log("Add workspace", "webex-add-workspace")
-        try:
-            async for ev in self._create([row], log):
-                yield ev
-            if self.result_fail_count == 0 and self.results:
-                self.form_workspace = ""
-                self.form_number = ""
-                self.form_extension = ""
-        finally:
-            log.close()
+        async for ev in self._begin([row], "Add workspace", "webex-add-workspace", single=True):
+            yield ev
 
     @rx.event
     async def create_from_csv(self, files: list[rx.UploadFile]):
@@ -239,14 +392,98 @@ class CreateWorkspaceState(WebexSession, RunMixin, PasteMixin):
         if not rows:
             yield rx.toast.error("The CSV has no data rows.")
             return
-        log = self._webex_log("Add workspaces from CSV", "webex-add-workspaces-csv")
+        async for ev in self._begin(rows, "Add workspaces from CSV", "webex-add-workspaces-csv"):
+            yield ev
+
+
+class CopyWorkspaceState(WebexSession, RunMixin, PasteMixin, WorkspaceCreateMixin):
+    form_source: str = ""
+    form_source_location: str = ""
+    paste_copy: str = ""
+    workspace_names: list[str] = []
+
+    @rx.event
+    async def load_page(self):
+        """Page load: check the login, then list the locations and the workspaces for the search lists."""
+        await self._refresh_session()
+        if not self.webex_ok:
+            return
+        log = self._webex_log("List locations and workspaces", "webex-list-workspaces")
         try:
-            log.info(f"CSV file: {files[0].filename}")
-            async for ev in self._create(rows, log):
-                yield ev
-            yield rx.clear_selected_files("workspace_upload")
+            client = await self._connect(log)
+            if client is None:
+                return
+            try:
+                rows = await asyncio.to_thread(list_locations, client)
+                names = await asyncio.to_thread(w.list_workspace_names, client)
+            except UserError as e:
+                log.error(str(e))
+                return
+            self.location_names = [r["name"] for r in rows]
+            self.workspace_names = names
+            log.info(f"{len(rows)} location(s), {len(names)} workspace(s)")
         finally:
             log.close()
+
+    @rx.event
+    async def copy_single(self):
+        row = {"workspace": self.form_workspace.strip(), "location": self.form_location.strip(), "type": "",
+               "capacity": "", "number": self.form_number.strip(), "extension": self.form_extension.strip()}
+        if not row["workspace"]:
+            yield rx.toast.error("Enter the name of the new workspace.")
+            return
+        async for ev in self._copy([row], "Copy workspace", "webex-copy-workspace", single=True):
+            yield ev
+
+    @rx.event
+    async def copy_from_csv(self, files: list[rx.UploadFile]):
+        async for ev in self._copy_from_csv(files):
+            yield ev
+
+    @rx.event
+    async def copy_from_text(self):
+        async for ev in self._from_paste(self._copy_from_csv, "copy", columns=w.COPY_COLUMNS,
+                                         markers=("workspace",)):
+            yield ev
+
+    async def _copy_from_csv(self, files: list[rx.UploadFile]):
+        if not files:
+            yield rx.toast.error("Choose a CSV file first.")
+            return
+        try:
+            rows = w.parse_workspace_csv(await files[0].read())
+        except ValueError as e:
+            yield rx.toast.error(str(e))
+            return
+        if not rows:
+            yield rx.toast.error("The CSV has no data rows.")
+            return
+        async for ev in self._copy(rows, "Copy workspaces from CSV", "webex-copy-workspaces-csv"):
+            yield ev
+
+    async def _copy(self, rows: list[dict[str, str]], title: str, slug: str, single: bool = False):
+        if not self.form_source.strip():
+            yield rx.toast.error("Enter the name of the workspace to copy.")
+            return
+        for r in rows:
+            if r["location"] and self.location_names and r["location"].lower() not in {n.lower() for n in self.location_names}:
+                yield rx.toast.error(f"Location {r['location']} is not in the list. Pick one from the list, or clear it.")
+                return
+        async for ev in self._begin(rows, title, slug, single=single):
+            yield ev
+
+    async def _make_action(self, client, cache: dict[str, str], log):
+        name, location = self.form_source.strip(), self.form_source_location.strip()
+        try:
+            source = await asyncio.to_thread(w.get_workspace, client, name, location, cache)
+        except UserError as e:
+            log.error(f"Source workspace {name}: {e}")
+            self.results = [{"key": name, "status": "Failed", "detail": str(e)}]
+            return None
+        settings, unread = await asyncio.to_thread(w.read_calling_settings, client, source)
+        log.info(f"Copying from {name}: {len(settings)} calling setting(s) read"
+                 + (f", {len(unread)} could not be read ({', '.join(unread)})" if unread else ""))
+        return lambda r: w.copy_workspace(client, source, r, cache, settings, unread)
 
 
 class AddWorkspaceState(WebexSession, RunMixin, PasteMixin):
@@ -299,7 +536,7 @@ class AddWorkspaceState(WebexSession, RunMixin, PasteMixin):
         if not (row["workspace"] and row["model"] and row["mac"]):
             yield rx.toast.error("Enter the workspace, the model and the MAC address.")
             return
-        if row["location"] and self.location_names and row["location"] not in self.location_names:
+        if row["location"] and self.location_names and row["location"].lower() not in {n.lower() for n in self.location_names}:
             yield rx.toast.error("Pick the location from the list, or clear it.")
             return
         log = self._webex_log("Add device to workspace", "webex-add-device")

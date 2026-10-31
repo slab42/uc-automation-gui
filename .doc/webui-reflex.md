@@ -278,13 +278,20 @@ Webex has no username/password token API, so login is the OAuth authorization co
 - Create CSVs are header based (`name,location,firstName,lastName,phoneNumber,extension,policy,destination,agent1,agent2,...`),
   unlike the scripts' fixed column positions. The queue create no longer sends the script's hardcoded org-specific announcement
   file id: all greetings are DEFAULT.
-- **Users** (Delete Users, Reset PIN), **Reports** (Voicemail: `/webex/voicemail`, one email or every Calling user of a location via the Add Numbers style location datalist; reads `GET /people/{id}/features/voicemail`, shows internal/external and, for external, the destination email; internal message counts are not available to an admin login), **Workspaces** (Add Workspace, Add Device, Migrate), **Locations** (Schedules, E911) are menu groups
+- **Users** (Delete Users, Reset PIN), **Reports** (Voicemail: `/webex/voicemail`, one email or every Calling user of a location via the Add Numbers style location datalist; reads `GET /people/{id}/features/voicemail`, shows internal/external and, for external, the destination email; internal message counts are not available to an admin login), **Workspaces** (Add Workspace, Copy Workspace, Add Device, Migrate), **Locations** (Schedules, E911) are menu groups
   in `webex_nav.GROUPS`. Destructive actions (delete users, migrate, copy/update/remove schedule events, RedSky opt-out) go
   through `tool_widgets.confirm_dialog` (`S.confirm_open`). Delete Users and Migrate are two-step: load/review a plan first,
   then confirm.
 - Add Workspace (`/webex/create-workspace`, `CreateWorkspaceState`): Single Workspace form or Multiple Workspaces (Paste Text / CSV;
   columns workspace, location, type, capacity, number, extension). `POST /workspaces`; a number or extension adds Webex Calling
-  at the location (`supportedDevices` phones). Not tested against a real org.
+  at the location (`supportedDevices` phones). Single and multiple: before creating, a workspace name that already exists (or repeats in the batch) is skipped with a warning, and rows with a location and
+  a number are checked (`review_row_number`). Numbers not configured anywhere prompt to add them to the location first (DID, active,
+  unused); a number that is already assigned (shows what it is in use on) or belongs to a different location is never added, its workspace is skipped and shown as failed. Not tested against a real org.
+- Copy Workspace (`/webex/copy-workspace`, `CopyWorkspaceState`): one existing workspace (name, optional location) is the template;
+  Single Copy or Multiple Copies (Paste Text / CSV; columns workspace, location, number, extension) create new workspaces with its
+  type, capacity, notes, hotdesking status, location and (when the source has Webex Calling and the copy gets a number or extension) its calling settings (`CALLING_SETTINGS`: call forwarding, waiting, caller ID, permissions, intercept, recording, voicemail, DND, ring and selective features; each is a GET on the source then a PUT on the copy, failures are listed in the row detail and do not fail the workspace; numbers, emergency callback number, devices, monitoring, audio greetings and criteria lists are not copied). Numbers and extensions are never copied; without a location a
+  number or extension uses the source's Webex Calling location. Shares the name and number review, confirm dialog and run with Add
+  Workspace through `WorkspaceCreateMixin`. Not tested against a real org.
 - Add Device: `AddDevicesWorkspaces.py` is an unfinished draft (it never runs the CSV loop), so the page implements its
   intent: add a device (`POST /v1/devices`: model, MAC, workspace) to an existing workspace found by display name. CSV is
   `workspace,model,mac[,location]`. It does not create workspaces.

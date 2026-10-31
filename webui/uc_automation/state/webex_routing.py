@@ -208,7 +208,7 @@ class AddNumbersState(WebexSession, RunMixin):
         if not row["locationId"] or not row["phoneNumber"]:
             yield rx.toast.error("Enter the location and the phone number.")
             return
-        if self.location_names and row["locationId"] not in self.location_names:
+        if self.location_names and row["locationId"].lower() not in {n.lower() for n in self.location_names}:
             yield rx.toast.error("Pick the location from the list.")
             return
         log = self._webex_log("Add number to location", "webex-add-number")

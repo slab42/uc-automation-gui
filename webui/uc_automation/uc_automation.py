@@ -30,7 +30,7 @@ from .pages.system import codec_lists, device_pools, locations, regions
 from .pages.webex_routing import add_numbers, call_forward, call_queues, hunt_groups as webex_hunt_groups, virtual_lines, webex_home
 from .pages.webex_locations import e911, schedules
 from .pages.webex_tools import hardware_compatibility
-from .pages.webex_users import add_workspace, create_workspace, delete_users, migrate, reset_pin, voicemail
+from .pages.webex_users import add_workspace, copy_workspace, create_workspace, delete_users, migrate, reset_pin, voicemail
 from .pages.pickup_groups import pickup_groups
 from .pages.route_patterns import route_patterns
 from .pages.translation_patterns import translation_patterns
@@ -63,6 +63,7 @@ from .state.webex_locations import E911State, SchedulesState
 from .state.webex_tools import HardwareCompatState
 from .state.webex_users import (
     AddWorkspaceState,
+    CopyWorkspaceState,
     CreateWorkspaceState,
     DeleteUsersState,
     MigrateState,
@@ -114,11 +115,12 @@ for _route, _title, _page, _state in [
     ("/webex/delete-users", "Delete Users", delete_users, DeleteUsersState),
     ("/webex/reset-pin", "Reset PIN", reset_pin, ResetPinState),
     ("/webex/create-workspace", "Add Workspace", create_workspace, CreateWorkspaceState),
+    ("/webex/copy-workspace", "Copy Workspace", copy_workspace, CopyWorkspaceState),
     ("/webex/add-workspace", "Add Device", add_workspace, AddWorkspaceState),
     ("/webex/voicemail", "Voicemail", voicemail, VoicemailState),
 ]:
     app.add_page(_page, route=_route, title=f"{_title} | {APP_NAME}",
-                 on_load=_state.load_page if _state in (AddWorkspaceState, CreateWorkspaceState, VoicemailState) else _state.on_page_load)
+                 on_load=_state.load_page if _state in (AddWorkspaceState, CopyWorkspaceState, CreateWorkspaceState, VoicemailState) else _state.on_page_load)
 app.add_page(logs, route="/logs", title=f"Logs | {APP_NAME}", on_load=LogsState.on_page_load)
 app.add_page(settings, route="/settings", title=f"Settings | {APP_NAME}", on_load=SettingsState.on_page_load)
 

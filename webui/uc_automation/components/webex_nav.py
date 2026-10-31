@@ -17,6 +17,7 @@ RESET_PIN = "/webex/reset-pin"
 VOICEMAIL = "/webex/voicemail"
 CREATE_WORKSPACE = "/webex/create-workspace"
 ADD_WORKSPACE = "/webex/add-workspace"
+COPY_WORKSPACE = "/webex/copy-workspace"
 MIGRATE = "/webex/migrate"
 SCHEDULES = "/webex/schedules"
 E911 = "/webex/e911"
@@ -40,6 +41,8 @@ GROUPS = [
     ("Workspaces", [
         ("Add Workspace", CREATE_WORKSPACE, "square-plus",
          "Create one workspace, or many from pasted text or a CSV."),
+        ("Copy Workspace", COPY_WORKSPACE, "copy",
+         "Create workspaces that copy the type, capacity and notes of an existing workspace."),
         ("Add Device", ADD_WORKSPACE, "monitor-smartphone", "Add devices to workspaces by MAC address."),
         ("Migrate", MIGRATE, "arrow-right-left", "Move users to another location by phone number."),
     ]),

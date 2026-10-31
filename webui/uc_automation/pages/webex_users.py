@@ -5,6 +5,7 @@ from ..components.webex_nav import webex_page
 from ..components.webex_picker import picker
 from ..state.webex_users import (
     AddWorkspaceState,
+    CopyWorkspaceState,
     CreateWorkspaceState,
     DeleteUsersState,
     MigrateState,
@@ -150,7 +151,7 @@ def create_workspace() -> rx.Component:
                                      on_change=lambda v: S.set_form("location", v)),
                             rx.el.datalist(rx.foreach(S.location_names, lambda n: rx.el.option(value=n)),
                                            id="create-workspace-locations"),
-                        ), "Required when you give a number or extension (the workspace gets Webex Calling)."),
+                        ), "Required when you give a phone number or extension (the workspace gets Webex Calling)."),
                         field("Type (optional)", rx.select(types, value=S.form_type, width="100%",
                                                            placeholder="Not set",
                                                            on_change=lambda v: S.set_form("type", v))),
@@ -196,6 +197,109 @@ def create_workspace() -> rx.Component:
                 ),
                 size="3", width="100%",
             ),
+            confirm_dialog(S, "Check The Phone Numbers", S.number_prompt, S.number_action,
+                           S.confirm_numbers, open_var=S.number_open, set_open=S.set_number_open),
+            run_results(S, "Workspace"),
+            spacing="4", align="start", width="100%",
+        )),
+    )
+
+
+def copy_workspace() -> rx.Component:
+    S = CopyWorkspaceState
+
+    def location_input(value, name: str, list_id: str):
+        return rx.fragment(
+            rx.input(value=value, width="100%", list=list_id, placeholder="Start typing to search",
+                     auto_complete="off", on_change=lambda v: S.set_form(name, v)),
+            rx.el.datalist(rx.foreach(S.location_names, lambda n: rx.el.option(value=n)), id=list_id),
+        )
+
+    return webex_page(
+        "Copy Workspace",
+        need_login(rx.vstack(
+            rx.card(
+                rx.vstack(
+                    rx.heading("Workspace To Copy", size="4"),
+                    rx.grid(
+                        field("Workspace name", rx.fragment(
+                            rx.input(value=S.form_source, width="100%", list="copy-source-workspaces",
+                                     placeholder="Start typing to search", auto_complete="off",
+                                     on_change=lambda v: S.set_form("source", v)),
+                            rx.el.datalist(rx.foreach(S.workspace_names, lambda n: rx.el.option(value=n)),
+                                           id="copy-source-workspaces"),
+                        ),
+                              "Search for an existing workspace. Its type, capacity, notes and calling settings are copied."),
+                        field("Location (optional)", location_input(S.form_source_location, "source_location",
+                                                                    "copy-source-locations"),
+                              "Only needed when two workspaces share a name."),
+                        columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%",
+                    ),
+                    spacing="3", align="start", width="100%",
+                ),
+                size="3", width="100%",
+            ),
+            rx.card(
+                rx.tabs.root(
+                    rx.tabs.list(
+                        rx.tabs.trigger("Single Copy", value="single"),
+                        rx.tabs.trigger("Multiple Copies", value="multiple"),
+                    ),
+                    rx.tabs.content(
+                        rx.vstack(
+                            rx.grid(
+                                field("New workspace name", rx.input(value=S.form_workspace, width="100%",
+                                                                     on_change=lambda v: S.set_form("workspace", v))),
+                                field("Location (optional)", location_input(S.form_location, "location",
+                                                                            "copy-new-locations"),
+                                      "Defaults to the location of the workspace being copied."),
+                                field("Phone number (optional)", rx.input(value=S.form_number, width="100%",
+                                                                          placeholder="+12145550100",
+                                                                          on_change=lambda v: S.set_form("number", v)),
+                                      "Numbers are never copied. Give one, or an extension, to add Webex Calling."),
+                                field("Extension (optional)", rx.input(value=S.form_extension, width="100%",
+                                                                       on_change=lambda v: S.set_form("extension", v))),
+                                columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%",
+                            ),
+                            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("copy", size=16)),
+                                      "Copy Workspace", on_click=S.copy_single, disabled=S.busy),
+                            spacing="3", align="start", width="100%", padding_top="1rem",
+                        ),
+                        value="single",
+                    ),
+                    rx.tabs.content(
+                        rx.box(
+                            paste_csv_tabs(
+                                S.paste_copy, lambda v: S.set_paste("copy", v),
+                                "One new workspace per line, columns separated by tabs (straight from Excel), pipes, "
+                                "semicolons or commas. The header row is optional; without it the order is workspace, "
+                                "location, number, extension (everything after workspace is optional). Every copy "
+                                "uses the workspace named above.",
+                                "Room 101,Dallas,+12145550101,\nRoom 102,Dallas,+12145550102,",
+                                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("copy", size=16)),
+                                          "Copy Workspaces", on_click=S.copy_from_text, disabled=S.busy),
+                                [
+                                    rx.text("Header row required: workspace. location, number and extension are "
+                                            "optional.", size="2", color="var(--gray-11)"),
+                                    code_block("workspace,location,number,extension\n"
+                                               "Room 101,Dallas,+12145550101,\n"),
+                                    csv_dropzone("workspace_upload"),
+                                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
+                                              "Copy Workspaces",
+                                              on_click=S.copy_from_csv(rx.upload_files(upload_id="workspace_upload")),
+                                              disabled=S.busy),
+                                ],
+                            ),
+                            padding_top="1rem", width="100%",
+                        ),
+                        value="multiple",
+                    ),
+                    default_value="single", width="100%",
+                ),
+                size="3", width="100%",
+            ),
+            confirm_dialog(S, "Check The Phone Numbers", S.number_prompt, S.number_action,
+                           S.confirm_numbers, open_var=S.number_open, set_open=S.set_number_open),
             run_results(S, "Workspace"),
             spacing="4", align="start", width="100%",
         )),
