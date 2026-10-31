@@ -15,7 +15,7 @@ def need_login(body: rx.Component) -> rx.Component:
             WebexSession.webex_ok,
             rx.fragment(),
             rx.callout(
-                rx.hstack(rx.text(WebexSession.webex_message), rx.link("Open Credentials", href="/credentials"),
+                rx.hstack(rx.text(WebexSession.webex_message), rx.link("Open Credentials", href="/credentials?tab=webex"),
                           spacing="2"),
                 icon="triangle-alert", color_scheme="red", width="100%",
             ),

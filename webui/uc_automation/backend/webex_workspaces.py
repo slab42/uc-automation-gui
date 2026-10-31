@@ -1,4 +1,4 @@
-"""Webex workspaces: add devices to workspaces, move users to another location by phone number.
+"""Webex workspaces: create workspaces, add devices to workspaces, move users to another location by phone number.
 
 Ported from webex/AddDevicesWorkspaces.py (an unfinished draft: the CSV is workspace, model, MAC here) and
 webex/migration_userWorkspace_location.py (reference only). Not tested against a real org.
@@ -10,11 +10,238 @@ import re
 import time
 
 from .webex_api import WebexClient, WebexError
+from .webex_groups import _list
 from .webex_routing import find_location_id
 
 JOB_TIMEOUT_SECONDS = 180
 JOB_POLL_SECONDS = 5
 MOVE_PATH = "/telephony/config/jobs/person/moveLocation"
+
+
+# --- Create workspaces ---
+
+WORKSPACE_COLUMNS = ("workspace", "location", "type", "capacity", "number", "extension")
+WORKSPACE_TYPES = ("notSet", "focus", "huddle", "meetingRoom", "open", "desk", "other")
+
+
+def parse_workspace_csv(data: bytes) -> list[dict[str, str]]:
+    """Header row required: workspace (display name). location, type, capacity, number and extension are optional."""
+    reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig", errors="replace")))
+    if not reader.fieldnames:
+        raise ValueError("The CSV file is empty.")
+    lookup = {(h or "").strip().lower(): h for h in reader.fieldnames}
+    if "workspace" not in lookup:
+        raise ValueError("The CSV needs a header row with a workspace column "
+                         "(location, type, capacity, number and extension are optional).")
+    rows = []
+    for raw in reader:
+        row = {f: (raw.get(lookup[f]) or "").strip() if f in lookup else "" for f in WORKSPACE_COLUMNS}
+        if any(row.values()):
+            rows.append(row)
+    return rows
+
+
+def build_workspace_body(row: dict[str, str], location_id: str) -> dict:
+    name = row.get("workspace", "").strip()
+    if not name:
+        raise WebexError("The workspace name is required.")
+    body: dict = {"displayName": name}
+    wtype = row.get("type", "").strip()
+    if wtype:
+        match = next((t for t in WORKSPACE_TYPES if t.lower() == wtype.replace(" ", "").lower()), None)
+        if not match:
+            raise WebexError(f"Type '{wtype}' must be one of: {', '.join(WORKSPACE_TYPES)}.")
+        body["type"] = match
+    capacity = row.get("capacity", "").strip()
+    if capacity:
+        if not capacity.isdigit():
+            raise WebexError(f"Capacity '{capacity}' must be a whole number.")
+        body["capacity"] = int(capacity)
+    number = normalize_e164(row.get("number", ""))
+    extension = row.get("extension", "").strip()
+    if number or extension:
+        if not location_id:
+            raise WebexError("A location is required to give the workspace a number or extension.")
+        calling = {"locationId": location_id}
+        if number:
+            calling["phoneNumber"] = number
+        if extension:
+            calling["extension"] = extension
+        body["calling"] = {"type": "webexCalling", "webexCalling": calling}
+        body["supportedDevices"] = "phones"
+    if location_id:
+        body["locationId"] = location_id
+    return body
+
+
+def workspace_exists(c: WebexClient, row: dict[str, str], cache: dict[str, str]) -> bool:
+    """True when a workspace with this name (ignoring case) exists, in the row's location when it has one."""
+    name = row.get("workspace", "").strip()
+    if not name:
+        return False
+    params = {"displayName": name}
+    location_id = ""
+    if row.get("location"):
+        try:
+            location_id = find_location_id(c, row["location"], cache)
+        except WebexError:
+            location_id = ""  # an unknown location fails on its own when the workspace is created
+    if location_id:
+        params["locationId"] = location_id
+    items = c.call("GET", "/workspaces", params).get("items") or []
+    return any((i.get("displayName") or "").strip().lower() == name.lower() for i in items)
+
+
+def review_row_number(c: WebexClient, row: dict[str, str], cache: dict[str, str]) -> tuple[str, str]:
+    """Where the row's phone number stands against its location: (status, detail).
+
+    status is 'none' (nothing to check), 'ok' (already in the location), 'missing' (not configured anywhere) or
+    'other' (configured in a different location, detail is that location's name plus what it is in use on)
+    or 'inuse' (in the location but already assigned, detail is what it is in use on)."""
+    if not (row.get("number") and row.get("location")):
+        return "none", ""
+    try:
+        location_id = find_location_id(c, row["location"], cache)
+    except WebexError:
+        return "none", ""  # an unknown location fails on its own when the workspace is created
+    n = normalize_e164(row["number"])
+    found = c.call("GET", "/telephony/config/numbers", {"phoneNumber": n}).get("phoneNumbers") or []
+    record = next((i for i in found if i.get("phoneNumber") == n), None)
+    if not record:
+        return "missing", ""
+    loc = record.get("location") or {}
+    owner = record.get("owner") or {}
+    used = describe_owner(owner) if owner.get("id") else ""
+    if loc.get("id") == location_id:
+        return ("inuse", used) if used else ("ok", "")
+    where = loc.get("name") or loc.get("id") or "another location"
+    return "other", f"{where} (in use on {used})" if used else where
+
+
+def add_location_number(c: WebexClient, number: str, location_id: str) -> None:
+    """Add a DID, active and unused, to the location (the Add Numbers defaults)."""
+    c.call("POST", f"/telephony/config/locations/{location_id}/numbers", body={
+        "phoneNumbers": [normalize_e164(number)], "numberType": "DID", "numberUsageType": "NONE", "state": "ACTIVE",
+    })
+
+
+def create_workspace(c: WebexClient, row: dict[str, str], cache: dict[str, str]) -> str:
+    location_id = find_location_id(c, row["location"], cache) if row.get("location") else ""
+    body = build_workspace_body(row, location_id)
+    c.call("POST", "/workspaces", body=body)
+    return f"Created workspace {body['displayName']}"
+
+
+# --- Copy a workspace ---
+
+COPY_COLUMNS = ("workspace", "location", "number", "extension")
+
+
+def list_workspace_names(c: WebexClient) -> list[str]:
+    """Display names of every workspace, sorted and without repeats, for the search list."""
+    names = {(i.get("displayName") or "").strip() for i in _list(c, "/workspaces", "items")}
+    return sorted(names - {""}, key=str.lower)
+
+
+# Per-workspace Webex Calling settings that are copied: (label, path under the workspace id). A "/features/..."
+# path is under /workspaces/{id}, the others under /telephony/config/workspaces/{id}. Not copied: numbers,
+# emergency callback number, devices, monitoring members, billing plan and audio greetings (they are specific to
+# the source), and the criteria lists of the selective and ring features.
+CALLING_SETTINGS = (
+    ("Call forwarding", "/features/callForwarding"),
+    ("Call waiting", "/features/callWaiting"),
+    ("Caller ID", "/features/callerId"),
+    ("Incoming permission", "/features/incomingPermission"),
+    ("Outgoing permission", "/features/outgoingPermission"),
+    ("Call intercept", "/features/intercept"),
+    ("Call recording", "/features/callRecordings"),
+    ("Voicemail", "/voicemail"),
+    ("Anonymous call reject", "/anonymousCallReject"),
+    ("Barge in", "/bargeIn"),
+    ("Do not disturb", "/doNotDisturb"),
+    ("Push to talk", "/pushToTalk"),
+    ("Privacy", "/privacy"),
+    ("Call policies", "/callPolicies"),
+    ("Music on hold", "/musicOnHold"),
+    ("Simultaneous ring", "/simultaneousRing"),
+    ("Sequential ring", "/sequentialRing"),
+    ("Selective reject", "/selectiveReject"),
+    ("Selective accept", "/selectiveAccept"),
+    ("Selective forward", "/selectiveForward"),
+    ("Priority alert", "/priorityAlert"),
+)
+READ_ONLY_KEYS = ("id", "orgId")
+
+
+def _settings_url(workspace_id: str, path: str) -> str:
+    return f"/workspaces/{workspace_id}{path}" if path.startswith("/features/") \
+        else f"/telephony/config/workspaces/{workspace_id}{path}"
+
+
+def read_calling_settings(c: WebexClient, source: dict) -> tuple[list[tuple[str, str, dict]], list[str]]:
+    """The source workspace's calling settings as (label, path, body), plus the labels that could not be read.
+    Empty when the source has no Webex Calling."""
+    if (source.get("calling") or {}).get("type") != "webexCalling":
+        return [], []
+    found: list[tuple[str, str, dict]] = []
+    unread: list[str] = []
+    for label, path in CALLING_SETTINGS:
+        try:
+            body = c.call("GET", _settings_url(source["id"], path))
+        except WebexError:
+            unread.append(label)
+            continue
+        found.append((label, path, {k: v for k, v in body.items() if k not in READ_ONLY_KEYS}))
+    return found, unread
+
+
+def apply_calling_settings(c: WebexClient, workspace_id: str, settings: list[tuple[str, str, dict]]) -> list[str]:
+    """PUT each setting to the new workspace. Returns 'label (error)' for the ones that failed."""
+    failed: list[str] = []
+    for label, path, body in settings:
+        try:
+            c.call("PUT", _settings_url(workspace_id, path), body=body)
+        except WebexError as e:
+            failed.append(f"{label} ({e})")
+    return failed
+
+
+def get_workspace(c: WebexClient, name: str, location: str, cache: dict[str, str]) -> dict:
+    """The full record of the workspace to copy, found by display name (and location when two share a name)."""
+    location_id = find_location_id(c, location, cache) if location else ""
+    return c.call("GET", f"/workspaces/{find_workspace_id(c, name, location_id)}")
+
+
+def copy_workspace(c: WebexClient, source: dict, row: dict[str, str], cache: dict[str, str],
+                   settings: list[tuple[str, str, dict]] | None = None, unread: list[str] | None = None) -> str:
+    """Create row['workspace'] with the source's type, capacity and notes. A number or extension must be given
+    for the copy, they are never taken from the source. Without a location the copy stays in the source's
+    location (and floor); a different location drops the floor. The legacy workspaceLocationId is only sent
+    when the source has no locationId, because Webex rejects the two together."""
+    new_location = find_location_id(c, row["location"], cache) if row.get("location") else ""
+    calling_location = ((source.get("calling") or {}).get("webexCalling") or {}).get("locationId", "")
+    location_id = new_location or source.get("locationId") or ""
+    if not location_id and (row.get("number") or row.get("extension")):
+        location_id = calling_location
+    base = {**row, "type": row.get("type") or source.get("type") or "",
+            "capacity": row.get("capacity") or str(source.get("capacity") or "")}
+    body = build_workspace_body(base, location_id)
+    for f in ("notes", "hotdeskingStatus"):
+        if source.get(f):
+            body[f] = source[f]
+    if not new_location and location_id and source.get("floorId"):
+        body["floorId"] = source["floorId"]
+    if not location_id and source.get("workspaceLocationId"):
+        body["workspaceLocationId"] = source["workspaceLocationId"]
+    created = c.call("POST", "/workspaces", body=body)
+    detail = f"Created workspace {body['displayName']} as a copy of {source.get('displayName', '')}"
+    if settings and "calling" in body and created.get("id"):
+        failed = apply_calling_settings(c, created["id"], settings)
+        detail += f". Copied {len(settings) - len(failed)} of {len(settings)} calling setting(s)"
+        failed += [f"{u} (could not be read from the source)" for u in unread or []]
+        if failed:
+            detail += f"; not copied: {'; '.join(failed)}"
+    return detail
 
 
 # --- Add devices to workspaces ---
@@ -107,7 +334,14 @@ def parse_numbers_csv(data: bytes) -> list[str]:
 
 
 def owner_name(owner: dict) -> str:
-    return f"{owner.get('firstName', '')} {owner.get('lastName', '')}".strip() or owner.get("id", "")
+    return (f"{owner.get('firstName', '')} {owner.get('lastName', '')}".strip() or owner.get("name")
+            or owner.get("id", ""))
+
+
+def describe_owner(owner: dict) -> str:
+    """What a number is in use on, e.g. 'Jane Doe (PEOPLE)' or 'Lobby (PLACE)'."""
+    kind = owner.get("type") or "unknown owner type"
+    return f"{owner_name(owner)} ({kind})"
 
 
 def classify(record: dict | None, location_id: str) -> tuple[str, str]:

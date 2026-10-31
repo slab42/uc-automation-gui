@@ -403,7 +403,7 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
                 rx.callout(
                     rx.hstack(
                         rx.text("No CUCM connection is set up yet."),
-                        rx.link("Add one on the Credentials page", href="/credentials"),
+                        rx.link("Add one on the Credentials page", href="/credentials?tab=cucm"),
                         spacing="2",
                     ),
                     icon="info", width="100%",

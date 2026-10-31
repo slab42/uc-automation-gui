@@ -50,7 +50,7 @@ def _connection_picker() -> rx.Component:
         rx.cond(
             RedskyState.has_active,
             instance_select(RedskyState.connection_names, RedskyState.active, RedskyState.select_active),
-            rx.link(rx.button("Add a connection", size="1", variant="soft"), href="/credentials"),
+            rx.link(rx.button("Add a connection", size="1", variant="soft"), href="/credentials?tab=redsky"),
         ),
         align="center",
         spacing="2",
@@ -90,7 +90,7 @@ def need_connection(body: rx.Component) -> rx.Component:
         body,
         rx.callout(
             rx.hstack(rx.text("No RedSky connection is set up yet."),
-                      rx.link("Add one on the Credentials page", href="/credentials"), spacing="2"),
+                      rx.link("Add one on the Credentials page", href="/credentials?tab=redsky"), spacing="2"),
             icon="info", width="100%",
         ),
     )

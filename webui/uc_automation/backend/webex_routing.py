@@ -87,6 +87,15 @@ def find_location_id(c: WebexClient, name: str, cache: dict[str, str]) -> str:
     data = c.call("GET", "/telephony/config/locations", {"name": key, "max": 200})
     items = data.get("locations") or data.get("items") or []
     exact = [i for i in items if (i.get("name") or "").strip().lower() == key.lower()]
+    if not exact:  # the name filter may be case sensitive: match against the full list, ignoring case
+        start = 0
+        while not exact:
+            data = c.call("GET", "/telephony/config/locations", {"max": 200, "start": start})
+            items = data.get("locations") or data.get("items") or []
+            exact = [i for i in items if (i.get("name") or "").strip().lower() == key.lower()]
+            if len(items) < 200:
+                break
+            start += 200
     if len(exact) == 1:
         cache[key] = exact[0]["id"]
     elif len(exact) > 1:

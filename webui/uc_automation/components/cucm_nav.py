@@ -75,7 +75,7 @@ def _connection_picker(on_change, on_org_change) -> rx.Component:
                 align="center",
                 spacing="2",
             ),
-            rx.link(rx.button("Add a connection", size="1", variant="soft"), href="/credentials"),
+            rx.link(rx.button("Add a connection", size="1", variant="soft"), href="/credentials?tab=cucm"),
         ),
         align="center",
         spacing="2",

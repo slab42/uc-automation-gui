@@ -15,7 +15,9 @@ VIRTUAL_LINES = "/webex/virtual-lines"
 DELETE_USERS = "/webex/delete-users"
 RESET_PIN = "/webex/reset-pin"
 VOICEMAIL = "/webex/voicemail"
+CREATE_WORKSPACE = "/webex/create-workspace"
 ADD_WORKSPACE = "/webex/add-workspace"
+COPY_WORKSPACE = "/webex/copy-workspace"
 MIGRATE = "/webex/migrate"
 SCHEDULES = "/webex/schedules"
 E911 = "/webex/e911"
@@ -37,6 +39,10 @@ GROUPS = [
         ("Reset PIN", RESET_PIN, "key-round", "Reset the voicemail PIN of one user or of users in a CSV."),
     ]),
     ("Workspaces", [
+        ("Add Workspace", CREATE_WORKSPACE, "square-plus",
+         "Create one workspace, or many from pasted text or a CSV."),
+        ("Copy Workspace", COPY_WORKSPACE, "copy",
+         "Create workspaces that copy the type, capacity and notes of an existing workspace."),
         ("Add Device", ADD_WORKSPACE, "monitor-smartphone", "Add devices to workspaces by MAC address."),
         ("Migrate", MIGRATE, "arrow-right-left", "Move users to another location by phone number."),
     ]),
@@ -62,7 +68,7 @@ def _status() -> rx.Component:
         rx.cond(
             WebexSession.webex_org_names.length() > 0,
             instance_select(WebexSession.webex_org_names, WebexSession.webex_active, WebexSession.select_webex_org),
-            rx.link(rx.button("Add an org", size="1", variant="soft"), href="/credentials"),
+            rx.link(rx.button("Add an org", size="1", variant="soft"), href="/credentials?tab=webex"),
         ),
         rx.cond(
             WebexSession.webex_login != "",
@@ -75,7 +81,7 @@ def _status() -> rx.Component:
                 rx.badge("Logged in", color_scheme="green"),
                 rx.badge("Login required", color_scheme="red"),
             ),
-            href="/credentials",
+            href="/credentials?tab=webex",
         ),
         align="center",
         spacing="2",
