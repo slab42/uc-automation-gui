@@ -197,8 +197,7 @@ class WebexState(WebexSession):
     async def on_credentials_load(self):
         """Credentials page: load saved logins and orgs, then check the edited login (renewing it if needed)."""
         tab = self.router.page.params.get("tab", "")
-        if tab in ("cucm", "cuc", "cube", "webex", "redsky"):
-            self.cred_tab = tab
+        self.cred_tab = tab if tab in ("cucm", "cuc", "cube", "webex", "redsky") else "organizations"
         self._load_webex()
         if self.login_name not in self.webex_login_names:
             self.login_name = self.webex_login or (self.webex_login_names[0] if self.webex_login_names else "")
@@ -374,6 +373,7 @@ class WebexState(WebexSession):
         if o:
             self.active_org = o.get("org") or orgs.UNASSIGNED
         self.webex_active = name
+        self._remember(name)
         self._load_webex()
         return rx.toast.info(f"{name} is the active Webex org")
 

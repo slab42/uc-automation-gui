@@ -18,6 +18,8 @@ _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,40}$")
 class CucmState(OrgState):
     connections: list[dict[str, str]] = []
     active: str = rx.LocalStorage("")
+    cucm_memory: str = rx.LocalStorage("{}")
+    memory_field = "cucm_memory"
 
     # Form (password is a backend var so it is never sent to the browser)
     form_name: str = ""
@@ -79,7 +81,8 @@ class CucmState(OrgState):
         """Keep the active connection inside the active organization."""
         names = [c["name"] for c in orgs.in_org(self.connections, self.active_org, self.org_names)]
         if names and self.active not in names:
-            self.active = names[0]
+            last = self._recall(self.active_org)
+            self.active = last if last in names else names[0]
         if not names:
             self.active = ""
 
@@ -92,6 +95,7 @@ class CucmState(OrgState):
     @rx.event
     def select_active(self, name: str):
         self.active = name
+        self._remember(name)
 
     @rx.event
     def select_org(self, org: str):

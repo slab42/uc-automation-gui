@@ -239,6 +239,7 @@ class CrudMixin(rx.State, mixin=True):
     @rx.event
     async def switch_connection(self, name: str):
         self.active = name
+        self._remember(name)
         self.items = []
         self.selected = []
         async for ev in self._fetch():

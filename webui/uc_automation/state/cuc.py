@@ -27,6 +27,8 @@ class CucRun(RunMixin, mixin=True):
 class CucState(OrgState):
     connections: list[dict[str, str]] = []
     active: str = rx.LocalStorage("")
+    cuc_memory: str = rx.LocalStorage("{}")
+    memory_field = "cuc_memory"
 
     # Form (password is a backend var so it is never sent to the browser)
     form_name: str = ""
@@ -95,7 +97,8 @@ class CucState(OrgState):
         """Keep the active connection inside the active organization."""
         names = [c["name"] for c in orgs.in_org(self.connections, self.active_org, self.org_names)]
         if names and self.active not in names:
-            self.active = names[0]
+            last = self._recall(self.active_org)
+            self.active = last if last in names else names[0]
         if not names:
             self.active = ""
 
@@ -108,6 +111,7 @@ class CucState(OrgState):
     @rx.event
     def select_active(self, name: str):
         self.active = name
+        self._remember(name)
 
     @rx.event
     def select_org(self, org: str):

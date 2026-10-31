@@ -27,6 +27,8 @@ class WebexSession(OrgState):
     webex_orgs: list[dict[str, str]] = []
     webex_logins: list[dict[str, str]] = []
     webex_active: str = rx.LocalStorage("")  # name of the saved org in use
+    webex_memory: str = rx.LocalStorage("{}")  # JSON: instance last used per customer organization
+    memory_field = "webex_memory"
     webex_ok: bool = False
     webex_message: str = ""
     webex_org: str = ""  # org id of the active org
@@ -61,7 +63,8 @@ class WebexSession(OrgState):
         self.webex_logins = webex_auth.list_logins()
         names = self.webex_org_names
         if names and self.webex_active not in names:
-            self.webex_active = names[0]
+            last = self._recall(self.active_org)
+            self.webex_active = last if last in names else names[0]
         if not names:
             self.webex_active = ""
         active = next((o for o in self.webex_orgs if o["name"] == self.webex_active), None)
@@ -91,6 +94,7 @@ class WebexSession(OrgState):
     def select_webex_org(self, name: str):
         """Switch org. The page reloads so it lists the new org's data."""
         self.webex_active = name
+        self._remember(name)
         return rx.call_script("setTimeout(() => window.location.reload(), 200)")
 
     async def _run_items(self, items, verb: str, log: OpLog, workers: int = WEBEX_WORKERS):

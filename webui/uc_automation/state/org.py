@@ -3,7 +3,9 @@
 Every platform state (CUCM, CUC, CUBE, Webex, RedSky) is a child of OrgState, so the list of organizations and the
 active organization are shared. A platform state filters its saved entries to the active organization."""
 
+import json
 import re
+from typing import ClassVar
 
 import reflex as rx
 
@@ -23,6 +25,24 @@ class OrgState(rx.State):
     new_org_name: str = ""
     org_view: str = ""  # organization shown in the organization window ("" = window closed)
     plat_dialog: str = ""  # platform form open on top of the organization window ("" = none)
+
+    memory_field: ClassVar[str] = ""  # name of the LocalStorage var (JSON text) where a platform state keeps its instance per org
+
+    def _recall(self, org: str) -> str:
+        """The instance last chosen in `org` on this platform ('' when none)."""
+        try:
+            return str(json.loads(getattr(self, self.memory_field) or "{}").get(org, ""))
+        except (ValueError, AttributeError):
+            return ""
+
+    def _remember(self, name: str):
+        """Keep `name` as the instance for the active organization, so it comes back when you return to it."""
+        try:
+            memo = json.loads(getattr(self, self.memory_field) or "{}")
+        except ValueError:
+            memo = {}
+        memo[self.active_org] = name
+        setattr(self, self.memory_field, json.dumps(memo))
 
     def _load_orgs(self):
         self.org_names = orgs.list_names()

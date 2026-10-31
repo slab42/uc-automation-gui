@@ -191,6 +191,7 @@ class PhoneCountState(CucmState):
     @rx.event
     async def switch_connection(self, name: str):
         self.active = name
+        self._remember(name)
         self.pool_rows = []
         self.total_phones = 0
         self.error = ""
