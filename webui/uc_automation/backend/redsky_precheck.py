@@ -9,7 +9,8 @@ from .redsky_api import RedskyClient, RedskyError
 from .redsky_common import normalize
 
 KINDS = ("Buildings", "Locations", "Private IPs")
-BUILDING_COLUMNS = (("name", "Building"), ("address", "Address"), ("status", "Status"), ("detail", "Conflicts With"))
+BUILDING_COLUMNS = (("name", "Input Building"), ("address", "Input Address"), ("status", "Status"),
+                    ("building", "Conflict Building"), ("detail", "Conflict Address"))
 LOCATION_COLUMNS = (("name", "Location"), ("status", "Status"))
 IP_COLUMNS = (("name", "Name"), ("status", "Status"), ("building", "Building"), ("address", "Address"),
               ("detail", "Location"), ("range", "Range"))
@@ -105,8 +106,9 @@ def precheck_buildings(client: RedskyClient, entries: list[tuple[str, str]]) -> 
     """Per Building: does the name exist, then does the address belong to another Building.
 
     Exists (name found, address matches or none given), Exists - Address Differs, Exists - Address Conflict
-    (the address is also on another Building, named in the last column), Address Conflict (new name, address
-    already used), Not Found, Duplicate In List."""
+    (the address is also on another Building), Address Conflict (new name, address already used), Not Found,
+    Duplicate In List. Conflict Building and Conflict Address list the Buildings in conflict (the same-name
+    Building when its address differs, and any other Building on the input address), looked up in RedSky."""
     buildings = client.list_buildings()
     addresses = {id(b): building_address(b) for b in buildings}
     if any(addr for _n, addr in entries) and not any(addresses.values()):
@@ -126,17 +128,21 @@ def precheck_buildings(client: RedskyClient, entries: list[tuple[str, str]]) -> 
         seen.add(key)
         hit = by_name.get(key[0])
         others = [b for b in buildings if address and b is not hit and same_address(address, addresses[id(b)])]
-        clash = ", ".join(dict.fromkeys(b.get("name", "").strip() for b in others))
-        shown = address or (addresses[id(hit)] if hit else "")
+        differs = hit is not None and bool(address) and not same_address(address, addresses[id(hit)])
+        conflicts = ([hit] if differs else []) + others
+
+        def row(status: str) -> dict[str, str]:
+            return _row(name, "; ".join(b.get("name", "").strip() for b in conflicts), status,
+                        "; ".join(addresses[id(b)] for b in conflicts), address=address)
+
         if hit is None:
-            rows.append(_row(name, "", "Address Conflict", clash, address=shown) if others
-                        else _row(name, "", "Not Found", address=shown))
+            rows.append(row("Address Conflict") if others else row("Not Found"))
         elif others:
-            rows.append(_row(name, "", "Exists - Address Conflict", clash, address=shown))
-        elif address and not same_address(address, addresses[id(hit)]):
-            rows.append(_row(name, "", "Exists - Address Differs", address=shown))
+            rows.append(row("Exists - Address Conflict"))
+        elif differs:
+            rows.append(row("Exists - Address Differs"))
         else:
-            rows.append(_row(name, "", "Exists", address=shown))
+            rows.append(row("Exists"))
     return rows
 
 

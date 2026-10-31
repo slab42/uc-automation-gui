@@ -225,10 +225,10 @@ uc_automation.py             app + every add_page()
 - **Check tools** (`check_page`, `CheckSpec`) run on demand, list the problems and Export CSV (browser download).
 - **Import Precheck** (`/redsky/import-precheck`, `PrecheckState`, `page import_precheck`, menu **Tools**) is its own page: a
   Buildings | Locations | Private IPs radio at the top of the input card, above Paste Text (first) and CSV (one radio for both).
-  Buildings: name in the first column, optional full address in the second (tab or `|`); columns Building, Address (as entered, else RedSky's), Status, Conflicts With. The name is
+  Buildings: name in the first column, optional full address in the second (tab or `|`); columns Input Building, Input Address (as entered), Status, Conflict Building, Conflict Address (the conflicting Buildings looked up in RedSky: the same-name Building when its address differs, plus any other Building on the input address; several are joined with `; `). The name is
   checked first, then the address against every other Building (`same_address`: punctuation and street words normalized, RedSky's
   trailing city/state/zip allowed). Status: Exists (name found, address matches or not given), Exists - Address Differs, Exists - Address
-  Conflict, Address Conflict (new name, address already used; Conflicts With names the Building), Not Found, Duplicate In List. The
+  Conflict, Address Conflict (new name, address already used; the Conflict columns name the Building), Not Found, Duplicate In List. The
   Building address field name in RedSky's list response is unverified (`building_address` tries several); with none found the run
   stops and lists the fields so it can be fixed. Locations: Location first, Building second (tab or `|` when pasted, so names may hold commas)
   or `Building / Location`; a Location without a Building matches in any Building. Private IPs: low and high address (tab, `|`, comma,
