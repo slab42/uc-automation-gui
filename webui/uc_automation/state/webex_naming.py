@@ -19,6 +19,10 @@ class NamingCheckState(WebexSession, RunMixin):
     checks: list[dict[str, str]] = []
     filter_status: str = "FAIL"
     confirm_open: bool = False
+    regex_desc: str = ""
+    regex_out: str = ""
+    regex_notes: list[str] = []
+    regex_target: str = "Call Queue"
     _items: list[dict[str, str]] = []
     _rules: dict[str, str] = {}
 
@@ -69,6 +73,37 @@ class NamingCheckState(WebexSession, RunMixin):
                 r["suggestion"] = value
                 r["valid"] = "1" if value and value != r["name"] and n.fits(r["type"], value) and n.matches(
                     self._rules[r["type"]], value, r["location"]) else ""
+
+    @rx.event
+    def set_regex_desc(self, value: str):
+        self.regex_desc = value
+
+    @rx.event
+    def set_regex_out(self, value: str):
+        self.regex_out = value
+
+    @rx.event
+    def set_regex_target(self, value: str):
+        self.regex_target = value
+
+    @rx.event
+    def generate_regex(self):
+        if not self.regex_desc.strip():
+            return rx.toast.error("Describe the rule first.")
+        self.regex_out, self.regex_notes = n.describe_to_regex(self.regex_desc)
+
+    @rx.event
+    def use_regex(self):
+        """Put the generated regex in the Rules box of the chosen item type."""
+        try:
+            rule = n.compile_pattern(self.regex_out)
+        except ValueError as e:
+            return rx.toast.error(str(e))
+        if not rule:
+            return rx.toast.error("There is no regex to use yet.")
+        key = next(k for k, label in n.TYPES.items() if label == self.regex_target)
+        self.patterns[key] = rule
+        return rx.toast.success(f"Set as the {self.regex_target} rule. See the Rules tab.")
 
     @rx.event
     def set_find(self, value: str):
