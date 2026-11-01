@@ -8,6 +8,7 @@ import reflex as rx
 
 from .cucm_nav import cucm_page
 from .search_input import search_input
+from .tool_widgets import run_progress, title_case
 
 
 @dataclass
@@ -145,7 +146,7 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
                 rx.scroll_area(
                     rx.table.root(
                         rx.table.header(rx.table.row(
-                            rx.table.column_header_cell(cfg.noun.capitalize()),
+                            rx.table.column_header_cell(title_case(cfg.noun)),
                             rx.table.column_header_cell("Result"),
                             rx.table.column_header_cell("Detail"),
                         )),
@@ -167,7 +168,7 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
     def progress() -> rx.Component:
         return rx.cond(
             S.busy,
-            rx.hstack(rx.spinner(size="2"), rx.text(S.progress, size="2"), align="center", spacing="2"),
+            run_progress(S),
             rx.fragment(),
         )
 

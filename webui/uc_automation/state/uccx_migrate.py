@@ -105,6 +105,8 @@ class UccxMigrateState(UccxState, RunMixin):
 
     @rx.event
     def delete_stored(self):
+        if self.busy:
+            return
         log = OpLog("Delete stored UCCX download", "uccx-download-delete")
         try:
             log.info(f"Deleting the stored download from {self.stored.get('source', '?')} ({self.stored.get('created', '?')})")
@@ -119,13 +121,16 @@ class UccxMigrateState(UccxState, RunMixin):
     @rx.event
     async def export_stored(self):
         """Zip the stored download and hand it to the browser (served once by /uccx-export/<token>)."""
+        if self.busy:
+            return
         self.busy = True
         self.progress = "Building the zip"
         yield
         log = OpLog("Export UCCX download", "uccx-download-export")
-        job = store.new_export_dir()
+        job = None
         registered = False
         try:
+            job = store.new_export_dir()
             name = await asyncio.to_thread(store.export_zip, job)
             log.info(f"Wrote {name}, {(job / name).stat().st_size:,} bytes")
             token = store.register(job, name)
@@ -135,7 +140,7 @@ class UccxMigrateState(UccxState, RunMixin):
             log.error(str(e))
             yield rx.toast.error(f"Export failed: {e}")
         finally:
-            if not registered:
+            if job is not None and not registered:
                 store.remove_export_dir(job)
             self.busy = False
             self.progress = ""
@@ -145,6 +150,9 @@ class UccxMigrateState(UccxState, RunMixin):
 
     @rx.event
     async def download_all(self):
+        # Run from the replace dialog when a download is stored, straight from the button otherwise.
+        if self.busy or (self.stored and not self.replace_open):
+            return
         self.replace_open = False
         name = self.origin_sel
         conn = uccx_connections.load(name) if name else None
@@ -155,32 +163,49 @@ class UccxMigrateState(UccxState, RunMixin):
         self.progress = "Connecting"
         self.results = []
         self.last_op = "Download"
-        yield
-        log = self._tool_log("Download from UCCX", "uccx-download", conn)
+        started = False
+        log = None
         try:
+            yield
+            log = self._tool_log("Download from UCCX", "uccx-download", conn)
             client = uccx_api.UccxClient(conn)
             try:
                 await asyncio.to_thread(client.check)
             except UserError as e:
                 log.error(f"Connection check failed: {e}")
-                self.busy = False
-                self.progress = ""
                 yield rx.toast.error(str(e))
                 return
-            dest = store.start(conn.name, conn.server)
+            try:
+                dest = store.start(conn.name, conn.server)
+            except OSError as e:
+                log.error(f"Could not prepare the stored download folder: {e}")
+                yield rx.toast.error(f"Could not prepare the stored download folder: {e}")
+                return
             log.info(f"Stored download folder emptied and ready: {dest}")
             items = [(label, partial(fn, client, dest, log)) for _key, label, fn in uccx_backup.AREAS]
-            async for ev in self._run_items(items, "Downloading", log):
-                yield ev
-            store.finish(self.results)
-            self._refresh()
+            started = True
+            yield self._start_run(items, "Downloading", log, then="_after_download")
         finally:
-            log.close()
+            if not started:
+                self.busy = False
+                self.progress = ""
+                self._refresh()
+            if log is not None:
+                log.close()
+
+    def _after_download(self, log: OpLog):
+        try:
+            store.finish(self.results)
+        except OSError as e:
+            log.error(f"Could not record the download result: {e}")
+        self._refresh()
 
     # --- upload to the destination ---
 
     @rx.event
     async def upload_selected(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         name = self.dest_sel
         conn = uccx_connections.load(name) if name else None
@@ -198,9 +223,11 @@ class UccxMigrateState(UccxState, RunMixin):
         self.progress = "Connecting"
         self.results = []
         self.last_op = "Upload"
-        yield
-        log = self._tool_log("Upload to UCCX", "uccx-upload", conn)
+        started = False
+        log = None
         try:
+            yield
+            log = self._tool_log("Upload to UCCX", "uccx-upload", conn)
             log.info(f"Stored download from {self.stored.get('source')} ({self.stored.get('server')}), "
                      f"made {self.stored.get('created')}")
             ctx = restore.Ctx(uccx_api.UccxClient(conn), conn, store.DIR,
@@ -209,13 +236,15 @@ class UccxMigrateState(UccxState, RunMixin):
                 await asyncio.to_thread(ctx.client.check)
             except UserError as e:
                 log.error(f"Connection check failed: {e}")
-                self.busy = False
-                self.progress = ""
                 yield rx.toast.error(str(e))
                 return
             log.info("Steps: " + ", ".join(label for _k, label, _fn in order))
             items = [(label, partial(fn, ctx)) for _k, label, fn in order]
-            async for ev in self._run_items(items, "Uploading", log):
-                yield ev
+            started = True
+            yield self._start_run(items, "Uploading", log)
         finally:
-            log.close()
+            if not started:
+                self.busy = False
+                self.progress = ""
+            if log is not None:
+                log.close()

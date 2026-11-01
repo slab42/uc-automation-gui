@@ -184,7 +184,7 @@ voice class uri {tenant_id} sip
 voice class sip-profiles {tenant_id}
  rule 10 request ANY sip-header SIP-Req-URI modify "sips:(.*)" "sip:\\1"
  rule 20 request ANY sip-header To modify "<sips:(.*)" "<sip:\\1"
- rule 30 request ANY sip-header From modify "<sips:" "<sip:\\1"
+ rule 30 request ANY sip-header From modify "<sips:(.*)" "<sip:\\1"
  rule 40 request ANY sip-header Contact modify "<sips:(.*)>" "<sip:\\1;transport=tls>"
  rule 50 response ANY sip-header To modify "<sips:(.*)" "<sip:\\1"
  rule 60 response ANY sip-header From modify "<sips:(.*)" "<sip:\\1"

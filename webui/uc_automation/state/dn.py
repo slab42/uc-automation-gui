@@ -88,6 +88,9 @@ class MoveDnState(CucmState, CrudMixin):
 
     @rx.event
     async def move_selected(self):
+        # The dialog stays open to show the results, so only the busy flag guards a second click.
+        if self.dialog != "move" or self.busy:
+            return
         conn = self._conn()
         targets = list(self.selected)
         new = self.move_target
@@ -99,15 +102,14 @@ class MoveDnState(CucmState, CrudMixin):
         log = self._open_log("Move selected", conn)
         try:
             log.info(f"Moving {len(targets)} directory number(s) to partition {new}")
-            async for ev in self._run_each(conn, targets, lambda c, t: d.move_dn(c, t, new),
-                                           "Moving", f"Moved to {new}", log):
-                yield ev
-            failed = {r["id"] for r in self.results if r["status"] != "OK"}
-            self.selected = [t for t in targets if t in failed]
-            async for ev in self._fetch(log):
-                yield ev
+            yield self._start_each(conn, targets, lambda c, t, new=new: d.move_dn(c, t, new),
+                                   "Moving", f"Moved to {new}", log, then="_after_run")
         finally:
             log.close()
+
+    def _after_run(self, log):
+        self.selected = [r["id"] for r in self.results if r["status"] != "OK"]
+        return [type(self).fetch]
 
 
 class AlternateNumbersState(CucmState, CrudMixin):
@@ -116,20 +118,23 @@ class AlternateNumbersState(CucmState, CrudMixin):
 
     @rx.event
     async def remove_selected(self):
+        # The dialog stays open to show the results, so only the busy flag guards a second click.
+        if self.dialog != "altconfirm" or self.busy:
+            return
         conn = self._conn()
         targets = list(self.selected)
         if conn is None or not targets:
             return
         log = self._open_log("Remove alternate numbers", conn)
         try:
-            async for ev in self._run_each(conn, targets, d.remove_alt_numbers, "Removing", "Removed", log):
-                yield ev
-            failed = {r["id"] for r in self.results if r["status"] != "OK"}
-            self.selected = [t for t in targets if t in failed]
-            async for ev in self._fetch(log):
-                yield ev
+            yield self._start_each(conn, targets, d.remove_alt_numbers, "Removing", "Removed", log,
+                                   then="_after_run")
         finally:
             log.close()
+
+    def _after_run(self, log):
+        self.selected = [r["id"] for r in self.results if r["status"] != "OK"]
+        return [type(self).fetch]
 
 
 class OrphansState(CucmState, CrudMixin):

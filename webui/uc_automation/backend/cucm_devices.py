@@ -299,16 +299,18 @@ def run_mpp_action(conn: CucmConnection, identifier: str, action: str) -> str:
     from lxml import etree
     name = format_phone_identifier(identifier)
     resp = _call(conn, "getPhone", name=name)
-    model = (resp["return"]["phone"].get("model") or "") if resp["return"] else ""
+    model = (getattr(resp["return"]["phone"], "model", None) or "") if resp["return"] else ""
     load = mpp_load_for_model(model, action)
     if not load:
         raise AxlError(f"No phone load mapping for model '{model}'")
     kwargs = {"loadInformation": load}
     if action == "prep":
-        vendor = etree.Element("vendorConfig")
-        etree.SubElement(vendor, "loadServer").text = MPP_LOAD_SERVER
-        etree.SubElement(vendor, "peerFirmwareSharing").text = "0"
-        kwargs["vendorConfig"] = vendor
+        # zeep adds the <vendorConfig> wrapper itself, so pass only its children
+        load_server = etree.Element("loadServer")
+        load_server.text = MPP_LOAD_SERVER
+        sharing = etree.Element("peerFirmwareSharing")
+        sharing.text = "0"
+        kwargs["vendorConfig"] = {"_value_1": [load_server, sharing]}
     _call(conn, "updatePhone", name=name, **kwargs)
     try:
         _call(conn, "resetPhone", name=name)

@@ -6,12 +6,17 @@ from datetime import datetime
 import reflex as rx
 
 from ..backend import cuc_api, cuc_users as u
+from ..backend.applog import OpLog
 from ..backend.paste import no_at_or_digit
 from .cuc import CucRun, CucState
 from .webex_routing import PasteMixin
 
 PREVIEW_LIMIT = 500
 _PASTE = {"columns": ("extension",), "flatten": True, "header_if": no_at_or_digit}
+
+# What a background run collects for its after-step, keyed by RunMixin._job_key(). Kept out of state: the workers
+# fill it while the run is going.
+_COLLECTED: dict[tuple[str, str], dict] = {}
 
 
 def _stamp() -> str:
@@ -33,6 +38,8 @@ class _Lookup(CucRun, PasteMixin, mixin=True):
         return max(0, len(self.rows) - PREVIEW_LIMIT)
 
     async def _lookup(self, files, make_row, title: str, slug: str, upload_id: str):
+        if self.busy:  # a second run would replace this one's collected rows
+            return
         conn = self._conn()
         if conn is None:
             yield rx.toast.error("Add a CUC connection first.")
@@ -61,12 +68,15 @@ class _Lookup(CucRun, PasteMixin, mixin=True):
 
             self.rows = []
             items = [(ext, lambda ext=ext: one(ext)) for ext in extensions]
-            async for ev in self._run_items(items, "Checking", log):
-                yield ev
-            self.rows = found
-            yield rx.clear_selected_files(upload_id)
+            _COLLECTED[self._job_key()] = {"found": found, "upload_id": upload_id}
+            yield self._start_run(items, "Checking", log, then="_after_lookup")
         finally:
             log.close()
+
+    def _after_lookup(self, log: OpLog):
+        out = _COLLECTED.pop(self._job_key(), {})
+        self.rows = out.get("found", [])
+        return [rx.clear_selected_files(out["upload_id"])] if "upload_id" in out else None
 
 
 class AllRows(CucRun, mixin=True):
@@ -279,6 +289,8 @@ class RemoveEmptyState(CucState, PasteMixin, AllRows):
     @rx.event
     async def delete_selected(self):
         """All users tab: delete the user accounts ticked in the list, then reload it."""
+        if not self.confirm_all_open or self.busy:
+            return
         self.confirm_all_open = False
         conn = self._conn()
         if conn is None:
@@ -292,12 +304,12 @@ class RemoveEmptyState(CucState, PasteMixin, AllRows):
             log.info(f"{len(rows)} user account(s) ticked in the list")
             client = cuc_api.CucClient(conn)
             items = [(r["dtmfAccessId"] or r["alias"], lambda r=r: u.delete_empty(client, r["uri"])) for r in rows]
-            async for ev in self._run_items(items, "Deleting", log):
-                yield ev
+            yield self._start_run(items, "Deleting", log, then="_after_delete_selected")
         finally:
             log.close()
-        async for ev in self._load_all():
-            yield ev
+
+    def _after_delete_selected(self, log: OpLog):
+        return [type(self).load_all]
 
     @rx.var
     def shown_empty(self) -> list[dict[str, str]]:
@@ -330,6 +342,8 @@ class RemoveEmptyState(CucState, PasteMixin, AllRows):
             yield ev
 
     async def _scan(self, files):
+        if self.busy:  # a second run would replace this one's collected rows
+            return
         conn = self._conn()
         if conn is None:
             yield rx.toast.error("Add a CUC connection first.")
@@ -363,17 +377,26 @@ class RemoveEmptyState(CucState, PasteMixin, AllRows):
 
             self._reset_plan()
             items = [(ext, lambda ext=ext: one(ext)) for ext in extensions]
-            async for ev in self._run_items(items, "Checking", log):
-                yield ev
-            self.empty, self.keep, self._uris = empty, keep, uris
-            self.scanned, self.scan_conn = len(extensions), conn.name
-            log.info(f"{len(empty)} empty, {len(keep)} with data, {self.result_fail_count} not checked")
-            yield rx.clear_selected_files("empty_upload")
+            _COLLECTED[self._job_key()] = {"empty": empty, "keep": keep, "uris": uris,
+                                           "scanned": len(extensions), "conn": conn.name}
+            yield self._start_run(items, "Checking", log, then="_after_scan")
         finally:
             log.close()
 
+    def _after_scan(self, log: OpLog):
+        out = _COLLECTED.pop(self._job_key(), None)
+        if out is None:
+            return None
+        self.empty, self.keep, self._uris = out["empty"], out["keep"], out["uris"]
+        self.scanned, self.scan_conn = out["scanned"], out["conn"]
+        unchecked = self.scanned - len(self.empty) - len(self.keep)  # failed or not run (cancelled)
+        log.info(f"{len(self.empty)} empty, {len(self.keep)} with data, {unchecked} not checked")
+        return [rx.clear_selected_files("empty_upload")]
+
     @rx.event
     async def run_delete(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         conn = self._conn()
         if conn is None or not self.empty:
@@ -384,13 +407,18 @@ class RemoveEmptyState(CucState, PasteMixin, AllRows):
         log = self._tool_log("Delete empty mailbox users", "cuc-remove-empty-delete", conn)
         try:
             client = cuc_api.CucClient(conn)
-            items = [(r["dtmfAccessID"], lambda r=r: u.delete_empty(client, self._uris[r["dtmfAccessID"]]))
+            uris = dict(self._uris)
+            items = [(r["dtmfAccessID"], lambda r=r: u.delete_empty(client, uris[r["dtmfAccessID"]]))
                      for r in self.empty]
-            async for ev in self._run_items(items, "Deleting", log):
-                yield ev
-            self.empty, self._uris = [], {}
+            yield self._start_run(items, "Deleting", log, then="_after_run_delete")
         finally:
             log.close()
+
+    def _after_run_delete(self, log: OpLog):
+        # Keep the rows not deleted (failed, or not run after Cancel) so the review still lists them.
+        done = {r["key"] for r in self.results if r["status"] == "OK"}
+        self.empty = [r for r in self.empty if r["dtmfAccessID"] not in done]
+        self._uris = {k: v for k, v in self._uris.items() if k not in done}
 
     @rx.event
     def export_keep(self):

@@ -18,6 +18,7 @@ from ..backend.applog import OpLog
 from ..backend.cucm_axl import AxlError
 from ..backend.cucm_connections import CucmConnection
 from ..backend.keys import KEY_SEP, split_key
+from .run_mixin import RunMixin
 
 
 DISPLAY_LIMIT = 500  # rows rendered at once; search and select-all still cover every match
@@ -80,7 +81,7 @@ def parse_csv(data: bytes, spec: ResourceSpec) -> list[dict[str, str]]:
     return rows
 
 
-class CrudMixin(rx.State, mixin=True):
+class CrudMixin(RunMixin, mixin=True):
     items: list[dict[str, str]] = []
     search: str = ""
     selected: list[str] = []
@@ -88,13 +89,11 @@ class CrudMixin(rx.State, mixin=True):
     error: str = ""
     loaded_for: str = ""
 
-    dialog: str = ""  # "", "add", "import", "bulk", "confirm", "result"
-    busy: bool = False
-    progress: str = ""
-    results: list[dict[str, str]] = []
+    dialog: str = ""  # "", "add", "import", "bulk", "confirm", "result"  (busy/progress/results: RunMixin)
 
     new_form: dict[str, str] = {}
     add_error: str = ""
+    _upload_id: str = ""  # upload box to clear after a CSV run
 
     # Subclasses implement this (not an event handler, not a var).
     def _spec(self) -> ResourceSpec:
@@ -136,14 +135,6 @@ class CrudMixin(rx.State, mixin=True):
     @rx.var
     def bulk_template_text(self) -> str:
         return self._spec().bulk_template_csv
-
-    @rx.var
-    def result_ok_count(self) -> int:
-        return sum(1 for r in self.results if r["status"] == "OK")
-
-    @rx.var
-    def result_fail_count(self) -> int:
-        return sum(1 for r in self.results if r["status"] != "OK")
 
     # --- helpers ---
 
@@ -193,32 +184,20 @@ class CrudMixin(rx.State, mixin=True):
             if own:
                 log.close()
 
-    async def _run_each(self, conn: CucmConnection, targets: list, op, verb: str, done: str, log: OpLog):
-        """Run op(conn, target) for each target in a thread, recording a result row (and a log line) per target."""
-        key = self._spec().key
-        log.info(f"{verb}: {len(targets)} target(s)")
-        self.busy = True
-        self.results = []
-        for i, t in enumerate(targets, 1):
-            self.progress = f"{verb} {i} of {len(targets)}"
-            yield
-            label = display_key(self._spec(), t) if isinstance(t, str) else row_label(self._spec(), t)
-            rid = t if isinstance(t, str) else t.get(key, label)
-            try:
-                ret = await asyncio.to_thread(op, conn, t)
-                detail = ret if isinstance(ret, str) and ret else done
-                self.results.append({"key": label, "id": rid, "status": "OK", "detail": detail})
-                log.info(f"{label}: OK - {detail}")
-            except AxlError as e:
-                self.results.append({"key": label, "id": rid, "status": "Failed", "detail": str(e)})
-                log.error(f"{label}: Failed - {e}")
-            except Exception as e:
-                self.results.append({"key": label, "id": rid, "status": "Failed", "detail": f"Unexpected error: {e}"})
-                log.error(f"{label}: Failed unexpectedly - {e!r}")
-        log.info(f"{verb} finished: {sum(1 for r in self.results if r['status'] == 'OK')} OK, "
-                 f"{sum(1 for r in self.results if r['status'] != 'OK')} failed")
-        self.progress = ""
-        self.busy = False
+    def _start_each(self, conn: CucmConnection, targets: list, op, verb: str, done: str, log: OpLog, then: str):
+        """Queue op(conn, target) for each target as a background run (RunMixin); rows carry the target id."""
+        spec = self._spec()
+
+        def item(t):
+            label = display_key(spec, t) if isinstance(t, str) else row_label(spec, t)
+            rid = t if isinstance(t, str) else t.get(spec.key, label)
+
+            def fn():
+                ret = op(conn, t)
+                return ret if isinstance(ret, str) and ret else done
+            return label, fn, {"id": rid}
+
+        return self._start_run([item(t) for t in targets], verb, log, then=then)
 
     # --- loading ---
 
@@ -312,25 +291,31 @@ class CrudMixin(rx.State, mixin=True):
         conn = self._conn()
         if conn is None:
             return
+        if self.busy:
+            return
         targets = list(self.selected)
         log = self._open_log("Delete selected", conn)
         try:
-            async for ev in self._run_each(conn, targets, self._spec().remove_fn, "Removing", "Removed", log):
-                yield ev
-            failed = {r["id"] for r in self.results if r["status"] != "OK"}
-            self.selected = [s for s in targets if s in failed]
-            self.dialog = "result" if failed else ""
-            async for ev in self._fetch(log):
-                yield ev
+            yield self._start_each(conn, targets, self._spec().remove_fn, "Removing", "Removed", log,
+                                   then="_after_delete_selected")
         finally:
             log.close()
-        if failed:
-            yield rx.toast.warning(f"{len(failed)} removal(s) failed")
-        else:
-            yield rx.toast.success(f"Removed {len(targets)} {self._spec().noun}(s)")
+
+    def _after_delete_selected(self, log: OpLog):
+        failed = {r["id"] for r in self.results if r["status"] != "OK"}
+        self.selected = [s for s in self.selected if s in failed]
+        self.dialog = "result" if failed else ""
+        done = (rx.toast.warning(f"{len(failed)} removal(s) failed") if failed
+                else rx.toast.success(f"Removed {len(self.results)} {self._spec().noun}(s)"))
+        return [type(self).fetch, done]
+
+    def _after_bulk_run(self, log: OpLog):
+        return [rx.clear_selected_files(self._upload_id), type(self).fetch]
 
     @rx.event
     async def bulk_delete(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         conn = self._conn()
         if conn is None or not files:
             yield rx.toast.error("Choose a CSV file first.")
@@ -350,11 +335,8 @@ class CrudMixin(rx.State, mixin=True):
                 log.error("CSV has no targets")
                 yield rx.toast.error(f"No {spec.noun}s found in the CSV.")
                 return
-            async for ev in self._run_each(conn, targets, spec.remove_fn, "Removing", "Removed", log):
-                yield ev
-            yield rx.clear_selected_files("bulk_upload")
-            async for ev in self._fetch(log):
-                yield ev
+            self._upload_id = "bulk_upload"
+            yield self._start_each(conn, targets, spec.remove_fn, "Removing", "Removed", log, then="_after_bulk_run")
         finally:
             log.close()
 
@@ -399,6 +381,8 @@ class CrudMixin(rx.State, mixin=True):
     # --- import ---
 
     async def _import(self, files: list[rx.UploadFile], mode: str):
+        if self.busy:
+            return
         conn = self._conn()
         if conn is None or not files:
             yield rx.toast.error("Choose a CSV file first.")
@@ -418,12 +402,10 @@ class CrudMixin(rx.State, mixin=True):
                 log.error("CSV has no data rows")
                 yield rx.toast.error("The CSV has no data rows.")
                 return
-            async for ev in self._run_each(conn, rows, spec.add_fn if add else spec.update_fn,
-                                           "Adding" if add else "Modifying", "Added" if add else "Modified", log):
-                yield ev
-            yield rx.clear_selected_files("import_upload")
-            async for ev in self._fetch(log):
-                yield ev
+            self._upload_id = "import_upload"
+            yield self._start_each(conn, rows, spec.add_fn if add else spec.update_fn,
+                                   "Adding" if add else "Modifying", "Added" if add else "Modified", log,
+                                   then="_after_bulk_run")
         finally:
             log.close()
 

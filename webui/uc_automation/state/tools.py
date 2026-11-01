@@ -60,6 +60,8 @@ class EmBulkState(CucmState, _RunMixin):
 
     @rx.event
     async def run_em(self, files: list[rx.UploadFile]):
+        if self.busy:  # a second click queued behind a run that already started
+            return
         conn = self._conn()
         mode = self.em_mode
         if not files:
@@ -94,12 +96,13 @@ class EmBulkState(CucmState, _RunMixin):
                           lambda r=r: t.em_request(server, "login", r["device"], r["user"], r["pin"])) for r in rows]
             else:
                 items = [(r["device"], lambda r=r: t.em_request(server, "logout", r["device"])) for r in rows]
-            async for ev in self._run_items(items, {"login": "Logging in", "logout": "Logging out",
-                                                    "check": "Checking"}[mode], log):
-                yield ev
-            yield rx.clear_selected_files("em_upload")
+            yield self._start_run(items, {"login": "Logging in", "logout": "Logging out", "check": "Checking"}[mode],
+                                  log, then="_after_em")
         finally:
             log.close()
+
+    def _after_em(self, log: OpLog) -> list:
+        return [rx.clear_selected_files("em_upload")]
 
 
 class PhoneCountState(CucmState):
@@ -225,6 +228,8 @@ class SetPinState(CucmState, _RunMixin):
 
     @rx.event
     async def set_single(self):
+        if self.busy:
+            return
         conn = self._conn()
         user, pin = self.pin_user, self._pin
         if conn is None:
@@ -234,17 +239,21 @@ class SetPinState(CucmState, _RunMixin):
             return
         log = self._tool_log("Set user PIN", "set-user-pin", conn)
         try:
-            async for ev in self._run_items([(user, lambda: t.set_user_pin(conn, user, pin))], "Setting PIN", log):
-                yield ev
-            if self.result_fail_count == 0:
-                self._pin = ""
-                self.pin_user = ""
-                self.pin_key += 1
+            yield self._start_run([(user, lambda: t.set_user_pin(conn, user, pin))], "Setting PIN", log,
+                                  then="_after_set_single")
         finally:
             log.close()
 
+    def _after_set_single(self, log: OpLog) -> None:
+        if self.results and self.result_fail_count == 0:
+            self._pin = ""
+            self.pin_user = ""
+            self.pin_key += 1
+
     @rx.event
     async def set_from_csv(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         conn = self._conn()
         if conn is None:
             return
@@ -263,8 +272,9 @@ class SetPinState(CucmState, _RunMixin):
         try:
             log.info(f"CSV file: {files[0].filename}")
             items = [(r["user"], lambda r=r: t.set_user_pin(conn, r["user"], r["pin"])) for r in rows]
-            async for ev in self._run_items(items, "Setting PIN", log):
-                yield ev
-            yield rx.clear_selected_files("pin_upload")
+            yield self._start_run(items, "Setting PIN", log, then="_after_set_from_csv")
         finally:
             log.close()
+
+    def _after_set_from_csv(self, log: OpLog) -> list:
+        return [rx.clear_selected_files("pin_upload")]

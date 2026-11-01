@@ -88,6 +88,8 @@ class NamingCheckState(WebexSession, RunMixin):
 
     @rx.event
     async def run_check(self):
+        if self.busy or self.checking:
+            return
         try:
             rules = {k: n.compile_pattern(v) for k, v in self.patterns.items()}
             if self.find:
@@ -118,7 +120,7 @@ class NamingCheckState(WebexSession, RunMixin):
                 return
             self._items = items
             self._rules = rules
-            self.checks = n.check_rows(items, rules, self.find, self.replace)
+            self.checks = await asyncio.to_thread(n.check_rows, items, rules, self.find, self.replace)
             for r in self.checks:
                 if r["status"] == "FAIL":
                     log.warning(f"{r['label']} '{r['name']}' ({r['location']}): {r['reason']}"
@@ -131,8 +133,10 @@ class NamingCheckState(WebexSession, RunMixin):
 
     @rx.event
     async def rename_all(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
-        todo = [r for r in self.checks if r["valid"]]
+        todo = [dict(r) for r in self.checks if r["valid"]]
         if not todo:
             yield rx.toast.error("No item has a valid suggested name.")
             return
@@ -144,11 +148,9 @@ class NamingCheckState(WebexSession, RunMixin):
                 return
             items = [(f"{r['label']}: {r['name']}", lambda r=r: n.rename(client, r, r["suggestion"]))
                      for r in todo]
-            async for ev in self._run_items(items, "Renaming", log):
-                yield ev
+            yield self._start_run(items, "Renaming", log)
         finally:
             log.close()
-            self.busy = False
 
     @rx.event
     def export_csv(self):

@@ -67,6 +67,8 @@ class DeleteUsersState(WebexSession, RunMixin, PasteMixin):
 
     @rx.event
     async def run_delete(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         emails = list(self.emails)
         if not emails:
@@ -79,11 +81,12 @@ class DeleteUsersState(WebexSession, RunMixin, PasteMixin):
                 yield rx.toast.error(self.webex_message)
                 return
             items = [(e, lambda e=e: u.delete_user(client, e)) for e in emails]
-            async for ev in self._run_items(items, "Deleting", log):
-                yield ev
-            self.emails, self.file_name = [], ""
+            yield self._start_run(items, "Deleting", log, then="_after_delete")
         finally:
             log.close()
+
+    def _after_delete(self, log):
+        self.emails, self.file_name = [], ""
 
 
 class ResetPinState(WebexSession, PanesMixin, RunMixin, PasteMixin):
@@ -94,29 +97,35 @@ class ResetPinState(WebexSession, PanesMixin, RunMixin, PasteMixin):
     def set_email(self, value: str):
         self.email = value.strip()
 
-    async def _reset(self, emails: list[str], log):
+    async def _reset(self, emails: list[str], log, then: str):
         client = await self._connect(log)
         if client is None:
             yield rx.toast.error(self.webex_message)
             return
         items = [(e, lambda e=e: u.reset_pin(client, e)) for e in emails]
-        async for ev in self._run_items(items, "Resetting", log):
-            yield ev
+        yield self._start_run(items, "Resetting", log, then=then)
 
     @rx.event
     async def reset_single(self):
+        if self.busy:
+            return
         if not self.email:
             yield rx.toast.error("Enter the user's email address.")
             return
         self._focus_pane(True)
         log = self._webex_log("Reset user PIN", "webex-reset-pin")
         try:
-            async for ev in self._reset([self.email], log):
+            async for ev in self._reset([self.email], log, "_after_reset_single"):
                 yield ev
-            if self.result_fail_count == 0 and self.results:
-                self.email = ""
         finally:
             log.close()
+
+    def _after_reset_single(self, log):
+        if self.result_fail_count == 0 and self.results:
+            self.email = ""
+
+    def _after_reset_csv(self, log):
+        return [rx.clear_selected_files("pin_upload")]
 
     @rx.event
     async def reset_from_csv(self, files: list[rx.UploadFile]):
@@ -130,6 +139,8 @@ class ResetPinState(WebexSession, PanesMixin, RunMixin, PasteMixin):
             yield ev
 
     async def _reset_from_csv(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         if not files:
             yield rx.toast.error("Choose a CSV file first.")
             return
@@ -145,9 +156,10 @@ class ResetPinState(WebexSession, PanesMixin, RunMixin, PasteMixin):
         log = self._webex_log("Reset user PINs from CSV", "webex-reset-pin-csv")
         try:
             log.info(f"CSV file: {files[0].filename}")
-            async for ev in self._reset(emails, log):
+            async for ev in self._reset(emails, log, "_after_reset_csv"):
                 yield ev
-            yield rx.clear_selected_files("pin_upload")
+            if not self.busy:  # no run was started (login failed): clear the upload now
+                yield rx.clear_selected_files("pin_upload")
         finally:
             log.close()
 
@@ -169,6 +181,7 @@ class WorkspaceCreateMixin(rx.State, mixin=True):
     _pending_title: str = ""
     _pending_slug: str = ""
     _pending_single: bool = False
+    _create_single: bool = False  # the running create came from the one-workspace form
 
     @rx.event
     def set_form(self, field: str, value: str):
@@ -221,8 +234,7 @@ class WorkspaceCreateMixin(rx.State, mixin=True):
 
         items = [(r["workspace"], blocker(blocked[i]) if i in blocked
                   else (lambda r=r: action(r))) for i, r in enumerate(rows)]
-        async for ev in self._run_items(items, "Creating", log):
-            yield ev
+        yield self._start_run(items, "Creating", log, then="_after_create")
 
     async def _review_numbers(self, rows: list[dict[str, str]]):
         """Check each row's workspace name and phone number. Returns (adds, blocked), or an error message when the check failed.
@@ -333,23 +345,35 @@ class WorkspaceCreateMixin(rx.State, mixin=True):
                 for i, r in enumerate(rows):
                     if r["number"] and w.normalize_e164(r["number"]) in failed:
                         blocked.setdefault(i, f"{w.normalize_e164(r['number'])} could not be added to {r['location']}")
+            self._create_single = single
             async for ev in self._create(rows, log, blocked):
                 yield ev
-            if single and self.result_fail_count == 0 and self.results:
-                self.form_workspace = ""
-                self.form_number = ""
-                self.form_extension = ""
-            if not single:
+            if not self.busy and not single:  # no run was started: clear the upload now
                 yield rx.clear_selected_files("workspace_upload")
         finally:
             log.close()
 
+    def _after_create(self, log):
+        if not self._create_single:
+            return [rx.clear_selected_files("workspace_upload")]
+        if self.result_fail_count == 0 and self.results:
+            self.form_workspace = ""
+            self.form_number = ""
+            self.form_extension = ""
+
     @rx.event
     async def confirm_numbers(self):
         """Dialog confirmed: add the missing numbers, then create the workspaces that are not blocked."""
+        if not self.number_open or self.busy:
+            return
         self.number_open = False
-        async for ev in self._run_create(self._pending_rows, self._pending_title, self._pending_slug,
-                                         self._pending_blocked, self._pending_adds, self._pending_single):
+        pending = (self._pending_rows, self._pending_title, self._pending_slug, self._pending_blocked,
+                   self._pending_adds, self._pending_single)
+        self._pending_rows, self._pending_adds, self._pending_blocked = [], [], {}
+        self._pending_title, self._pending_slug, self._pending_single = "", "", False
+        if not pending[0]:
+            return
+        async for ev in self._run_create(*pending):
             yield ev
 
 
@@ -360,6 +384,8 @@ class CreateWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin, Works
 
     @rx.event
     async def create_single(self):
+        if self.busy:
+            return
         row = {"workspace": self.form_workspace.strip(), "location": self.form_location.strip(),
                "type": "" if self.form_type == "notSet" else self.form_type, "capacity": self.form_capacity.strip(),
                "number": self.form_number.strip(), "extension": self.form_extension.strip()}
@@ -385,6 +411,8 @@ class CreateWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin, Works
             yield ev
 
     async def _create_from_csv(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         if not files:
             yield rx.toast.error("Choose a CSV file first.")
             return
@@ -432,6 +460,8 @@ class CopyWorkspaceState(WebexSession, RunMixin, PasteMixin, WorkspaceCreateMixi
 
     @rx.event
     async def copy_single(self):
+        if self.busy:
+            return
         row = {"workspace": self.form_workspace.strip(), "location": self.form_location.strip(), "type": "",
                "capacity": "", "number": self.form_number.strip(), "extension": self.form_extension.strip()}
         if not row["workspace"]:
@@ -452,6 +482,8 @@ class CopyWorkspaceState(WebexSession, RunMixin, PasteMixin, WorkspaceCreateMixi
             yield ev
 
     async def _copy_from_csv(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         if not files:
             yield rx.toast.error("Choose a CSV file first.")
             return
@@ -543,18 +575,26 @@ class AddWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin):
         finally:
             log.close()
 
-    async def _add(self, rows: list[dict[str, str]], log):
+    async def _add(self, rows: list[dict[str, str]], log, then: str):
         client = await self._connect(log)
         if client is None:
             yield rx.toast.error(self.webex_message)
             return
         cache: dict[str, str] = {}
         items = [(f"{r['workspace']} / {r['mac']}", lambda r=r: w.add_device(client, r, cache)) for r in rows]
-        async for ev in self._run_items(items, "Adding", log):
-            yield ev
+        yield self._start_run(items, "Adding", log, then=then)
+
+    def _after_add_single(self, log):
+        if self.result_fail_count == 0 and self.results:
+            self.form_mac = ""
+
+    def _after_add_csv(self, log):
+        return [rx.clear_selected_files("device_upload")]
 
     @rx.event
     async def add_single(self):
+        if self.busy:
+            return
         row = {"workspace": self.form_workspace.strip(), "model": self.form_model.strip(),
                "mac": self.form_mac.strip(), "location": self.form_location.strip()}
         if not (row["workspace"] and row["model"] and row["mac"]):
@@ -566,10 +606,8 @@ class AddWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin):
         self._focus_pane(True)
         log = self._webex_log("Add device to workspace", "webex-add-device")
         try:
-            async for ev in self._add([row], log):
+            async for ev in self._add([row], log, "_after_add_single"):
                 yield ev
-            if self.result_fail_count == 0 and self.results:
-                self.form_mac = ""
         finally:
             log.close()
 
@@ -585,6 +623,8 @@ class AddWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin):
             yield ev
 
     async def _add_from_csv(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         if not files:
             yield rx.toast.error("Choose a CSV file first.")
             return
@@ -600,9 +640,10 @@ class AddWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin):
         log = self._webex_log("Add devices to workspaces from CSV", "webex-add-devices-csv")
         try:
             log.info(f"CSV file: {files[0].filename}")
-            async for ev in self._add(rows, log):
+            async for ev in self._add(rows, log, "_after_add_csv"):
                 yield ev
-            yield rx.clear_selected_files("device_upload")
+            if not self.busy:  # no run was started (login failed): clear the upload now
+                yield rx.clear_selected_files("device_upload")
         finally:
             log.close()
 
@@ -639,6 +680,8 @@ class MigrateState(WebexSession, RunMixin, PickerMixin):
 
     @rx.event
     async def review(self, files: list[rx.UploadFile]):
+        if self.busy:  # a migration is running in the background
+            return
         location = self.selected_row
         if not location:
             yield rx.toast.error("Select the new location first.")
@@ -652,12 +695,12 @@ class MigrateState(WebexSession, RunMixin, PickerMixin):
         if not numbers:
             yield rx.toast.error("Enter at least one phone number, or choose a CSV.")
             return
-        self.busy = True
-        self.results = []
-        self.progress = f"Looking up {len(numbers)} number(s)"
-        yield
         log = self._webex_log("Review user migration", "webex-migrate-review")
         try:
+            self.busy = True
+            self.results = []
+            self.progress = f"Looking up {len(numbers)} number(s)"
+            yield
             log.info(f"New location: {location['name']}, {len(numbers)} number(s)")
             client = await self._connect(log)
             if client is None:
@@ -684,6 +727,8 @@ class MigrateState(WebexSession, RunMixin, PickerMixin):
 
     @rx.event
     async def run_migration(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         location, moves = self.selected_row, list(self._plan_moves)
         if not location or not moves or self.plan_location != location["id"]:
@@ -696,13 +741,15 @@ class MigrateState(WebexSession, RunMixin, PickerMixin):
             if client is None:
                 yield rx.toast.error(self.webex_message)
                 return
+            location_id = location["id"]
             items = [(f"{m['number']} {m['owner']}",
-                      lambda m=m: w.move_user(client, m["ownerId"], location["id"], log.info)) for m in moves]
-            async for ev in self._run_items(items, "Moving", log):
-                yield ev
-            self.plan_rows, self._plan_moves = [], []
+                      lambda m=m: w.move_user(client, m["ownerId"], location_id, log.info)) for m in moves]
+            yield self._start_run(items, "Moving", log, then="_after_migration")
         finally:
             log.close()
+
+    def _after_migration(self, log):
+        self.plan_rows, self._plan_moves = [], []
 
 
 class VoicemailState(WebexSession, PanesMixin, RunMixin):
@@ -752,25 +799,29 @@ class VoicemailState(WebexSession, PanesMixin, RunMixin):
     async def _report(self, client, people: list[dict[str, str]], log):
         self.busy = True
         self.rows = []
-        for i, p in enumerate(people, 1):
-            self.progress = f"Reading voicemail {i} of {len(people)}"
-            yield
-            row = {"name": p["name"], "email": p["email"], "enabled": "", "storage": "", "details": ""}
-            try:
-                info = await asyncio.to_thread(vm.voicemail_info, client, p["id"])
-                log.info(f"{p['email']}: raw settings {info.pop('raw')}")
-                row.update(info)
-                log.info(f"{p['email']}: {row['storage']} - {row['details']}")
-            except UserError as e:
-                row["details"] = str(e)
-                log.error(f"{p['email']}: {e}")
-            self.rows.append(row)
-        log.info(f"Report finished: {self.internal_count} internal, {self.external_count} external")
-        self.progress = ""
-        self.busy = False
+        try:
+            for i, p in enumerate(people, 1):
+                self.progress = f"Reading voicemail {i} of {len(people)}"
+                yield
+                row = {"name": p["name"], "email": p["email"], "enabled": "", "storage": "", "details": ""}
+                try:
+                    info = await asyncio.to_thread(vm.voicemail_info, client, p["id"])
+                    log.info(f"{p['email']}: raw settings {info.pop('raw')}")
+                    row.update(info)
+                    log.info(f"{p['email']}: {row['storage']} - {row['details']}")
+                except UserError as e:
+                    row["details"] = str(e)
+                    log.error(f"{p['email']}: {e}")
+                self.rows.append(row)
+            log.info(f"Report finished: {self.internal_count} internal, {self.external_count} external")
+        finally:
+            self.progress = ""
+            self.busy = False
 
     @rx.event
     async def report_user(self):
+        if self.busy:
+            return
         if not self.form_email:
             yield rx.toast.error("Enter the user's email address.")
             return
@@ -795,6 +846,8 @@ class VoicemailState(WebexSession, PanesMixin, RunMixin):
 
     @rx.event
     async def report_location(self):
+        if self.busy:
+            return
         name = self.form_location.strip()
         if not name:
             yield rx.toast.error("Choose a location.")

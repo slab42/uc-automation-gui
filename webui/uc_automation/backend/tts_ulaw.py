@@ -104,7 +104,7 @@ def text_to_ulaw_wav(text: str) -> bytes:
         raise TtsError(f"The text is {len(text)} characters. The limit is {MAX_CHARS}.")
     buf = io.BytesIO()
     try:
-        gTTS(text=text, lang="en").write_to_fp(buf)
+        gTTS(text=text, lang="en", timeout=30).write_to_fp(buf)
     except gTTSError as e:
         raise TtsError(f"Text to speech failed (internet access to Google is needed): {e}")
     except Exception as e:

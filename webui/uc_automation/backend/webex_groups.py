@@ -87,19 +87,35 @@ def lookup_calling_user(c: WebexClient, email: str) -> str:
     raise WebexError(f"{email}: user not found or has no Calling license.")
 
 
+def _digits(value: str) -> str:
+    return "".join(ch for ch in value or "" if ch.isdigit())
+
+
 def _lookup_virtual_line(c: WebexClient, number: str) -> str:
     lines = c.call("GET", VIRTUAL_LINES, {"phoneNumber": number}).get("virtualLines") or []
-    if not lines:
+    want = _digits(number)
+
+    def matches(v: dict) -> bool:
+        num = v.get("number") or {}
+        external = _digits(num.get("external", ""))
+        return (len(want) >= 10 and external.endswith(want[-10:])) or num.get("extension") == number
+
+    exact = [v for v in lines if matches(v)]
+    if not exact:
         raise WebexError(f"{number}: no virtual line has this number.")
-    return lines[0]["id"]
+    if len(exact) > 1:
+        raise WebexError(f"{number}: more than one virtual line matches this number.")
+    return exact[0]["id"]
 
 
 def _lookup_extension(c: WebexClient, extension: str) -> str:
     found = c.call("GET", "/telephony/config/numbers", {"extension": extension}).get("phoneNumbers") or []
-    owner = (found[0].get("owner") or {}).get("id") if found else None
-    if not owner:
+    owners = {(n.get("owner") or {}).get("id") for n in found if n.get("extension") == extension} - {None, ""}
+    if not owners:
         raise WebexError(f"{extension}: extension not found or has no owner.")
-    return owner
+    if len(owners) > 1:
+        raise WebexError(f"{extension}: this extension exists in more than one location. Use an email instead.")
+    return owners.pop()
 
 
 def resolve_agent(c: WebexClient, entry: str, numeric: str | None) -> str:
@@ -142,10 +158,13 @@ def replace_agents(c: WebexClient, kind: str, group: dict[str, str], entries: li
     path = f"{location_path(group['locationId'])}/{'huntGroups' if kind == 'hunt' else 'queues'}/{group['id']}"
     note = f" Skipped: {'; '.join(skipped)}" if skipped else ""
     if add:
-        current = [a["id"] for a in c.call("GET", path).get("agents") or []]
-        new = [a for a in dict.fromkeys(a["id"] for a in agents) if a not in current]
+        # Re-send the current agents with their settings, or the PUT resets weight, skill level and join state.
+        keep = ("id", "weight", "skillLevel", "joinEnabled")
+        current = [{k: a[k] for k in keep if k in a} for a in c.call("GET", path).get("agents") or []]
+        ids = {a["id"] for a in current}
+        new = [a for a in dict.fromkeys(a["id"] for a in agents) if a not in ids]
         if new:
-            c.call("PUT", path, body={"agents": [{"id": i} for i in current + new]})
+            c.call("PUT", path, body={"agents": current + [{"id": i} for i in new]})
         already = len(set(a["id"] for a in agents)) - len(new)
         return f"{len(new)} agent(s) added, {already} already in the list ({len(current) + len(new)} total).{note}"
     c.call("PUT", path, body={"agents": agents})

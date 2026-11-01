@@ -134,6 +134,7 @@ def _read_identifiers(data: bytes) -> list[str]:
 
 class MppPhonesState(CucmState, CrudMixin):
     mpp_action: str = "migrate"
+    _mpp_targets: list[str] = []
 
     def _spec(self) -> ResourceSpec:
         return MPP
@@ -151,42 +152,55 @@ class MppPhonesState(CucmState, CrudMixin):
 
     @rx.event
     def ask_mpp(self, action: str):
+        if self.busy:
+            return
         self.mpp_action = action
         self.results = []
         self.dialog = "mppconfirm"
 
-    async def _mpp_run(self, targets: list[str]):
+    async def _mpp_run(self, targets: list[str], then: str):
         conn = self._conn()
         if conn is None:
             return
         action = self.mpp_action
         log = self._open_log(f"MPP {action}", conn)
         try:
-            async for ev in self._run_each(conn, targets, lambda c, t: d.run_mpp_action(c, t, action),
-                                           "Updating", "Done", log):
-                yield ev
-            async for ev in self._fetch(log):
-                yield ev
+            yield self._start_each(conn, targets, lambda c, t, action=action: d.run_mpp_action(c, t, action),
+                                   "Updating", "Done", log, then=then)
         finally:
             log.close()
 
     @rx.event
     async def run_selected(self):
+        if self.dialog != "mppconfirm" or self.busy:
+            return
         targets = list(self.selected)
-        async for ev in self._mpp_run(targets):
+        self._mpp_targets = targets
+        async for ev in self._mpp_run(targets, "_after_run_selected"):
             yield ev
+
+    def _after_run_selected(self, log):
         self.dialog = "mppresult"
         failed = {r["id"] for r in self.results if r["status"] != "OK"}
-        self.selected = [s for s in targets if s in failed]
+        self.selected = [s for s in self._mpp_targets if s in failed]
+        self._mpp_targets = []
+        return [type(self).fetch]
+
+    def _after_csv_run(self, log):
+        return [type(self).fetch, rx.clear_selected_files("mpp_upload")]
 
     @rx.event
     async def csv_migrate(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         self.mpp_action = "migrate"
         async for ev in self._csv(files):
             yield ev
 
     @rx.event
     async def csv_prep(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         self.mpp_action = "prep"
         async for ev in self._csv(files):
             yield ev
@@ -203,7 +217,6 @@ class MppPhonesState(CucmState, CrudMixin):
         if not ids:
             yield rx.toast.error("The CSV has no phones.")
             return
-        async for ev in self._mpp_run(ids):
+        async for ev in self._mpp_run(ids, "_after_csv_run"):
             yield ev
-        yield rx.clear_selected_files("mpp_upload")
 

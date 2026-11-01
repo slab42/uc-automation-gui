@@ -97,10 +97,9 @@ class WebexSession(OrgState):
         self._remember(name)
         return rx.call_script("setTimeout(() => window.location.reload(), 200)")
 
-    async def _run_items(self, items, verb: str, log: OpLog, workers: int = WEBEX_WORKERS):
+    def _default_workers(self) -> int:
         """Bulk Webex rows run WEBEX_WORKERS at a time (RunMixin does the work)."""
-        async for ev in super()._run_items(items, verb, log, workers):
-            yield ev
+        return WEBEX_WORKERS
 
     def _webex_log(self, title: str, slug: str) -> OpLog:
         log = OpLog(title, slug)
@@ -197,18 +196,19 @@ class AddNumbersState(WebexSession, PanesMixin, RunMixin):
     def set_form_state(self, value: str):
         self.form_state = value
 
-    async def _add(self, rows: list[dict[str, str]], log: OpLog):
+    async def _add(self, rows: list[dict[str, str]], log: OpLog, then: str):
+        """The event that starts the run, or an error toast when there is no Webex connection."""
         client = await self._connect(log)
         if client is None:
-            yield rx.toast.error(self.webex_message)
-            return
+            return rx.toast.error(self.webex_message)
         cache: dict[str, str] = {}
         items = [(r_["phoneNumber"], lambda r_=r_: r.add_number(client, r_, cache)) for r_ in rows]
-        async for ev in self._run_items(items, "Adding", log):
-            yield ev
+        return self._start_run(items, "Adding", log, then=then)
 
     @rx.event
     async def add_single(self):
+        if self.busy:
+            return
         row = {"locationId": self.form_location.strip(), "phoneNumber": self.form_number.strip(),
                "numberType": self.form_type, "numberUsageType": self.form_usage, "state": self.form_state}
         if not row["locationId"] or not row["phoneNumber"]:
@@ -220,15 +220,18 @@ class AddNumbersState(WebexSession, PanesMixin, RunMixin):
         self._focus_pane(True)
         log = self._webex_log("Add number to location", "webex-add-number")
         try:
-            async for ev in self._add([row], log):
-                yield ev
-            if self.result_fail_count == 0 and self.results:
-                self.form_number = ""
+            yield await self._add([row], log, "_after_add_single")
         finally:
             log.close()
 
+    def _after_add_single(self, log: OpLog):
+        if self.result_fail_count == 0 and self.results:
+            self.form_number = ""
+
     @rx.event
     async def add_from_csv(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         if not files:
             yield rx.toast.error("Choose a CSV file first.")
             return
@@ -244,14 +247,19 @@ class AddNumbersState(WebexSession, PanesMixin, RunMixin):
         log = self._webex_log("Add numbers to locations from CSV", "webex-add-numbers-csv")
         try:
             log.info(f"CSV file: {files[0].filename}")
-            async for ev in self._add(rows, log):
-                yield ev
-            yield rx.clear_selected_files("numbers_upload")
+            yield await self._add(rows, log, "_after_add_csv")
+            if not self.busy:  # no connection: the run did not start
+                yield rx.clear_selected_files("numbers_upload")
         finally:
             log.close()
 
+    def _after_add_csv(self, log: OpLog):
+        return [rx.clear_selected_files("numbers_upload")]
+
     @rx.event
     async def add_from_text(self):
+        if self.busy:
+            return
         try:
             rows = r.parse_add_numbers_text(self.paste_text, self.form_location.strip())
         except ValueError as e:
@@ -263,12 +271,13 @@ class AddNumbersState(WebexSession, PanesMixin, RunMixin):
         self._focus_pane(False)
         log = self._webex_log("Add numbers to locations from pasted text", "webex-add-numbers-text")
         try:
-            async for ev in self._add(rows, log):
-                yield ev
-            if self.result_fail_count == 0 and self.results:
-                self.paste_text = ""
+            yield await self._add(rows, log, "_after_add_text")
         finally:
             log.close()
+
+    def _after_add_text(self, log: OpLog):
+        if self.result_fail_count == 0 and self.results:
+            self.paste_text = ""
 
 
 class CallForwardState(WebexSession, PanesMixin, RunMixin, PasteMixin):
@@ -290,20 +299,18 @@ class CallForwardState(WebexSession, PanesMixin, RunMixin, PasteMixin):
     def set_cf_number(self, value: str):
         self.cf_number = value
 
-    async def _forward(self, numbers: list[str], log: OpLog):
+    async def _forward(self, numbers: list[str], log: OpLog, then: str):
+        """The event that starts the run, or an error toast when the prefix or the Webex connection is missing."""
         enable = self.cf_mode == "set"
         prefix = self.cf_prefix
         if enable and not prefix:
-            yield rx.toast.error("Enter the forward prefix.")
-            return
+            return rx.toast.error("Enter the forward prefix.")
         client = await self._connect(log)
         if client is None:
-            yield rx.toast.error(self.webex_message)
-            return
+            return rx.toast.error(self.webex_message)
         log.info(f"Forward all: {'set with prefix ' + prefix if enable else 'remove'}")
         items = [(n, lambda n=n: r.set_call_forward_all(client, n, enable, prefix)) for n in numbers]
-        async for ev in self._run_items(items, "Setting forward" if enable else "Removing forward", log):
-            yield ev
+        return self._start_run(items, "Setting forward" if enable else "Removing forward", log, then=then)
 
     def _log(self) -> OpLog:
         if self.cf_mode == "set":
@@ -312,6 +319,8 @@ class CallForwardState(WebexSession, PanesMixin, RunMixin, PasteMixin):
 
     @rx.event
     async def run_single(self):
+        if self.busy:
+            return
         number = self.cf_number.strip()
         if not number:
             yield rx.toast.error("Enter a phone number.")
@@ -319,12 +328,13 @@ class CallForwardState(WebexSession, PanesMixin, RunMixin, PasteMixin):
         self._focus_pane(True)
         log = self._log()
         try:
-            async for ev in self._forward([number], log):
-                yield ev
-            if self.result_fail_count == 0 and self.results:
-                self.cf_number = ""
+            yield await self._forward([number], log, "_after_run_single")
         finally:
             log.close()
+
+    def _after_run_single(self, log: OpLog):
+        if self.result_fail_count == 0 and self.results:
+            self.cf_number = ""
 
     @rx.event
     async def run_csv(self, files: list[rx.UploadFile]):
@@ -338,6 +348,8 @@ class CallForwardState(WebexSession, PanesMixin, RunMixin, PasteMixin):
             yield ev
 
     async def _run_csv(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         if not files:
             yield rx.toast.error("Choose a CSV file first.")
             return
@@ -353,8 +365,11 @@ class CallForwardState(WebexSession, PanesMixin, RunMixin, PasteMixin):
         log = self._log()
         try:
             log.info(f"CSV file: {files[0].filename}")
-            async for ev in self._forward(numbers, log):
-                yield ev
-            yield rx.clear_selected_files("forward_upload")
+            yield await self._forward(numbers, log, "_after_run_csv")
+            if not self.busy:  # no prefix or no connection: the run did not start
+                yield rx.clear_selected_files("forward_upload")
         finally:
             log.close()
+
+    def _after_run_csv(self, log: OpLog):
+        return [rx.clear_selected_files("forward_upload")]

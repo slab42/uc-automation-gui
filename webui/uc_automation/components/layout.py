@@ -135,15 +135,29 @@ def topbar(title: str) -> rx.Component:
         rx.cond(
             FavoritesState.is_function,
             rx.tooltip(
-                rx.icon(
-                    "star",
-                    width="14px",
-                    height="14px",
-                    color=rx.cond(FavoritesState.is_favorite, "var(--accent-9)", "var(--gray-9)"),
-                    fill=rx.cond(FavoritesState.is_favorite, "var(--accent-9)", "none"),
+                # A plain button (not icon_button, which forces its own icon size) so the star is keyboard
+                # reachable and announced, at 14px.
+                rx.el.button(
+                    rx.icon(
+                        "star",
+                        width="14px",
+                        height="14px",
+                        color=rx.cond(FavoritesState.is_favorite, "var(--accent-9)", "var(--gray-9)"),
+                        fill=rx.cond(FavoritesState.is_favorite, "var(--accent-9)", "none"),
+                    ),
+                    type="button",
                     on_click=FavoritesState.toggle_favorite,
+                    aria_label=rx.cond(FavoritesState.is_favorite, "Remove From Favorites", "Add To Favorites"),
+                    aria_pressed=rx.cond(FavoritesState.is_favorite, "true", "false"),
+                    display="flex",
+                    align_items="center",
+                    padding="2px",
+                    background="none",
+                    border="none",
+                    border_radius="var(--radius-2)",
                     cursor="pointer",
                     flex_shrink="0",
+                    _focus_visible={"outline": "2px solid var(--accent-8)"},
                 ),
                 content=rx.cond(FavoritesState.is_favorite, "Remove From Favorites", "Add To Favorites"),
             ),

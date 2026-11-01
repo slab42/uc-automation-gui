@@ -30,7 +30,8 @@ DEFAULT_SCOPES = (
     "spark-admin:people_read spark-admin:people_write "
     "spark-admin:telephony_config_read spark-admin:telephony_config_write "
     "spark-admin:workspaces_read spark-admin:workspaces_write "
-    "spark-admin:devices_read spark-admin:devices_write spark-admin:licenses_read identity:groups_rw"
+    "spark-admin:devices_read spark-admin:devices_write spark-admin:licenses_read identity:groups_rw "
+    "spark-admin:locations_read spark-admin:locations_write identity:contacts_rw"
 )
 EXPIRY_MARGIN = 120  # renew when fewer than this many seconds remain
 TIMEOUT = 20

@@ -84,6 +84,10 @@ def em_request(server: str, mode: str, device: str, user: str = "", pin: str = "
         raise AxlError("Timed out")
     except requests.exceptions.ConnectionError:
         raise AxlError(f"Cannot reach {server}:{EM_PORT}")
+    except requests.exceptions.RetryError:
+        raise AxlError(f"{server}:{EM_PORT} kept returning errors (rate limited or service down)")
+    except requests.RequestException as e:  # never pass the message on: it holds the URL with the PIN
+        raise AxlError(f"Request failed ({type(e).__name__})")
     if resp.status_code != 200:
         raise AxlError(f"HTTP {resp.status_code}")
     return "Logged in (HTTP 200)" if mode == "login" else "Logged out (HTTP 200)"

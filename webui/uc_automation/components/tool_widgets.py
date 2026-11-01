@@ -3,6 +3,18 @@
 import reflex as rx
 
 
+def title_case(text: str) -> str:
+    """Capitalize every word and keep acronyms upper case ("private IP range" -> "Private IP Range")."""
+    return " ".join(w if w.isupper() else w[:1].upper() + w[1:] for w in text.split())
+
+
+def plural(noun: str) -> str:
+    """English plural of the last word ("LLDP entry" -> "LLDP entries", "BSSID" -> "BSSIDs")."""
+    if noun.endswith("y") and noun[-2:-1].lower() not in "aeiou":
+        return noun[:-1] + "ies"
+    return noun + ("es" if noun.endswith(("s", "x", "ch", "sh")) else "s")
+
+
 def field(label: str, control: rx.Component, hint: str = "") -> rx.Component:
     return rx.vstack(
         rx.text(label, size="2", weight="medium"),
@@ -103,11 +115,21 @@ def code_block(text: str) -> rx.Component:
     )
 
 
+def run_progress(S) -> rx.Component:
+    """Spinner, progress text and a Cancel button for a background run (RunMixin)."""
+    return rx.hstack(
+        rx.spinner(size="2"),
+        rx.text(S.progress, size="2"),
+        rx.button("Cancel", size="1", variant="soft", color_scheme="gray", on_click=S.cancel_run,
+                  disabled=S.cancelling),
+        align="center", spacing="2",
+    )
+
+
 def run_results(S, item_header: str) -> rx.Component:
     """Progress line, OK/failed badges and the per-row table for a state with busy/progress/results."""
     return rx.vstack(
-        rx.cond(S.busy, rx.hstack(rx.spinner(size="2"), rx.text(S.progress, size="2"), align="center", spacing="2"),
-                rx.fragment()),
+        rx.cond(S.busy, run_progress(S), rx.fragment()),
         rx.cond(
             S.results.length() > 0,
             rx.vstack(

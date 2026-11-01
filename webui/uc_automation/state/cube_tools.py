@@ -18,6 +18,11 @@ MANUAL = "Enter Manually"
 _PASTE = {"columns": ("router_ip", "hostname"), "markers": ("router_ip",)}
 
 
+# Rows (and Config Compare reports) the worker threads fill during a run, keyed like the run's job, picked up by
+# the after-step. Kept out of state: the threads must not touch it.
+_FOUND: dict[tuple[str, str], tuple[list[dict[str, str]], dict[str, str]]] = {}
+
+
 def _stamp() -> str:
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -127,6 +132,8 @@ class MemStatusState(CubeRun, OrgState):
             yield ev
 
     async def _run(self, files):
+        if self.busy:
+            return
         try:
             low = int(self.threshold or mem.DEFAULT_THRESHOLD)
         except ValueError:
@@ -154,17 +161,20 @@ class MemStatusState(CubeRun, OrgState):
 
             self.rows = []
             items = [(r.label, lambda r=r: one(r)) for r in routers]
-            async for ev in self._run_items(items, "Checking", log):
-                yield ev
-            # a failed router keeps its row; put the error text in it
-            errors = {x["key"]: x["detail"] for x in self.results if x["status"] != "OK"}
-            for row in found:
-                if row["status"] == "Failed":
-                    row["memory"] = errors.get(f"{row['hostname']} ({row['ip']})", "")
-            self.rows = found
-            yield rx.clear_selected_files("mem_upload")
+            _FOUND[self._job_key()] = (found, {})
+            yield self._start_run(items, "Checking", log, then="_after_check")
         finally:
             log.close()
+
+    def _after_check(self, log: OpLog):
+        found, _ = _FOUND.pop(self._job_key(), ([], {}))
+        # a failed router keeps its row; put the error text in it
+        errors = {x["key"]: x["detail"] for x in self.results if x["status"] != "OK"}
+        for row in found:
+            if row["status"] == "Failed":
+                row["memory"] = errors.get(f"{row['hostname']} ({row['ip']})", "")
+        self.rows = found
+        return [rx.clear_selected_files("mem_upload")]
 
     @rx.var
     def low_count(self) -> int:
@@ -209,6 +219,8 @@ class ConfigCompareState(CubeRun, OrgState):
             yield ev
 
     async def _run(self, files):
+        if self.busy:
+            return
         template = cfg.parse_template(self.template_text)
         if not template:
             yield rx.toast.error("The template has no voice sections. Paste or upload one first.")
@@ -239,17 +251,20 @@ class ConfigCompareState(CubeRun, OrgState):
 
             self.rows = []
             items = [(r.label, lambda r=r: one(r)) for r in routers]
-            async for ev in self._run_items(items, "Comparing", log):
-                yield ev
-            errors = {x["key"]: x["detail"] for x in self.results if x["status"] != "OK"}
-            for row in found:
-                if row["status"] == "Failed":
-                    row["detail"] = errors.get(f"{row['hostname']} ({row['ip']})", "")
-            self.rows = found
-            self._reports = reports
-            yield rx.clear_selected_files("compare_upload")
+            _FOUND[self._job_key()] = (found, reports)
+            yield self._start_run(items, "Comparing", log, then="_after_compare")
         finally:
             log.close()
+
+    def _after_compare(self, log: OpLog):
+        found, reports = _FOUND.pop(self._job_key(), ([], {}))
+        errors = {x["key"]: x["detail"] for x in self.results if x["status"] != "OK"}
+        for row in found:
+            if row["status"] == "Failed":
+                row["detail"] = errors.get(f"{row['hostname']} ({row['ip']})", "")
+        self.rows = found
+        self._reports = reports
+        return [rx.clear_selected_files("compare_upload")]
 
     @rx.var
     def report_count(self) -> int:

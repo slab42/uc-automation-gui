@@ -54,18 +54,19 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
         finally:
             log.close()
 
-    async def _add(self, devices: list[dict], log):
+    async def _add(self, devices: list[dict], log, then: str):
         client = await self._connect(log)
         if client is None:
             yield rx.toast.error(self.webex_message)
             return
         cache: dict[str, str] = {}
         items = [(d["mac"], lambda d=d: w.add_ata(client, d, cache)) for d in devices]
-        async for ev in self._run_items(items, "Adding", log):
-            yield ev
+        yield self._start_run(items, "Adding", log, then=then)
 
     @rx.event
     async def add_single(self):
+        if self.busy:  # a second click queued behind the first
+            return
         location = self.form_location.strip()
         rows = w.port_rows_from_text(self.form_ports, self.form_mac.strip(), self.form_model.strip(), location)
         if not (location and self.form_model.strip() and self.form_mac.strip() and rows):
@@ -76,13 +77,15 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
             return
         log = self._webex_log("Add ATA/VG", "webex-add-ata")
         try:
-            async for ev in self._add(w.group_ata_rows(rows), log):
+            async for ev in self._add(w.group_ata_rows(rows), log, "_after_add_single"):
                 yield ev
-            if self.result_fail_count == 0 and self.results:
-                self.form_mac = ""
-                self.form_ports = ""
         finally:
             log.close()
+
+    def _after_add_single(self, log: OpLog):
+        if self.result_fail_count == 0 and self.results:
+            self.form_mac = ""
+            self.form_ports = ""
 
     @rx.event
     async def add_from_csv(self, files: list[rx.UploadFile]):
@@ -96,6 +99,8 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
             yield ev
 
     async def _add_from_csv(self, files: list[rx.UploadFile]):
+        if self.busy:  # a second click queued behind the first
+            return
         if not files:
             yield rx.toast.error("Choose a CSV file first.")
             return
@@ -110,11 +115,13 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
         log = self._webex_log("Add ATA/VG from CSV", "webex-add-ata-csv")
         try:
             log.info(f"CSV file: {files[0].filename}")
-            async for ev in self._add(w.group_ata_rows(rows), log):
+            async for ev in self._add(w.group_ata_rows(rows), log, "_after_add_csv"):
                 yield ev
-            yield rx.clear_selected_files("ata_upload")
         finally:
             log.close()
+
+    def _after_add_csv(self, log: OpLog):
+        return [rx.clear_selected_files("ata_upload")]
 
 
 class DeviceMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
@@ -139,6 +146,8 @@ class DeviceMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
     _pending_orgs: tuple[str, str] = ("", "")
     _pending_side: str = ""  # "l" or "r": the side the single phone is moving to, "" for a bulk run
     _csv_name: str = ""
+    _run_side: str = ""  # _pending_side and the first MAC of the run in progress, for _after_migrate
+    _run_mac: str = ""
 
     @rx.var
     def all_org_names(self) -> list[str]:
@@ -242,8 +251,11 @@ class DeviceMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
 
     @rx.event
     async def confirm_migrate(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         rows, (src_name, dst_name), side = self._pending, self._pending_orgs, self._pending_side
+        self._pending = []
         self._focus_pane(side != "")
         log = self._webex_log("Webex-Webex Phone Migrate", "webex-webex-phone-migrate")
         try:
@@ -260,18 +272,19 @@ class DeviceMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
                 return
             items = [(r["mac"], lambda r=r: d.migrate_phone(src, dst, r, supported, src_name, dst_name))
                      for r in rows]
-            async for ev in self._run_items(items, "Migrating", log):
-                yield ev
-            if side and self.result_fail_count == 0 and self.results:
-                # The phone now sits on the destination side: show its MAC there and empty the source side.
-                mac = rows[0]["mac"]
-                if side == "l":
-                    self.mac_l, self.mac_r = mac, ""
-                else:
-                    self.mac_r, self.mac_l = mac, ""
-            self._pending = []
+            self._run_side, self._run_mac = side, rows[0]["mac"] if rows else ""
+            yield self._start_run(items, "Migrating", log, then="_after_migrate")
         finally:
             log.close()
+
+    def _after_migrate(self, log: OpLog):
+        side, mac = self._run_side, self._run_mac
+        if side and self.result_fail_count == 0 and self.results:
+            # The phone now sits on the destination side: show its MAC there and empty the source side.
+            if side == "l":
+                self.mac_l, self.mac_r = mac, ""
+            else:
+                self.mac_r, self.mac_l = mac, ""
 
 
 class CucmMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
@@ -294,6 +307,9 @@ class CucmMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
     _pending_to_webex: bool = True
     _pending_single: bool = True
     _csv_name: str = ""
+    _run_single: bool = False  # the direction, single flag and first MAC of the run in progress, for _after_migrate
+    _run_to_webex: bool = True
+    _run_mac: str = ""
 
     @rx.var
     def cucm_names(self) -> list[str]:
@@ -387,8 +403,11 @@ class CucmMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
 
     @rx.event
     async def confirm_migrate(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         rows, to_webex, single = self._pending, self._pending_to_webex, self._pending_single
+        self._pending = []
         conn_name, org_name = self.conn_l, self.org_r
         self._focus_pane(single)
         log = self._webex_log("CUCM Webex Phone Migrate", "webex-cucm-phone-migrate")
@@ -412,14 +431,16 @@ class CucmMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
             else:
                 # Going to CUCM, the user column is the CUCM owner to check; the Webex owner check is single only.
                 items = [(r["mac"], lambda r=r: cm.webex_to_cucm(conn, client, r, org_name)) for r in rows]
-            async for ev in self._run_items(items, "Migrating", log):
-                yield ev
-            if single and self.result_fail_count == 0 and self.results:
-                mac = rows[0]["mac"]
-                if to_webex:
-                    self.mac_r, self.mac_l = mac, ""
-                else:
-                    self.mac_l, self.mac_r = mac, ""
-            self._pending = []
+            self._run_single, self._run_to_webex = single, to_webex
+            self._run_mac = rows[0]["mac"] if rows else ""
+            yield self._start_run(items, "Migrating", log, then="_after_migrate")
         finally:
             log.close()
+
+    def _after_migrate(self, log: OpLog):
+        if self._run_single and self.result_fail_count == 0 and self.results:
+            mac = self._run_mac
+            if self._run_to_webex:
+                self.mac_r, self.mac_l = mac, ""
+            else:
+                self.mac_l, self.mac_r = mac, ""

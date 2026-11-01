@@ -7,6 +7,7 @@ from datetime import datetime
 import reflex as rx
 
 from ..backend import webex_locations as L
+from ..backend.applog import OpLog
 from ..backend.errors import UserError
 from .run_mixin import RunMixin
 from .webex_groups import PickerMixin
@@ -169,6 +170,8 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
             yield ev
 
     async def _review_update(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         loc = self.selected_row
         if not loc:
             yield rx.toast.error("Select the location first.")
@@ -184,10 +187,10 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
         if not schedules:
             yield rx.toast.error("No valid rows were found in the CSV.")
             return
-        self.busy, self.progress = True, "Comparing with the location"
-        yield
         log = self._webex_log("Review schedule update", "webex-schedule-review")
         try:
+            self.busy, self.progress = True, "Comparing with the location"
+            yield
             log.info(f"{loc['name']}, CSV file: {files[0].filename}")
             client = await self._connect(log)
             if client is None:
@@ -216,6 +219,8 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
 
     @rx.event
     async def run_update(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         loc, plan = self.selected_row, [p for p in self._plan if p["adds"] or p["removes"]]
         if not loc or not plan:
@@ -228,17 +233,21 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
             if client is None:
                 yield rx.toast.error(self.webex_message)
                 return
-            items = [(p["name"], lambda p=p: L.apply_update_plan(client, loc["id"], [p])[0][1]) for p in plan]
-            async for ev in self._run_items(items, "Updating", log):
-                yield ev
-            self.plan_rows, self.plan_notes, self._plan = [], [], []
+            loc_id = loc["id"]
+            items = [(p["name"], lambda p=p: L.apply_update_plan(client, loc_id, [p])[0][1]) for p in plan]
+            yield self._start_run(items, "Updating", log, then="_after_update")
         finally:
             log.close()
+
+    def _after_update(self, log: OpLog):
+        self.plan_rows, self.plan_notes, self._plan = [], [], []
 
     # --- copy ---
 
     @rx.event
     async def run_copy(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         source, sched = self.selected_row, self._picked_schedule()
         if not source or not sched:
@@ -265,10 +274,10 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
                 yield rx.toast.error(str(e))
                 return
             body = L.copy_body(sched, detail)
-            items = [(t["name"], lambda t=t: L.copy_schedule_to(client, body, sched["type"], sched["name"], t["id"]))
+            s_type, s_name = sched["type"], sched["name"]
+            items = [(t["name"], lambda tid=t["id"]: L.copy_schedule_to(client, body, s_type, s_name, tid))
                      for t in targets]
-            async for ev in self._run_items(items, "Copying", log):
-                yield ev
+            yield self._start_run(items, "Copying", log)
         finally:
             log.close()
 
@@ -276,16 +285,18 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
 
     @rx.event
     async def find_past(self):
+        if self.busy:
+            return
         locs = self.rows if self.remove_scope == "all" else ([self.selected_row] if self.selected_row else [])
         if not locs:
             yield rx.toast.error("Select a location first.")
             return
-        self.busy, self.searched = True, False
-        self.past_rows, self.past_selected, self.results = [], [], []
-        yield
         today = datetime.now().strftime("%Y-%m-%d")
         log = self._webex_log("Find past schedule events", "webex-past-events")
         try:
+            self.busy, self.searched = True, False
+            self.past_rows, self.past_selected, self.results = [], [], []
+            yield
             client = await self._connect(log)
             if client is None:
                 yield rx.toast.error(self.webex_message)
@@ -323,8 +334,10 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
 
     @rx.event
     async def run_remove(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
-        chosen = [r for r in self.past_rows if r["key"] in self.past_selected]
+        chosen = [dict(r) for r in self.past_rows if r["key"] in self.past_selected]
         if not chosen:
             yield rx.toast.error("Nothing selected.")
             return
@@ -336,14 +349,16 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
                 yield rx.toast.error(self.webex_message)
                 return
             items = [(f"{r['location']} - {r['schedule']} - {r['event']} - {r['dates']}",
-                      lambda r=r: L.delete_event(client, r)) for r in chosen]
-            async for ev in self._run_items(items, "Deleting", log):
-                yield ev
-            done = {r["key"] for r in chosen} - {res["key"] for res in self.results if res["status"] != "OK"}
-            self.past_rows = [r for r in self.past_rows if r["key"] not in done]
-            self.past_selected = [k for k in self.past_selected if k not in done]
+                      lambda r=r: L.delete_event(client, r), {"eventKey": r["key"]}) for r in chosen]
+            yield self._start_run(items, "Deleting", log, then="_after_remove")
         finally:
             log.close()
+
+    def _after_remove(self, log: OpLog):
+        # Only events actually deleted leave the list (failed or cancelled ones stay).
+        done = {res["eventKey"] for res in self.results if res["status"] == "OK"}
+        self.past_rows = [r for r in self.past_rows if r["key"] not in done]
+        self.past_selected = [k for k in self.past_selected if k not in done]
 
 
 class E911State(WebexSession, RunMixin, PasteMixin):
@@ -460,6 +475,8 @@ class E911State(WebexSession, RunMixin, PasteMixin):
 
     @rx.event
     async def run_opt_out(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         chosen = [r for r in self.rows if r["id"] in self.selected]
         if not chosen:
@@ -472,10 +489,10 @@ class E911State(WebexSession, RunMixin, PasteMixin):
             if client is None:
                 yield rx.toast.error(self.webex_message)
                 return
-            items = [(r["name"], lambda r=r: L.opt_out_redsky(client, r["id"])) for r in chosen]
-            async for ev in self._run_items(items, "Opting out", log):
-                yield ev
-            async for ev in self._load():
-                yield ev
+            items = [(r["name"], lambda rid=r["id"]: L.opt_out_redsky(client, rid)) for r in chosen]
+            yield self._start_run(items, "Opting out", log, then="_after_opt_out")
         finally:
             log.close()
+
+    def _after_opt_out(self, log: OpLog):
+        return [type(self).reload]

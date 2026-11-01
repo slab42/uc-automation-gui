@@ -139,10 +139,20 @@ def parse_number_list_csv(data: bytes) -> list[str]:
 
 def lookup_number(c: WebexClient, number: str) -> tuple[str, str, str]:
     """(location id, owner type, owner id) for a phone number or extension."""
-    data = c.call("GET", "/telephony/config/numbers", {"phoneNumber": number})
-    found = data.get("phoneNumbers") or []
+    number = number.strip()
+    digits = re.sub(r"\D", "", number)
+    if len(digits) >= 10:  # a full number: search and match it in E.164 form
+        e164 = normalize_number(number)
+        found = c.call("GET", "/telephony/config/numbers", {"phoneNumber": e164}).get("phoneNumbers") or []
+        found = [n for n in found if n.get("phoneNumber") == e164]
+    else:  # an extension
+        found = c.call("GET", "/telephony/config/numbers", {"extension": digits}).get("phoneNumbers") or []
+        found = [n for n in found if n.get("extension") == digits]
     if not found:
         raise WebexError(f"Phone number {number} was not found.")
+    if len(found) > 1:
+        raise WebexError(f"{number} matches more than one number (an extension used in several locations). "
+                         "Use the full phone number.")
     n = found[0]
     owner = n.get("owner") or {}
     if not owner.get("id"):

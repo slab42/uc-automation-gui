@@ -4,7 +4,7 @@ Reads GET /people/{id}/features/voicemail. Not tested against a real org.
 """
 
 from .webex_api import WebexClient, WebexError
-from .webex_groups import PAGE, calling_license_ids
+from .webex_groups import calling_license_ids
 
 
 def _person_row(p: dict) -> dict[str, str]:
@@ -26,15 +26,8 @@ def find_person(c: WebexClient, email: str) -> dict[str, str]:
 def list_location_people(c: WebexClient, location_id: str) -> list[dict[str, str]]:
     """Every user of a location, sorted by name. The list API returns no licenses, so users without Calling
     are not filtered here; their voicemail read fails and shows as an error row."""
-    people: list[dict] = []
-    start = 0
-    while True:
-        page = c.call("GET", "/people", {"locationId": location_id, "callingData": "true", "max": PAGE,
-                                         "start": start}).get("items") or []
-        people.extend(page)
-        if len(page) < PAGE:
-            break
-        start += PAGE
+    # With locationId the API returns at most 50 per page and pages with the Link header, not start.
+    people = c.list_all("/people", "items", {"locationId": location_id, "callingData": "true", "max": 50})
     return sorted((_person_row(p) for p in people), key=lambda r: r["name"].lower())
 
 

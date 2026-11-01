@@ -75,7 +75,7 @@ backend/ini_store.py         comment-preserving credentials.env editor
 state/logs.py                LogsState: Logs page (search, read, export; no delete or import)
 state/favorites.py           FavoritesState: favorite and recent function routes (browser LocalStorage `favorite_routes`, `recent_routes`)
 state/search.py              SearchState: home page search over the GROUPS of the CUCM, CUC and Webex menus (platform, section, link)
-state/run_mixin.py           RunMixin: busy/progress/per-row results for tool pages (CUCM and Webex); `_run_items(..., workers=N)` runs N rows at once
+state/run_mixin.py           RunMixin: busy/progress/per-row results and the background run (`_start_run`, `run_job`, `cancel_run`); CrudMixin inherits it
 state/webex_tools.py         Check Hardware Compatibility state
 state/webex_naming.py        Naming Check state
 state/webex_devices.py       Bulk ATA/VG, Webex-Webex Phone Migrate and CUCM-Webex Phone Migrate states
@@ -131,8 +131,8 @@ uc_automation.py             app + every add_page()
 - Every operation writes its own text file to `webui/logs/` (git-ignored): `<YYYY-MM-DD_HH-MM-SS>-<slug>.log`,
   first line `<Title> - Started`, last line `<Title> - Completed`.
 - Use `OpLog(title, slug)` from `backend/applog.py` and close it in `try/finally`. On CRUD pages call
-  `self._open_log("Action")` (builds title and slug from the spec). Pass the log into `_run_each(..., log)` and
-  `_fetch(log)` so a follow-up reload lands in the parent operation's log. A bare `_fetch()` opens its own "List" log.
+  `self._open_log("Action")` (builds title and slug from the spec). Pass the log into `_start_each(..., log)`;
+  the run owns it from there (`OpLog.hold`/`release`). The reload after a run is the `fetch` event, with its own "List" log.
 - Covered: list/reload, add, import add/modify, delete selected, bulk delete, export, dependency check, MPP
   migrate/prep, and save/test/delete connection. New features must log too. Never log passwords.
 - Logs page (`/logs`, sidebar above Credentials): newest first, search matches file names and contents,
@@ -315,14 +315,14 @@ Webex has no username/password token API, so login is the OAuth authorization co
 - Menu: `components/webex_nav.GROUPS` drives the Webex menu bar and the `/webex` home cards. Menu order: Call Routing, Locations, Users, Workspaces, Devices, Tools, Reports. Section **Call Routing**:
   Add Numbers (`/webex/add-numbers`, single number plus a CSV | Paste text tab pair for bulk) and Call Forward (`/webex/call-forward`, Set or Remove switch).
 - A feature is backend functions taking a `WebexClient` (`webex_api.py`), a state `class X(_WebexRun)` that builds
-  `(label, callable)` items and runs them with `_run_items` (per-row results, one log per operation), and a page using
+  `(label, callable)` items and yields `self._start_run(...)` (per-row results, one log per operation), and a page using
   `webex_page` + `tool_widgets`. Create the client once per run with `self._connect(log)`; never call `ensure_token` per row.
 - Every call gets `orgId` from the saved Org ID when there is one. The Locations lookup uses the Calling API
   (`GET /telephony/config/locations`), not the core `/v1/locations` (different scope).
 - Call forward owner types: PEOPLE, PLACE, VIRTUAL_LINE (also sets business continuity), HUNT_GROUP, CALL_QUEUE,
   AUTO_ATTENDANT. The forward prefix (default 88888888) is a form field.
 - Page states are `class X(WebexSession, RunMixin, ...)`: mixins go on the leaf so busy/results are per page.
-  `WebexSession._run_items` runs `WEBEX_WORKERS` (4) rows at once; the result table keeps CSV order, the log lists rows as they finish. Row callables must not touch state.
+  Webex runs do `WEBEX_WORKERS` (4) rows at once (`WebexSession._default_workers`); the result table keeps CSV order, the log lists rows as they finish. Row callables must not touch state.
 - **Call Queues** (`/webex/call-queues`): Create (CSV) and Update agents. **Hunt Groups**: Create, Update agents, Migrate to Call
   Queue (Review, then a confirm dialog; the original settings are saved to `webui/logs/<ts>-hunt_group_backup-<name>.json`
   before the hunt group is deleted). **Virtual Lines**: upload a .wav as busy + unanswered greeting. Agents are an email, or a
@@ -447,15 +447,26 @@ Dialogs are driven by one string var, `dialog` (`""`, `"add"`, `"import"`, `"bul
 ## Tool pages (not CRUD)
 
 CUCM > Tools (`pages/tools.py`, `state/tools.py`, `components/tool_widgets.py`) are one-off runners, not lists.
-`_RunMixin` gives them busy / progress / per-row results and `_run_items`, which runs each item in a thread and logs it.
+`RunMixin` gives them busy / progress / per-row results and `_start_run`, which runs each item in a thread and logs it.
 Their routes are registered with `on_load=<State>.load_connections`. Secrets: PINs come from a password input (backend
 var) or an uploaded CSV, go straight to CUCM or the EM servlet, and are never logged or shown. EM login and logout call
 `http://<server>:8080/emapp/EMAppServlet` from the app's host, so that host must be able to reach the EM server.
 
 ## Shared behavior worth knowing
 
-- `CrudMixin._run_each(conn, targets, op, verb, done)` runs `op(conn, target)` per target in a thread and
-  records one result row each. If `op` returns a non-empty string it becomes that row's detail.
+- **Bulk runs are background tasks.** A handler builds `(label, fn)` items (or `(label, fn, extra_fields)`) and
+  yields `self._start_run(items, verb, log, then="_after_x")`, then returns. `run_job` (background) runs them
+  `workers` at a time in threads and updates progress and results under `async with self`, so the tab stays usable.
+  `run_progress` (in `run_results` and the CRUD dialogs) shows a Cancel button (`cancel_run`): no new items start,
+  running ones finish. Item callables must not touch state. Work that follows the run goes in the sync
+  `then` method `(self, log)`, called under the lock with final results; it may return events (toasts, `type(self).fetch`,
+  or another `_start_run` to chain a second run on the same log). Run handlers start with `if self.busy: return`.
+- `CrudMixin._start_each(conn, targets, op, verb, done, log, then)` does that for `op(conn, target)`; rows carry the
+  target `id`. If `op` returns a non-empty string it becomes that row's detail.
+- Confirm dialog actions start with `if not self.<open var> or self.busy: return` and close the dialog before any
+  await, so a queued second click is ignored.
+- Page state lives in memory (`state_manager_mode="memory"` in `rxconfig.py`): the disk mode pickled backend vars,
+  passwords included, into `.states/`. A backend restart drops open page state.
 - Lists render the first 500 filtered rows (`DISPLAY_LIMIT` in `state/crud.py`). Search, select-all and
   export cover every match.
 - Export with rows selected asks for Selected or All. Without a selection it exports all.
@@ -468,7 +479,7 @@ var) or an uploaded CSV, go straight to CUCM or the EM servlet, and are never lo
 - **Generator handlers cannot `return value`.** If a handler has any `yield`, write `yield rx.toast.error(..)`
   then a bare `return`.
 - **Mixins cannot name the concrete state class.** Shared helpers are plain `async def` generators
-  (`_fetch`, `_import`, `_run_each`) that handlers forward with `async for ev in self._x(): yield ev`.
+  (`_fetch`, `_import`) that handlers forward with `async for ev in self._x(): yield ev`.
   Do not call one event handler from another. Subclasses supply behavior through `_spec()`.
 - **`rx.upload_files(...)` takes exactly one handler argument.** Two actions on one upload (Add and Modify)
   need two handlers (`import_add`, `import_modify`).

@@ -31,6 +31,8 @@ class ListHandlersState(CucState, AllRows):
     @rx.event
     async def delete_selected(self):
         """Delete the ticked call handlers, then reload the list."""
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         conn = self._conn()
         rows = self._selected_rows()
@@ -42,12 +44,12 @@ class ListHandlersState(CucState, AllRows):
             client = cuc_api.CucClient(conn)
             items = [(r["displayName"] or r["objectId"],
                       lambda r=r: client.delete_call_handler(r["objectId"]) or "Deleted") for r in rows]
-            async for ev in self._run_items(items, "Deleting", log):
-                yield ev
+            yield self._start_run(items, "Deleting", log, then="_after_delete_selected")
         finally:
             log.close()
-        async for ev in self._load_all():
-            yield ev
+
+    def _after_delete_selected(self, log):
+        return [type(self).load_all]
 
     def _read_all(self, client):
         handlers, _ = h.list_handlers(client)
@@ -75,10 +77,10 @@ class ListHandlersState(CucState, AllRows):
         if conn is None or not rows:
             yield rx.toast.error("Tick the call handlers first.")
             return
-        self.menu_busy, self.menu_errors = True, []
-        yield
         log = self._tool_log("List menu entries of call handlers", "cuc-list-menu-entries", conn)
         try:
+            self.menu_busy, self.menu_errors = True, []
+            yield
             client = cuc_api.CucClient(conn)
             try:
                 _, by_id = await asyncio.to_thread(h.list_handlers, client)
@@ -171,11 +173,11 @@ class MapState(CucState):
         if not from_conn and (not self._handlers or not self._menu):
             yield rx.toast.error("Load both CSV files first.")
             return
-        self.building = True
-        self.summary, self._xlsx = {}, b""
-        yield
         log = self._tool_log("Build call trees", "cuc-map", conn)
         try:
+            self.building = True
+            self.summary, self._xlsx = {}, b""
+            yield
             try:
                 if from_conn:
                     client = cuc_api.CucClient(conn)
@@ -270,6 +272,8 @@ class DeleteHandlersState(CucState, CucRun, PasteMixin):
 
     @rx.event
     async def run_delete(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         conn = self._conn()
         rows = list(self.rows)
@@ -284,8 +288,9 @@ class DeleteHandlersState(CucState, CucRun, PasteMixin):
             client = cuc_api.CucClient(conn)
             items = [((r["displayName"] or r["objectId"]),
                       lambda r=r: client.delete_call_handler(r["objectId"]) or "Deleted") for r in rows]
-            async for ev in self._run_items(items, "Deleting", log):
-                yield ev
-            self.rows, self.file_name = [], ""
+            yield self._start_run(items, "Deleting", log, then="_after_run_delete")
         finally:
             log.close()
+
+    def _after_run_delete(self, log):
+        self.rows, self.file_name = [], ""

@@ -58,13 +58,29 @@ class WebexClient:
         """Run one request. Returns the JSON body ({} for 204). Raises WebexError on any failure.
 
         `files` makes it a multipart upload ({"file": (name, bytes, content_type)}); `body` is then ignored."""
+        return _json(self._send(method, BASE + path, self._params(path, params), body, files))
+
+    def list_all(self, path: str, key: str, params: dict | None = None) -> list[dict]:
+        """Every item of a list API that pages with the Link header (rel="next"), such as /people."""
+        r = self._send("GET", BASE + path, self._params(path, params))
+        items = list(_json(r).get(key) or [])
+        while r.links.get("next", {}).get("url"):
+            r = self._send("GET", r.links["next"]["url"], None)  # the next link carries every query parameter
+            items.extend(_json(r).get(key) or [])
+        return items
+
+    def _params(self, path: str, params: dict | None) -> dict:
         params = dict(params or {})
         if self.org_id:
             params["orgId"] = _core_org_id(self.org_id) if path.startswith(CORE_PATHS) else self.org_id
+        return params
+
+    def _send(self, method: str, url: str, params: dict | None, body: dict | None = None,
+              files: dict | None = None) -> requests.Response:
         headers = {"Authorization": f"Bearer {self._token}"}
         for attempt in range(MAX_RETRIES + 1):
             try:
-                r = self._session.request(method, BASE + path, headers=headers, params=params,
+                r = self._session.request(method, url, headers=headers, params=params,
                                           json=None if files else body, files=files, timeout=TIMEOUT)
             except requests.RequestException as e:
                 raise WebexError(f"Could not reach Webex: {e}") from e
@@ -77,12 +93,16 @@ class WebexClient:
         if r.status_code >= 300:
             text = _error_text(r)
             if r.status_code == 400:
-                text += f" ({method} {path})"
+                text += f" ({method} {url.removeprefix(BASE).split('?')[0]})"
             raise WebexError(text)
-        try:
-            return r.json() if r.content else {}
-        except ValueError:
-            return {}
+        return r
+
+
+def _json(r: requests.Response) -> dict:
+    try:
+        return r.json() if r.content else {}
+    except ValueError:
+        return {}
 
 
 def _error_text(r: requests.Response) -> str:

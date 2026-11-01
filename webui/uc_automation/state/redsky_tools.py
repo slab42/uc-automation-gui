@@ -11,6 +11,7 @@ from typing import ClassVar
 import reflex as rx
 
 from ..backend import redsky_alerts as alerts, redsky_geography as geo, redsky_networking as net, redsky_precheck as pre
+from ..backend.applog import OpLog
 from ..backend.errors import UserError
 from ..backend.redsky_api import RedskyClient
 from ..backend.redsky_common import AddSpec, CheckSpec, build_items, csv_bytes, read_rows
@@ -58,11 +59,14 @@ class RedskyBulk(RunMixin, PasteMixin, mixin=True):
         finally:
             log.close()
 
-    async def _execute(self, rows: list[list[str]], title: str):
+    async def _execute(self, rows: list[list[str]], title: str, then: str):
+        """Build the items and start the background run (RunMixin). `then` runs after it."""
         spec = self.SPEC
         conn = self._conn()
         if conn is None:
             yield rx.toast.error(_NO_CONNECTION)
+            return
+        if self.busy:
             return
         log = self._tool_log(title, f"redsky-{spec.slug}", conn)
         try:
@@ -73,8 +77,7 @@ class RedskyBulk(RunMixin, PasteMixin, mixin=True):
                 log.error(str(e))
                 yield rx.toast.error(str(e))
                 return
-            async for ev in self._run_items(items, "Adding", log):
-                yield ev
+            yield self._start_run(items, "Adding", log, then=then)
         finally:
             log.close()
 
@@ -82,10 +85,12 @@ class RedskyBulk(RunMixin, PasteMixin, mixin=True):
     async def add_single(self):
         spec = self.SPEC
         row = [self.row.get(f.key, "").strip() for f in spec.fields]
-        async for ev in self._execute([row], f"RedSky {spec.title}"):
+        async for ev in self._execute([row], f"RedSky {spec.title}", "_after_add_single"):
             yield ev
+
+    def _after_add_single(self, log: OpLog):
         if self.results and self.result_fail_count == 0:
-            self.row = _blank(spec)
+            self.row = _blank(self.SPEC)
 
     async def _csv_flow(self, files):
         """Shared by the CSV upload and the pasted text (PastedFile stands in for the upload)."""
@@ -98,9 +103,13 @@ class RedskyBulk(RunMixin, PasteMixin, mixin=True):
         except ValueError as e:
             yield rx.toast.error(str(e))
             return
-        async for ev in self._execute(rows, f"RedSky {spec.title} from CSV ({files[0].filename})"):
+        async for ev in self._execute(rows, f"RedSky {spec.title} from CSV ({files[0].filename})", "_after_csv"):
             yield ev
-        yield rx.clear_selected_files(f"{spec.slug}_upload")
+        if not self.busy:  # the run did not start: clear the upload now, otherwise _after_csv does
+            yield rx.clear_selected_files(f"{spec.slug}_upload")
+
+    def _after_csv(self, log: OpLog):
+        return [rx.clear_selected_files(f"{self.SPEC.slug}_upload")]
 
     @rx.event
     async def add_from_csv(self, files: list[rx.UploadFile]):

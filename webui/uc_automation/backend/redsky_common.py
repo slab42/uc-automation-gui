@@ -123,7 +123,7 @@ def resolve_location(locations: dict[str, str | None], text: str) -> str:
 
 
 def build_items(spec: AddSpec, client: RedskyClient, rows: list[list[str]]) -> list[tuple[str, Callable]]:
-    """(label, callable) per row for RunMixin._run_items. A row missing a required value fails on its own."""
+    """(label, callable) per row for RunMixin._start_run. A row missing a required value fails on its own."""
     context = spec.prepare(client)
     keys = spec.label_keys or spec.columns[:1]
     items = []

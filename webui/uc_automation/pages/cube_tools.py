@@ -4,7 +4,7 @@ import reflex as rx
 
 from ..components.cube_nav import GROUPS, cred_picker, cube_page
 from ..components.cuc_widgets import list_input_parts, hidden_note
-from ..components.tool_widgets import code_block, file_dropzone, run_results
+from ..components.tool_widgets import code_block, file_dropzone, run_progress, run_results
 from ..state.cube_tools import ConfigCompareState, MemStatusState
 from .cucm_home import _card
 
@@ -97,8 +97,7 @@ def mem_status() -> rx.Component:
             ),
             size="3", width="100%",
         ),
-        rx.cond(S.busy, rx.hstack(rx.spinner(size="2"), rx.text(S.progress, size="2"), align="center", spacing="2"),
-                rx.fragment()),
+        rx.cond(S.busy, run_progress(S), rx.fragment()),
         rx.cond(
             S.rows.length() > 0,
             rx.vstack(
@@ -186,8 +185,7 @@ def config_compare() -> rx.Component:
     return cube_page("Config Compare", rx.vstack(
         template,
         routers,
-        rx.cond(S.busy, rx.hstack(rx.spinner(size="2"), rx.text(S.progress, size="2"), align="center", spacing="2"),
-                rx.fragment()),
+        rx.cond(S.busy, run_progress(S), rx.fragment()),
         rx.cond(
             S.rows.length() > 0,
             rx.vstack(

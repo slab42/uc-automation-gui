@@ -9,4 +9,7 @@ config = rx.Config(
         ),
     ],
     telemetry_enabled=False,
+    # Keep page state in memory only. The default disk mode pickles every state var, including the
+    # backend-only passwords, into .states/ (CLAUDE.md: passwords are never written outside credentials.env).
+    state_manager_mode="memory",
 )

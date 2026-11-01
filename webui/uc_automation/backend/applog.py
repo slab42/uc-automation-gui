@@ -55,6 +55,7 @@ class OpLog:
         self._handler.setFormatter(_FORMAT)
         self._logger.addHandler(self._handler)
         self._closed = False
+        self._held = False
         self.info(f"{title} - Started")
 
     def info(self, msg: str) -> None:
@@ -69,8 +70,16 @@ class OpLog:
     def debug(self, msg: str) -> None:
         self._logger.debug(msg)
 
+    def hold(self) -> None:
+        """Hand the log to a background run: close() is ignored until release()."""
+        self._held = True
+
+    def release(self) -> None:
+        self._held = False
+        self.close()
+
     def close(self) -> None:
-        if self._closed:
+        if self._closed or self._held:
             return
         self._closed = True
         self.info(f"{self.title} - Completed")

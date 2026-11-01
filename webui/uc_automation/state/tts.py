@@ -10,6 +10,9 @@ from ..backend.applog import OpLog
 from .run_mixin import RunMixin
 from .webex_routing import PasteMixin
 
+# WAV bytes made by a running conversion, keyed by RunMixin job key. Filled from worker threads, so kept out of state.
+_MADE: dict[tuple[str, str], dict[str, bytes]] = {}
+
 
 class TtsState(RunMixin, PasteMixin, rx.State):
     one_name: str = ""
@@ -17,6 +20,7 @@ class TtsState(RunMixin, PasteMixin, rx.State):
     paste_prompts: str = ""
     _files: dict[str, bytes] = {}  # file name -> WAV bytes, kept in the backend until downloaded
     file_names: list[str] = []
+    _names: list[str] = []  # prompt names of the running conversion, in input order
 
     @rx.var
     def file_count(self) -> int:
@@ -75,6 +79,8 @@ class TtsState(RunMixin, PasteMixin, rx.State):
             yield ev
 
     async def _convert(self, prompts: list[tuple[str, str]], source: str):
+        if self.busy:  # a second click queued behind the first would replace its job and its WAV bytes
+            return
         log = OpLog("Text To U-Law Audio", "tools-text-to-ulaw")
         try:
             log.info(f"Input: {source}, {len(prompts)} prompt(s), {sum(len(t) for _n, t in prompts)} characters")
@@ -89,12 +95,17 @@ class TtsState(RunMixin, PasteMixin, rx.State):
 
             self.file_names = []
             self._files = {}
-            async for ev in self._run_items([one(n, t) for n, t in prompts], "Converting", log):
-                yield ev
-            self._files = made
-            self.file_names = [n for n, _t in prompts if n in made]
+            self._names = [n for n, _t in prompts]
+            _MADE[self._job_key()] = made
+            yield self._start_run([one(n, t) for n, t in prompts], "Converting", log, then="_after_convert")
         finally:
             log.close()
+
+    def _after_convert(self, log: OpLog):
+        made = _MADE.pop(self._job_key(), {})
+        self._files = made
+        self.file_names = [n for n in self._names if n in made]
+        self._names = []
 
     @rx.event
     def download(self):

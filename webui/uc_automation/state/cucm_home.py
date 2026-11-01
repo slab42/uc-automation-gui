@@ -17,6 +17,20 @@ from .run_mixin import RunMixin
 WORKERS = 10
 
 
+def _home_items(saved: dict, username: str, password: str, user: str, names: list[str], local: bool) -> list[tuple]:
+    """Run items that set (local=True) or remove the home cluster of `user` on each named connection."""
+
+    def conn(name: str) -> CucmConnection:
+        c = saved[name]
+        return CucmConnection(name, c["server"], username, password, c.get("version", ""),
+                              c.get("schema_version", ""))
+
+    def item(name: str):
+        return (name, lambda: home.set_home(conn(name), user, local))
+
+    return [item(n) for n in names]
+
+
 class HomeClusterState(CucmState, RunMixin):
     username: str = ""
     searched_user: str = ""
@@ -27,6 +41,14 @@ class HomeClusterState(CucmState, RunMixin):
     _axl_password: str = ""  # backend var: never sent to the browser, never logged
     axl_key: int = 0
     confirm_open: bool = False
+    # Pending Move Home Cluster run (backend only; the password is never sent to the browser or logged)
+    _move_user: str = ""
+    _move_target: str = ""
+    _move_others: list[str] = []
+    _move_head: list[dict[str, str]] = []
+    _move_saved: dict[str, dict[str, str]] = {}
+    _move_username: str = ""
+    _move_password: str = ""
 
     @rx.var
     def cluster_count(self) -> int:
@@ -174,54 +196,78 @@ class HomeClusterState(CucmState, RunMixin):
 
     @rx.event
     async def apply(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         user, target = self.searched_user, (self.selected[0] if len(self.selected) == 1 else "")
         if not target or not self.axl_username or not self._axl_password:
             yield rx.toast.error("Tick one cluster and enter the AXL username and password.")
             return
         saved = {c["name"]: c for c in self.org_connections}
-        username, password = self.axl_username, self._axl_password
-
-        def conn(name: str) -> CucmConnection:
-            c = saved[name]
-            return CucmConnection(name, c["server"], username, password, c.get("version", ""),
-                                  c.get("schema_version", ""))
-
-        def item(name: str, local: bool):
-            return (name, lambda: home.set_home(conn(name), user, local))
-
+        username = self.axl_username
         names = [r["name"] for r in self.rows if r["name"] in saved]
         others = [n for n in names if n != target]
+        # Kept for the then-steps: the second run is built after the first, from the same snapshot.
+        self._move_user, self._move_target, self._move_others = user, target, others
+        self._move_saved, self._move_username, self._move_password = saved, username, self._axl_password
         log = OpLog("Move Home Cluster", "cucm-move-home-cluster")
         try:
             log.info(f"User {user}: home on {target}, removed from {len(others)} other cluster(s); AXL account {username}")
             # Enable the target first. If that fails nothing else is touched, so the user never ends up with no home.
-            async for ev in self._run_items([item(target, True)], "Enabling home cluster", log):
-                yield ev
-            head = list(self.results)
-            if self.result_fail_count:
-                log.error("Target cluster failed, other clusters were not changed")
-                yield rx.toast.error("The chosen cluster could not be updated. Nothing else was changed.")
-                return
-            if others:
-                async for ev in self._run_items([item(n, False) for n in others], "Removing home cluster", log):
-                    yield ev
-                self.results = head + self.results
-            else:
-                self.results = head
-            failed = self.result_fail_count
-            self._axl_password = ""
-            self.axl_key += 1
+            yield self._start_run(_home_items(saved, username, self._axl_password, user, [target], True),
+                                  "Enabling home cluster", log, then="_after_enable_home")
         finally:
-            self.busy = False
-            self.progress = ""
             log.close()
+
+    def _clear_move(self):
+        self._move_saved = {}
+        self._move_username = self._move_password = ""
+
+    def _after_enable_home(self, log: OpLog):
+        self._move_head = list(self.results)
+        # No OK row also covers a cancel before the target ran: then the others must not be touched either.
+        if not self.result_ok_count:
+            self._clear_move()
+            self._move_user = self._move_target = ""
+            self._move_others, self._move_head = [], []
+            if not self.results:
+                return None  # cancelled: the runner shows the cancel toast
+            log.error("Target cluster failed, other clusters were not changed")
+            return [rx.toast.error("The chosen cluster could not be updated. Nothing else was changed.")]
+        if self._move_others and not self._cancel:  # a cancel during the target run also skips the removals
+            items = _home_items(self._move_saved, self._move_username, self._move_password, self._move_user,
+                                self._move_others, False)
+            self._clear_move()
+            return [self._start_run(items, "Removing home cluster", log, then="_after_remove_home")]
+        return self._after_remove_home(log, head_only=True)
+
+    def _after_remove_home(self, log: OpLog, head_only: bool = False):
+        self._clear_move()
+        self.results = self._move_head if head_only else self._move_head + self.results
+        self._move_head = []
+        self._axl_password = ""
+        self.axl_key += 1
+        return [type(self).refresh_after_move]
+
+    @rx.event
+    async def refresh_after_move(self):
+        """Search again to show the new state, then put back the move results and report."""
+        user, target = self._move_user, self._move_target
+        if not user or self.busy:
+            return
+        self._move_user = self._move_target = ""
         results = list(self.results)
-        async for ev in self._search(user):  # show the new state
+        failed = sum(1 for r in results if r["status"] != "OK")
+        skipped = max(0, 1 + len(self._move_others) - len(results))  # not run after a cancel
+        self._move_others = []
+        async for ev in self._search(user):
             yield ev
         self.results = results
-        yield rx.toast.error(f"{failed} cluster(s) failed. See the results.") if failed else rx.toast.success(
-            f"{user} is now home on {target}.")
+        if failed or skipped:
+            yield rx.toast.error(f"{failed} cluster(s) failed, {skipped} not changed (cancelled). See the results."
+                                 if skipped else f"{failed} cluster(s) failed. See the results.")
+        else:
+            yield rx.toast.success(f"{user} is now home on {target}.")
 
     @rx.event
     def export_csv(self):

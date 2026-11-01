@@ -117,6 +117,9 @@ class ConfigComparator:
                 diff['template_only'].extend(template_lines[i1:i2])
             elif tag == 'insert':
                 diff['router_only'].extend(router_lines[j1:j2])
+            elif tag == 'replace':  # changed lines: the template's version and the router's version
+                diff['template_only'].extend(template_lines[i1:i2])
+                diff['router_only'].extend(router_lines[j1:j2])
             elif tag == 'equal':
                 diff['shared'].extend(template_lines[i1:i2])
 

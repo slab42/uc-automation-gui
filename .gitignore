@@ -24,3 +24,6 @@ logs/
 
 # OS and editors
 .DS_Store
+
+# Customer scripts and other working files at the repo root
+/*.aef

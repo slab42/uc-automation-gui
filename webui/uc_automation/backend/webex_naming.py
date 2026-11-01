@@ -184,7 +184,10 @@ def rename(c: WebexClient, row: dict[str, str], new_name: str) -> str:
     if typ == "location":
         c.call("PUT", f"/locations/{rid}", body={"name": new_name})
     elif typ == "workspace":
-        c.call("PUT", f"/workspaces/{rid}", body={"displayName": new_name})
+        # The PUT clears capacity, type and notes when they are left out, so send the current values back.
+        current = c.call("GET", f"/workspaces/{rid}")
+        body = {k: current[k] for k in ("capacity", "type", "notes") if current.get(k) is not None}
+        c.call("PUT", f"/workspaces/{rid}", body={**body, "displayName": new_name})
     elif typ == "virtual_line":
         c.call("PUT", f"{VIRTUAL_LINES}/{rid}", body={"displayName": new_name})
     elif typ in ("queue", "hunt_group", "auto_attendant"):

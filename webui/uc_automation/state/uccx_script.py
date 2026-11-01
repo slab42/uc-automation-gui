@@ -15,6 +15,9 @@ from .uccx import UccxState
 
 DISPLAY_LIMIT = 500
 
+# Reports being built by a background run, keyed by RunMixin._job_key(). Kept out of state: worker threads fill it.
+_BUILT: dict[tuple[str, str], dict[str, str]] = {}
+
 
 def _report_name(script: str) -> str:
     base = script.rsplit("/", 1)[-1]
@@ -66,39 +69,48 @@ class UccxScriptState(UccxState, RunMixin):
     def clear_picked(self):
         self.picked = []
 
-    async def _make_reports(self, sources: list[tuple[str, object]], title: str, slug: str):
-        """sources: (script name, zero-argument callable returning its bytes). Builds a report for each."""
-        log = OpLog(title, slug)
+    def _make_reports(self, sources: list[tuple[str, object]], log: OpLog, then: str):
+        """sources: (script name, zero-argument callable returning its bytes). Returns the event that builds a
+        report for each in the background."""
+        built: dict[str, str] = {}
+        _BUILT[self._job_key()] = built  # filled by the worker threads, read by the then-step
+
+        def one(name: str, read):
+            page, counts = uccx_aef.report(read(), name)
+            built[_report_name(name)] = page
+            return f"{counts['steps']} steps, {counts['variables']} variables, {counts['labels']} labels"
+
+        self._html = {}
+        self.preview_name = self.preview_html = ""
+        items = [(name, lambda n=name, r=read: one(n, r)) for name, read in sources]
+        return self._start_run(items, "Reading", log, then=then)
+
+    def _after_reports(self, log: OpLog):
+        built = _BUILT.pop(self._job_key(), {})
+        self._html = built
+        self.reports = list(built)
+        if built:
+            self._show(next(iter(built)))
+
+    def _after_report_uploads(self, log: OpLog):
+        self._after_reports(log)
+        return [rx.clear_selected_files("aef_upload")]
+
+    @rx.event
+    async def report_picked(self):
+        if not self.picked or self.busy:
+            return
+        log = OpLog("UCCX script report", "uccx-script-report")
         try:
-            built: dict[str, str] = {}
-
-            def one(name: str, read):
-                page, counts = uccx_aef.report(read(), name)
-                built[_report_name(name)] = page
-                return f"{counts['steps']} steps, {counts['variables']} variables, {counts['labels']} labels"
-
-            self._html = {}
-            self.preview_name = self.preview_html = ""
-            items = [(name, lambda n=name, r=read: one(n, r)) for name, read in sources]
-            async for ev in self._run_items(items, "Reading", log):
-                yield ev
-            self._html = built
-            self.reports = list(built)
-            if built:
-                self._show(next(iter(built)))
+            sources = [(p, lambda p=p: store.read_script(p)) for p in self.picked]
+            yield self._make_reports(sources, log, "_after_reports")
         finally:
             log.close()
 
     @rx.event
-    async def report_picked(self):
-        if not self.picked:
-            return
-        sources = [(p, lambda p=p: store.read_script(p)) for p in self.picked]
-        async for ev in self._make_reports(sources, "UCCX script report", "uccx-script-report"):
-            yield ev
-
-    @rx.event
     async def report_uploads(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         if not files:
             yield rx.toast.error("Choose one or more .aef files first.")
             return
@@ -106,9 +118,11 @@ class UccxScriptState(UccxState, RunMixin):
         for f in files:
             data = await f.read()
             loaded.append((f.filename or "script.aef", lambda d=data: d))
-        async for ev in self._make_reports(loaded, "UCCX script report", "uccx-script-report"):
-            yield ev
-        yield rx.clear_selected_files("aef_upload")
+        log = OpLog("UCCX script report", "uccx-script-report")
+        try:
+            yield self._make_reports(loaded, log, "_after_report_uploads")
+        finally:
+            log.close()
 
     def _show(self, name: str):
         if name in self._html:

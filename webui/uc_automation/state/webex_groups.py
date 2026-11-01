@@ -102,11 +102,12 @@ class PickerMixin(rx.State, mixin=True):
 
 
 class _GroupsBase(PasteMixin, mixin=True):
-    """Create-from-CSV and replace-agents, shared by the queue and hunt group states (methods only, no vars)."""
+    """Create-from-CSV and replace-agents, shared by the queue and hunt group states."""
 
     paste_create: str = ""
     paste_agents: str = ""
     agent_mode: str = "replace"
+    _upload_to_clear: str = ""
 
     @rx.event
     def set_agent_mode(self, value: str | list[str]):
@@ -115,6 +116,9 @@ class _GroupsBase(PasteMixin, mixin=True):
     def _kind(self) -> str:
         """"queue" or "hunt"."""
         raise NotImplementedError
+
+    def _after_upload_run(self, log: OpLog):
+        return [rx.clear_selected_files(self._upload_to_clear)]
 
     async def _create_from_text(self, upload_id: str):
         async for ev in self._from_paste(lambda f: self._create_from_csv(f, upload_id), "create",
@@ -128,6 +132,8 @@ class _GroupsBase(PasteMixin, mixin=True):
             yield ev
 
     async def _create_from_csv(self, files: list[rx.UploadFile], upload_id: str):
+        if self.busy:
+            return
         if not files:
             yield rx.toast.error("Choose a CSV file first.")
             return
@@ -148,15 +154,17 @@ class _GroupsBase(PasteMixin, mixin=True):
                 yield rx.toast.error(self.webex_message)
                 return
             cache: dict[str, str] = {}
-            items = [(r["name"] or "(no name)", lambda r=r: g.create_group(client, self._kind(), r, cache))
+            kind = self._kind()
+            items = [(r["name"] or "(no name)", lambda r=r: g.create_group(client, kind, r, cache))
                      for r in rows]
-            async for ev in self._run_items(items, "Creating", log):
-                yield ev
-            yield rx.clear_selected_files(upload_id)
+            self._upload_to_clear = upload_id
+            yield self._start_run(items, "Creating", log, then="_after_upload_run")
         finally:
             log.close()
 
     async def _update_agents(self, files: list[rx.UploadFile], upload_id: str):
+        if self.busy:
+            return
         group = self.selected_row
         if not group:
             yield rx.toast.error("Select one from the list first.")
@@ -179,11 +187,10 @@ class _GroupsBase(PasteMixin, mixin=True):
             if client is None:
                 yield rx.toast.error(self.webex_message)
                 return
-            items = [(group["name"], lambda: g.replace_agents(client, self._kind(), group, entries,
-                                                                  add=self.agent_mode == "add"))]
-            async for ev in self._run_items(items, "Updating agents", log):
-                yield ev
-            yield rx.clear_selected_files(upload_id)
+            kind, add = self._kind(), self.agent_mode == "add"
+            items = [(group["name"], lambda: g.replace_agents(client, kind, group, entries, add=add))]
+            self._upload_to_clear = upload_id
+            yield self._start_run(items, "Updating agents", log, then="_after_upload_run")
         finally:
             log.close()
 
@@ -223,6 +230,8 @@ class CallQueuesState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
     @rx.event
     async def review_migration(self):
         """Read the selected call queue and show what the migration will do."""
+        if self.busy:
+            return
         group = self.selected_row
         if not group:
             yield rx.toast.error("Select a call queue first.")
@@ -262,6 +271,8 @@ class CallQueuesState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
 
     @rx.event
     async def run_migration(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         group, q = self.selected_row, self._plan_q
         if not group or not q or self.plan_for != group["id"]:
@@ -281,20 +292,23 @@ class CallQueuesState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
             log.info(f"Call queue settings saved to {backup}")
             yield rx.download(data=backup_json, filename=backup.name)
             items = [(group["name"], lambda: g.migrate_queue(client, group, q, str(backup), log.info))]
-            async for ev in self._run_items(items, "Migrating", log):
-                yield ev
-            if self.result_fail_count == 0:
-                self.plan_for = ""
-                self.plan_lines, self.plan_notes = [], []
-                self._plan_q = {}
-                self.selected_id = ""
-                async for ev in self._load_rows():
-                    yield ev
+            yield self._start_run(items, "Migrating", log, then="_after_migration")
         finally:
             log.close()
 
+    def _after_migration(self, log: OpLog):
+        if not self.results or self.result_fail_count:  # failed, or cancelled before it ran
+            return None
+        self.plan_for = ""
+        self.plan_lines, self.plan_notes = [], []
+        self._plan_q = {}
+        self.selected_id = ""
+        return [type(self).reload]
+
     @rx.event
     async def restore_from_json(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         if not files:
             yield rx.toast.error("Choose a JSON backup first.")
             return
@@ -312,9 +326,8 @@ class CallQueuesState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
                 return
             name = doc.get("name", "(no name)") if isinstance(doc, dict) else "(invalid)"
             items = [(name, lambda: g.restore_queue(client, doc, {}))]
-            async for ev in self._run_items(items, "Restoring", log):
-                yield ev
-            yield rx.clear_selected_files("queue_restore_upload")
+            self._upload_to_clear = "queue_restore_upload"
+            yield self._start_run(items, "Restoring", log, then="_after_upload_run")
         finally:
             log.close()
 
@@ -384,6 +397,8 @@ class HuntGroupsState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
 
     @rx.event
     async def restore_from_json(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         if not files:
             yield rx.toast.error("Choose a JSON backup first.")
             return
@@ -401,9 +416,8 @@ class HuntGroupsState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
                 return
             name = doc.get("name", "(no name)") if isinstance(doc, dict) else "(invalid)"
             items = [(name, lambda: g.restore_hunt_group(client, doc, {}))]
-            async for ev in self._run_items(items, "Restoring", log):
-                yield ev
-            yield rx.clear_selected_files("hunt_restore_upload")
+            self._upload_to_clear = "hunt_restore_upload"
+            yield self._start_run(items, "Restoring", log, then="_after_upload_run")
         finally:
             log.close()
 
@@ -420,6 +434,8 @@ class HuntGroupsState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
     @rx.event
     async def review_migration(self):
         """Read the selected hunt group and show what the migration will do."""
+        if self.busy:
+            return
         group = self.selected_row
         if not group:
             yield rx.toast.error("Select a hunt group first.")
@@ -459,6 +475,8 @@ class HuntGroupsState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
 
     @rx.event
     async def run_migration(self):
+        if not self.confirm_open or self.busy:
+            return
         self.confirm_open = False
         group, hg = self.selected_row, self._plan_hg
         if not group or not hg or self.plan_for != group["id"]:
@@ -479,17 +497,18 @@ class HuntGroupsState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
             self.last_backup = str(backup)
             yield rx.download(data=backup_json, filename=backup.name)
             items = [(group["name"], lambda: g.migrate_hunt_group(client, group, hg, str(backup), log.info))]
-            async for ev in self._run_items(items, "Migrating", log):
-                yield ev
-            if self.result_fail_count == 0:
-                self.plan_for = ""
-                self.plan_lines, self.plan_notes = [], []
-                self._plan_hg = {}
-                self.selected_id = ""
-                async for ev in self._load_rows():
-                    yield ev
+            yield self._start_run(items, "Migrating", log, then="_after_migration")
         finally:
             log.close()
+
+    def _after_migration(self, log: OpLog):
+        if not self.results or self.result_fail_count:  # failed, or cancelled before it ran
+            return None
+        self.plan_for = ""
+        self.plan_lines, self.plan_notes = [], []
+        self._plan_hg = {}
+        self.selected_id = ""
+        return [type(self).reload]
 
 
 class VirtualLinesState(WebexSession, RunMixin, PickerMixin):
@@ -501,6 +520,8 @@ class VirtualLinesState(WebexSession, RunMixin, PickerMixin):
 
     @rx.event
     async def upload_greeting(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
         line = self.selected_row
         if not line:
             yield rx.toast.error("Select a virtual line first.")
@@ -523,8 +544,9 @@ class VirtualLinesState(WebexSession, RunMixin, PickerMixin):
                 yield rx.toast.error(self.webex_message)
                 return
             items = [(line["name"], lambda: vl.upload_greetings(client, line, name, data, log.info))]
-            async for ev in self._run_items(items, "Uploading", log):
-                yield ev
-            yield rx.clear_selected_files("greeting_upload")
+            yield self._start_run(items, "Uploading", log, then="_after_greeting")
         finally:
             log.close()
+
+    def _after_greeting(self, log: OpLog):
+        return [rx.clear_selected_files("greeting_upload")]
