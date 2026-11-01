@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 APP_NAME = "slab42 UC-Automations"
-VERSION = "0.0.2"
+VERSION = "2026.10.0"
 
 
 @dataclass(frozen=True)
