@@ -149,7 +149,6 @@ def topbar(title: str) -> rx.Component:
             ),
         ),
         rx.spacer(),
-        rx.badge(f"v{VERSION}", variant="soft", radius="full"),
         rx.color_mode.button(variant="ghost", size="2"),
         align="center",
         spacing="3",
