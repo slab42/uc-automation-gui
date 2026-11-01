@@ -91,17 +91,14 @@ def _status(show_org: bool = True) -> rx.Component:
             ),
         ] if show_org else []),
         *([
-            rx.cond(
-                WebexSession.webex_login != "",
-                rx.badge("Login " + WebexSession.webex_login, variant="soft", color_scheme="gray"),
-                rx.fragment(),
-            ),
-        ] if show_org else []),
-        *([
             rx.link(
                 rx.cond(
                     WebexSession.webex_ok,
-                    rx.badge("Logged in", color_scheme="green"),
+                    rx.tooltip(
+                        rx.badge("Logged in", color_scheme="green"),
+                        content="Login " + WebexSession.webex_login,
+                        disabled=WebexSession.webex_login == "",
+                    ),
                     rx.badge("Login required", color_scheme="red"),
                 ),
                 href="/credentials?tab=webex",
