@@ -35,7 +35,8 @@ def _platform(plat: dict) -> rx.Component:
     return rx.box(
         rx.hstack(
             _checkbox(slug),
-            rx.text(plat["label"], weight="bold"),
+            rx.text(plat["label"], weight="bold",
+                    color=rx.cond(S.group_state[slug] == "none", "inherit", "var(--accent-11)")),
             rx.badge(S.group_count[slug], variant="soft", color_scheme="gray"),
             rx.spacer(),
             rx.icon_button(
