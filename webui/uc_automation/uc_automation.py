@@ -38,7 +38,7 @@ from .pages.webex_routing import add_numbers, call_forward, call_queues, hunt_gr
 from .pages.webex_locations import copy_location, e911, migrate_pstn, schedules
 from .pages.webex_tools import hardware_compatibility
 from .pages.webex_naming import naming_check
-from .pages.webex_devices import bulk_ata, cucm_migrate, device_migrate
+from .pages.webex_devices import bulk_ata, cucm_gateway, cucm_migrate, device_migrate
 from .pages.webex_users import add_workspace, copy_workspace, create_workspace, delete_users, migrate, reset_pin, voicemail
 from .pages.pickup_groups import pickup_groups
 from .pages.route_patterns import route_patterns
@@ -70,7 +70,7 @@ from .state.devices import (
 from .state.logs import LogsState
 from .state.settings import SettingsState
 from .state.webex import WebexState
-from .state.webex_devices import BulkAtaState, CucmMigrateState, DeviceMigrateState
+from .state.webex_devices import BulkAtaState, CucmGatewayState, CucmMigrateState, DeviceMigrateState
 from .state.webex_groups import CallQueuesState, HuntGroupsState as WebexHuntGroupsState, VirtualLinesState
 from .state.webex_locations import CopyLocationState, E911State, MigratePstnState, SchedulesState
 from .state.webex_tools import HardwareCompatState
@@ -145,10 +145,11 @@ for _route, _title, _page, _state in [
     ("/webex/bulk-ata", "Bulk ATA/VG", bulk_ata, BulkAtaState),
     ("/webex/webex-phone-migrate", "Webex-Webex Phone Migrate", device_migrate, DeviceMigrateState),
     ("/webex/cucm-phone-migrate", "CUCM-Webex Phone Migrate", cucm_migrate, CucmMigrateState),
+    ("/webex/cucm-gateway-migrate", "CUCM-Webex Analog Gateway Migrate", cucm_gateway, CucmGatewayState),
     ("/webex/voicemail", "Voicemail", voicemail, VoicemailState),
 ]:
     app.add_page(_page, route=_route, title=f"{_title} | {APP_NAME}",
-                 on_load=_state.load_page if _state in (AddWorkspaceState, BulkAtaState, DeviceMigrateState, CucmMigrateState, CopyWorkspaceState, CreateWorkspaceState, VoicemailState) else _state.on_page_load)
+                 on_load=_state.load_page if _state in (AddWorkspaceState, BulkAtaState, DeviceMigrateState, CucmMigrateState, CucmGatewayState, CopyWorkspaceState, CreateWorkspaceState, VoicemailState) else _state.on_page_load)
 app.add_page(logs, route="/logs", title=f"Logs | {APP_NAME}", on_load=LogsState.on_page_load)
 app.add_page(settings, route="/settings", title=f"Settings | {APP_NAME}", on_load=SettingsState.on_page_load)
 

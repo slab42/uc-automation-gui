@@ -4,7 +4,7 @@ import asyncio
 
 import reflex as rx
 
-from ..backend import cucm_connections, webex_auth, webex_cucm_migrate as cm, webex_devices as d, webex_workspaces as w
+from ..backend import cucm_connections, webex_auth, webex_cucm_gateway as gw, webex_cucm_migrate as cm, webex_devices as d, webex_workspaces as w
 from ..backend.applog import OpLog
 from ..backend.errors import UserError
 from ..backend.webex_api import WebexClient
@@ -22,10 +22,92 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
     location_names: list[str] = []
     model_rows: list[dict[str, str]] = []
     paste_ata: str = ""
+    upd_device: str = ""  # the label typed or picked in the Update ATA Or VG tab
+    upd_labels: list[str] = []
+    upd_ports: list[dict[str, str]] = []
+    upd_workspaces: list[str] = []
+    upd_reading: bool = False
+    _upd_devices: dict[str, dict[str, str]] = {}
+    _upd_loaded: str = ""  # device id the ports were read for
 
     @rx.event
     def set_form(self, field: str, value: str):
         setattr(self, f"form_{field}", value)
+
+    @rx.var
+    def upd_open_count(self) -> int:
+        return sum(1 for r in self.upd_ports if not r["configured"])
+
+    @rx.event
+    async def set_upd_device(self, value: str):
+        self.upd_device = value
+        if value in self._upd_devices and self._upd_devices[value]["id"] != self._upd_loaded:
+            async for ev in self.read_upd_ports():
+                yield ev
+
+    @rx.event
+    def set_upd_port(self, index: int, field: str, value: str):
+        self.upd_ports[index][field] = value
+
+    @rx.event
+    async def read_upd_ports(self):
+        device = self._upd_devices.get(self.upd_device)
+        if device is None:
+            yield rx.toast.error("Pick the ATA or VG from the list.")
+            return
+        self.upd_reading = True
+        yield
+        log = self._webex_log("Read ATA/VG Ports", "webex-read-ata-ports")
+        try:
+            log.info(f"Device: {self.upd_device}")
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            try:
+                members, max_ports = await asyncio.to_thread(w.read_ata_ports, client, device["id"])
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            finally:
+                self.upd_reading = False
+            self.upd_ports = w.port_table(members, max_ports)
+            self._upd_loaded = device["id"]
+            log.info(f"{len(members)} of {len(self.upd_ports)} port(s) configured")
+        finally:
+            log.close()
+
+    @rx.event
+    async def apply_upd(self):
+        if self.busy:  # a second click queued behind the first
+            return
+        device = self._upd_devices.get(self.upd_device)
+        if device is None or device["id"] != self._upd_loaded:
+            yield rx.toast.error("Pick the ATA or VG and load its ports first.")
+            return
+        rows = [dict(r) for r in self.upd_ports if not r["configured"] and r["workspace"].strip()]
+        if not rows:
+            yield rx.toast.error("Enter a workspace for at least one open port.")
+            return
+        log = self._webex_log("Update ATA/VG", "webex-update-ata")
+        try:
+            log.info(f"Device: {self.upd_device}, ports: {', '.join(r['port'] for r in rows)}")
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            cache: dict[str, str] = {}
+            yield self._start_run(
+                [(device["mac"] or device["id"],
+                  lambda: w.update_ata(client, device["id"], device["workspaceId"], rows, cache, device["name"]))],
+                "Updating", log, then="_after_upd")
+        finally:
+            log.close()
+
+    def _after_upd(self, log: OpLog):
+        self._upd_loaded = ""
+        return [type(self).read_upd_ports]
 
     @rx.event
     async def load_page(self):
@@ -51,6 +133,15 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
                 log.info(f"{len(self.model_rows)} supported model(s)")
             except UserError as e:
                 log.warning(f"Supported models not loaded: {e}")
+            try:
+                found = await asyncio.to_thread(w.list_ata_devices, client, {r["id"]: r["name"] for r in rows})
+                self._upd_devices = {r["label"]: r for r in found}
+                self.upd_labels = list(self._upd_devices)
+                log.info(f"{len(found)} ATA/VG device(s)")
+                self.upd_workspaces = await asyncio.to_thread(w.list_workspace_names, client)
+                log.info(f"{len(self.upd_workspaces)} workspace(s)")
+            except UserError as e:
+                log.warning(f"ATA/VG devices or workspaces not loaded: {e}")
         finally:
             log.close()
 
@@ -444,3 +535,163 @@ class CucmMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
                 self.mac_r, self.mac_l = mac, ""
             else:
                 self.mac_l, self.mac_r = mac, ""
+
+
+class CucmGatewayState(WebexSession, RunMixin):
+    """Read an analog gateway from CUCM, edit its ports, then create the Webex workspaces and, if chosen, the device."""
+
+    conn: str = rx.LocalStorage("")
+    gateway: str = rx.LocalStorage("")
+    location: str = ""
+    model: str = ""
+    mac: str = ""
+    mode: str = "Add Device Now"
+    use_existing: bool = False
+    cucm_saved: list[dict[str, str]] = []
+    gateway_names: list[str] = []
+    port_rows: list[dict[str, str]] = []  # include, port, workspace, line (all text)
+    location_names: list[str] = []
+    model_rows: list[dict[str, str]] = []
+    reading: bool = False
+
+    @rx.var
+    def cucm_names(self) -> list[str]:
+        return [c["name"] for c in self.cucm_saved]
+
+    @rx.var
+    def add_now(self) -> bool:
+        return self.mode == "Add Device Now"
+
+    @rx.event
+    def set_field(self, field: str, value: str):
+        setattr(self, field, value)
+        if field == "conn":
+            self.gateway_names, self.port_rows = [], []
+
+    @rx.event
+    def set_form(self, field: str, value: str):
+        """Used by the shared location combo box."""
+        setattr(self, field, value)
+
+    @rx.event
+    def set_mode(self, value: str | list[str]):
+        self.mode = value if isinstance(value, str) else value[0]
+
+    @rx.event
+    def set_use_existing(self, value: bool):
+        self.use_existing = value
+
+    @rx.event
+    def set_row(self, index: int, field: str, value: str):
+        if field == "include" and self.port_rows[index]["port"] == "1":
+            return  # port 1 always gets a workspace
+        self.port_rows[index][field] = value
+
+    @rx.event
+    def toggle_row(self, index: int, checked: bool):
+        self.set_row(index, "include", "1" if checked else "")
+
+    @rx.event
+    async def load_page(self):
+        self.cucm_saved = cucm_connections.list_public()
+        await self._refresh_session()
+        if not self.webex_ok:
+            return
+        log = self._webex_log("List locations", "webex-list-locations")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                return
+            try:
+                rows = await asyncio.to_thread(list_locations, client)
+                self.location_names = [r["name"] for r in rows]
+                log.info(f"{len(rows)} location(s)")
+                devices = await asyncio.to_thread(get_supported_devices, client)
+                self.model_rows = model_import_rows(devices)
+                log.info(f"{len(self.model_rows)} supported model(s)")
+            except UserError as e:
+                log.warning(f"Not loaded: {e}")
+        finally:
+            log.close()
+
+    @rx.event
+    async def list_gateways(self):
+        if not self.conn:
+            yield rx.toast.error("Pick the CUCM connection first.")
+            return
+        log = OpLog("List CUCM Analog Gateways", "webex-cucm-gateway-list")
+        try:
+            log.info(f"CUCM connection: {self.conn}")
+            try:
+                conn = await asyncio.to_thread(cucm_connections.load, self.conn)
+                if conn is None:
+                    raise UserError(f"CUCM connection {self.conn} is not saved. Add it on the Credentials page.")
+                rows = await asyncio.to_thread(gw.list_gateways, conn)
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            self.gateway_names = [r["domainName"] for r in rows]
+            log.info(f"{len(rows)} gateway(s)")
+            if not rows:
+                yield rx.toast.info("No analog gateways were found. Type the gateway name instead.")
+        finally:
+            log.close()
+
+    @rx.event
+    async def read_gateway(self):
+        if not (self.conn and self.gateway.strip()):
+            yield rx.toast.error("Pick the CUCM connection and enter the gateway name.")
+            return
+        self.reading = True
+        yield
+        log = OpLog("Read CUCM Analog Gateway", "webex-cucm-gateway-read")
+        try:
+            log.info(f"CUCM connection: {self.conn}, gateway: {self.gateway.strip()}")
+            try:
+                conn = await asyncio.to_thread(cucm_connections.load, self.conn)
+                if conn is None:
+                    raise UserError(f"CUCM connection {self.conn} is not saved. Add it on the Credentials page.")
+                ports = await asyncio.to_thread(gw.read_ports, conn, self.gateway)
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            finally:
+                self.reading = False
+            self.port_rows = gw.suggest_rows(self.gateway.strip(), ports)
+            mac = gw.mac_from_domain(self.gateway)
+            if mac and not self.mac:
+                self.mac = mac
+            log.info(f"{len(ports)} port(s)")
+        finally:
+            log.close()
+
+    @rx.event
+    async def migrate(self):
+        if self.busy:  # a second click queued behind the first
+            return
+        if not self.port_rows:
+            yield rx.toast.error("Read the gateway first.")
+            return
+        gateway = {"name": self.gateway.strip(), "location": self.location.strip(), "add_device": self.add_now,
+                   "model": self.model, "mac": self.mac, "use_existing": self.use_existing,
+                   "rows": [dict(r) for r in self.port_rows]}
+        if not gateway["location"]:
+            yield rx.toast.error("Pick the Webex location.")
+            return
+        if self.location_names and gateway["location"].lower() not in {n.lower() for n in self.location_names}:
+            yield rx.toast.error("Pick the location from the list.")
+            return
+        log = self._webex_log("CUCM Webex Analog Gateway Migrate", "webex-cucm-gateway-migrate")
+        try:
+            log.info(f"Gateway: {gateway['name']}, location: {gateway['location']}, mode: {self.mode}")
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            cache: dict[str, str] = {}
+            yield self._start_run([(gateway["name"], lambda: gw.migrate_gateway(client, gateway, cache))],
+                                  "Migrating", log)
+        finally:
+            log.close()

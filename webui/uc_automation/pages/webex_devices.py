@@ -3,7 +3,7 @@ import reflex as rx
 from ..components.tool_widgets import (
     code_block, collapsible_card, confirm_dialog, one_multiple_card, csv_dropzone, field, paste_csv_tabs, run_results)
 from ..components.webex_nav import webex_page
-from ..state.webex_devices import BulkAtaState, CucmMigrateState, DeviceMigrateState
+from ..state.webex_devices import BulkAtaState, CucmGatewayState, CucmMigrateState, DeviceMigrateState
 from .webex_routing import need_login
 from .webex_users import _models_info
 
@@ -22,6 +22,68 @@ def _combo(S, name: str, value, names, list_id: str, placeholder: str = "Start t
             on_change=lambda v: S.set_form(name, v)),
         rx.el.datalist(rx.foreach(names, lambda n: rx.el.option(value=n)), id=list_id),
     )
+
+
+def _upd_row(S, r, i) -> rx.Component:
+    open_port = r["configured"] == ""
+    is_new = r["kind"] == "New"
+    return rx.table.row(
+        rx.table.row_header_cell(r["port"]),
+        rx.table.cell(rx.cond(open_port, rx.badge("Open", color_scheme="gray"), r["current"])),
+        rx.table.cell(rx.cond(open_port, "", rx.text(r["line"], " ", r["ext"], size="2"))),
+        rx.table.cell(rx.cond(open_port, rx.select(["Existing", "New"], value=r["kind"],
+                                                   on_change=lambda v: S.set_upd_port(i, "kind", v)), "")),
+        rx.table.cell(rx.cond(open_port, rx.input(
+            value=r["workspace"], width="100%", list="upd-workspaces", auto_complete="off",
+            placeholder=rx.cond(is_new, "New workspace name", "Search existing workspaces"),
+            on_change=lambda v: S.set_upd_port(i, "workspace", v)), "")),
+        rx.table.cell(rx.cond(open_port, rx.input(
+            value=r["extension"], width="6rem", disabled=~is_new, placeholder="Ext",
+            on_change=lambda v: S.set_upd_port(i, "extension", v)), "")),
+        rx.table.cell(rx.cond(open_port, rx.input(
+            value=r["number"], width="9rem", disabled=~is_new, placeholder="Number (optional)",
+            on_change=lambda v: S.set_upd_port(i, "number", v)), "")),
+    )
+
+
+def _update_tab(S) -> list:
+    return [
+        rx.text("Pick an ATA or VG that is already in Webex. Its ports are listed with what is configured on each. "
+                "An open port can get an existing workspace or a new one (a new workspace needs an extension or a "
+                "number and is created in the location of the device).", size="2", color="var(--gray-11)"),
+        field("ATA or VG", rx.hstack(
+            rx.input(rx.input.slot(
+                         rx.cond(S.upd_device != "",
+                                 rx.icon("x", size=16, cursor="pointer", aria_label="Clear device",
+                                         on_click=S.set_upd_device("")),
+                                 rx.fragment()), side="right"),
+                     value=S.upd_device, width="100%", list="upd-devices", auto_complete="off",
+                     placeholder="Start typing a name or MAC address", on_change=S.set_upd_device),
+            rx.el.datalist(rx.foreach(S.upd_labels, lambda n: rx.el.option(value=n)), id="upd-devices"),
+            rx.el.datalist(rx.foreach(S.upd_workspaces, lambda n: rx.el.option(value=n)), id="upd-workspaces"),
+            rx.button(rx.cond(S.upd_reading, rx.spinner(size="2"), rx.icon("refresh-cw", size=16)), "Load Ports",
+                      variant="soft", on_click=S.read_upd_ports, disabled=S.upd_reading),
+            width="100%", spacing="2"),
+              "Click the field to see every ATA and VG in the org, or type to narrow the list."),
+        rx.cond(
+            S.upd_ports.length() > 0,
+            rx.vstack(
+                rx.table.root(
+                    rx.table.header(rx.table.row(
+                        rx.table.column_header_cell("Port"), rx.table.column_header_cell("Workspace"),
+                        rx.table.column_header_cell("Line"), rx.table.column_header_cell("Assign"),
+                        rx.table.column_header_cell("Workspace To Assign"),
+                        rx.table.column_header_cell("Extension"), rx.table.column_header_cell("Number"))),
+                    rx.table.body(rx.foreach(S.upd_ports, lambda r, i: _upd_row(S, r, i))),
+                    width="100%",
+                ),
+                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("save", size=16)), "Update Device",
+                          on_click=S.apply_upd, disabled=S.busy | (S.upd_open_count == 0)),
+                spacing="3", align="start", width="100%",
+            ),
+            rx.fragment(),
+        ),
+    ]
 
 
 def bulk_ata() -> rx.Component:
@@ -89,7 +151,7 @@ paste_csv_tabs(
                                       disabled=S.busy),
                         ],
                     ),
-]),
+], extra=("Update ATA Or VG", _update_tab(S))),
             run_results(S, "MAC"),
             spacing="4", align="start", width="100%",
         )),
@@ -283,4 +345,123 @@ def cucm_migrate() -> rx.Component:
             run_results(S, "MAC"),
             spacing="4", align="start", width="100%",
         )),
+    )
+
+
+def _port_row(S, r, i) -> rx.Component:
+    return rx.table.row(
+        rx.table.cell(rx.checkbox(checked=r["include"] != "", disabled=r["port"] == "1",
+                                  on_change=lambda v: S.toggle_row(i, v))),
+        rx.table.cell(rx.input(value=r["port"], width="4rem", on_change=lambda v: S.set_row(i, "port", v))),
+        rx.table.cell(rx.input(value=r["workspace"], width="100%",
+                               on_change=lambda v: S.set_row(i, "workspace", v))),
+        rx.table.cell(rx.input(value=r["line"], width="100%", on_change=lambda v: S.set_row(i, "line", v))),
+    )
+
+
+def cucm_gateway() -> rx.Component:
+    S = CucmGatewayState
+    return webex_page(
+        "CUCM-Webex Analog Gateway Migrate",
+        need_login(rx.vstack(
+            rx.callout("Reads an analog gateway from CUCM and creates a Webex Calling workspace for port 1 and for "
+                       "any other ports you tick. Nothing is changed in CUCM. Not tested against a real CUCM or "
+                       "Webex org: check the port numbers before you create.",
+                       icon="info", width="100%"),
+            rx.card(
+                rx.vstack(
+                    rx.heading("1. CUCM Gateway", size="4"),
+                    rx.grid(
+                        field("CUCM", rx.select(S.cucm_names, value=S.conn, placeholder="Pick a connection",
+                                                width="100%", on_change=lambda v: S.set_field("conn", v))),
+                        field("Gateway name", rx.hstack(
+                            rx.input(value=S.gateway, width="100%", placeholder="AN001122334455",
+                                     list="gw-names", auto_complete="off",
+                                     on_change=lambda v: S.set_field("gateway", v)),
+                            rx.el.datalist(rx.foreach(S.gateway_names, lambda n: rx.el.option(value=n)), id="gw-names"),
+                            rx.button("List", variant="soft", on_click=S.list_gateways, disabled=S.reading),
+                            width="100%", spacing="2"),
+                              "For an SCCP gateway this is AN plus the MAC address. List shows the analog gateways of "
+                              "the connection."),
+                        columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%",
+                    ),
+                    rx.button(rx.cond(S.reading, rx.spinner(size="2"), rx.icon("search", size=16)), "Read Gateway",
+                              on_click=S.read_gateway, disabled=S.reading),
+                    spacing="3", align="start", width="100%",
+                ),
+                width="100%",
+            ),
+            rx.cond(
+                S.port_rows.length() > 0,
+                rx.card(
+                    rx.vstack(
+                        rx.heading("2. Ports", size="4"),
+                        rx.text("Tick the ports that get a workspace. Port 1 is always created. Edit the port number, "
+                                "workspace name or line if needed. A line starting with + or with 10 or more digits "
+                                "is a phone number, anything else is an extension.",
+                                size="2", color="var(--gray-11)"),
+                        rx.table.root(
+                            rx.table.header(rx.table.row(
+                                rx.table.column_header_cell("Create"), rx.table.column_header_cell("Port"),
+                                rx.table.column_header_cell("Workspace Name"),
+                                rx.table.column_header_cell("Extension Or Number"))),
+                            rx.table.body(rx.foreach(S.port_rows, lambda r, i: _port_row(S, r, i))),
+                            variant="ghost", width="100%",
+                        ),
+                        spacing="3", align="start", width="100%",
+                    ),
+                    width="100%",
+                ),
+                rx.fragment(),
+            ),
+            rx.card(
+                rx.vstack(
+                    rx.heading("3. Webex", size="4"),
+                    field("Location", _combo(S, "location", S.location, S.location_names, "gw-locations"),
+                          "Click the field to see every location, or type to narrow the list."),
+                    field("Device", rx.segmented_control.root(
+                        rx.segmented_control.item("Add Device Now", value="Add Device Now"),
+                        rx.segmented_control.item("Add Device Later", value="Add Device Later"),
+                        value=S.mode, on_change=S.set_mode),
+                          "Now adds the device to the port 1 workspace and assigns the other ports. Later only creates "
+                          "the workspaces; add the device afterwards with Add Device."),
+                    rx.checkbox("Use an existing workspace when the name already exists", checked=S.use_existing,
+                                on_change=S.set_use_existing),
+                    rx.text("Off: a name that already exists stops the run. On: that workspace is assigned to the port "
+                            "as it is (nothing is changed on it) and only the missing ones are created.",
+                            size="1", color="var(--gray-10)"),
+                    rx.cond(
+                        S.add_now,
+                        rx.grid(
+                            rx.vstack(
+                                rx.hstack(rx.text("Model", size="2", weight="medium"), _models_info(S),
+                                          spacing="2", align="center"),
+                                rx.input(value=S.model, width="100%", placeholder="Cisco VG400",
+                                         list="gw-models", auto_complete="off",
+                                         on_change=lambda v: S.set_field("model", v)),
+                                rx.el.datalist(rx.foreach(S.model_rows,
+                                                          lambda r: rx.el.option(r["name"], value=r["model"])),
+                                               id="gw-models"),
+                                rx.text("Click the field to see the supported models.", size="1",
+                                        color="var(--gray-10)"),
+                                spacing="1", align="start", width="100%",
+                            ),
+                            field("MAC address", rx.input(value=S.mac, width="100%", placeholder="AA:BB:CC:DD:EE:FF",
+                                                          on_change=lambda v: S.set_field("mac", v)),
+                                  "Filled from the gateway name when it is AN plus a MAC."),
+                            columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%",
+                        ),
+                        rx.fragment(),
+                    ),
+                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)),
+                              rx.cond(S.add_now, "Create Workspaces And Add Device", "Create Workspaces"),
+                              on_click=S.migrate, disabled=S.busy | (S.port_rows.length() == 0)),
+                    spacing="3", align="start", width="100%",
+                ),
+                width="100%",
+            ),
+            run_results(S, "Gateway"),
+            spacing="4", align="start", width="100%",
+        )),
+        show_org=True,
     )

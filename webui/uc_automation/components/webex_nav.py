@@ -22,6 +22,7 @@ COPY_WORKSPACE = "/webex/copy-workspace"
 BULK_ATA = "/webex/bulk-ata"
 DEVICE_MIGRATE = "/webex/webex-phone-migrate"
 CUCM_MIGRATE = "/webex/cucm-phone-migrate"
+CUCM_GATEWAY = "/webex/cucm-gateway-migrate"
 MIGRATE = "/webex/migrate"
 SCHEDULES = "/webex/schedules"
 E911 = "/webex/e911"
@@ -71,6 +72,8 @@ GROUPS = [
          "Move a physical phone from one Webex org to another."),
         ("CUCM-Webex Phone Migrate", CUCM_MIGRATE, "arrow-right-left",
          "Move a physical phone between CUCM and Webex."),
+        ("CUCM-Webex Analog Gateway Migrate", CUCM_GATEWAY, "cable",
+         "Move a CUCM analog gateway to Webex: a workspace for port 1 or more ports, and the device now or later."),
     ]),
     ("Tools", [
         ("Check Hardware Compatibility", HARDWARE, "shield-check",

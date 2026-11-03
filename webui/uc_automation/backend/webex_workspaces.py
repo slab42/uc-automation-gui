@@ -132,6 +132,23 @@ def create_workspace(c: WebexClient, row: dict[str, str], cache: dict[str, str])
     return f"Created workspace {body['displayName']}"
 
 
+def create_workspace_adding_number(c: WebexClient, body: dict, location_id: str, added: list[str]) -> str:
+    """POST the workspace. When that fails and it has a phone number, add the number to the location and try once
+    more (the number is probably not in the location yet); `added` collects the numbers that were added."""
+    try:
+        return c.call("POST", "/workspaces", body=body)["id"]
+    except WebexError as first:
+        number = (((body.get("calling") or {}).get("webexCalling")) or {}).get("phoneNumber")
+        if not number:
+            raise
+        try:
+            add_location_number(c, number, location_id)
+        except WebexError as e:
+            raise WebexError(f"{first} Adding {number} to the location also failed: {e}") from e
+        added.append(number)
+        return c.call("POST", "/workspaces", body=body)["id"]
+
+
 # --- Copy a workspace ---
 
 COPY_COLUMNS = ("workspace", "location", "number", "extension")
@@ -363,7 +380,8 @@ def group_ata_rows(rows: list[dict[str, str]]) -> list[dict]:
 def member_body(workspace_ids: list[str]) -> dict:
     """PUT members body: workspace n is on port n, port 1 is the device owner."""
     return {"members": [{"port": n, "id": wid, "primaryOwner": n == 1, "lineType": "PRIMARY", "lineWeight": 1,
-                         "hotlineEnabled": False, "hotlineDestination": "", "allowCallDeclineEnabled": True}
+                         "hotlineEnabled": False, "hotlineDestination": "", "allowCallDeclineEnabled": True,
+                         "t38FaxCompressionEnabled": False}
                         for n, wid in enumerate(workspace_ids, 1)]}
 
 
@@ -403,6 +421,124 @@ def add_ata(c: WebexClient, device: dict, cache: dict[str, str]) -> str:
     if len(ids) > 1:
         c.call("PUT", f"/telephony/config/devices/{device_id}/members", body=member_body(ids))
     return f"Added {model} {mac} with {len(ids)} port(s): " + ", ".join(p["workspace"] for p in ports)
+
+
+# --- Update an existing ATA / VG: show its ports, fill the open ones ---
+
+ATA_PRODUCT = re.compile(r"\bATA\b|\bVG|\bDMS\b", re.I)
+MEMBER_KEYS = ("port", "id", "primaryOwner", "lineType", "lineWeight", "allowCallDeclineEnabled",
+               "hotlineDestination", "hotlineEnabled", "t38FaxCompressionEnabled", "lineLabel")
+
+
+def list_ata_devices(c: WebexClient, location_names: dict[str, str] | None = None) -> list[dict[str, str]]:
+    """Webex devices whose product looks like an ATA or VG, as {label, name, id, mac, model, workspaceId}, by label.
+
+    name is 'device (MAC)'; label is the name with ' - <location>' added when location_names (id to name) knows it."""
+    rows = []
+    for i in _list(c, "/devices", "items"):
+        product = i.get("product") or i.get("model") or ""
+        if not ATA_PRODUCT.search(product):
+            continue
+        mac = (i.get("mac") or "").upper()
+        name = i.get("displayName") or product
+        short = f"{name} ({mac or i.get('serial', '')})"
+        where = (location_names or {}).get(i.get("locationId") or "", "")
+        rows.append({"label": f"{short} - {where}" if where else short, "name": short, "id": i.get("id", ""), "mac": mac,
+                     "model": product, "workspaceId": i.get("workspaceId") or i.get("placeId") or ""})
+    return sorted(rows, key=lambda r: r["label"].lower())
+
+
+def read_ata_ports(c: WebexClient, device_id: str) -> tuple[list[dict], int]:
+    """(members, maxLineCount) of the device. A member is the raw API record: port, id, names, numbers."""
+    data = c.call("GET", f"/telephony/config/devices/{device_id}/members")
+    members = sorted(data.get("members") or [], key=lambda m: m.get("port") or 0)
+    return members, int(data.get("maxLineCount") or 0)
+
+
+def port_table(members: list[dict], max_ports: int) -> list[dict[str, str]]:
+    """One row per port 1..max: port, configured ('1' or ''), workspace, number, extension, plus the blank input
+    fields for an open port (kind is 'Existing' or 'New')."""
+    by_port = {int(m.get("port") or 0): m for m in members}
+    rows = []
+    for n in range(1, max(max_ports, max(by_port, default=0)) + 1):
+        m = by_port.get(n)
+        name = f"{(m or {}).get('firstName', '')} {(m or {}).get('lastName', '')}".strip() if m else ""
+        rows.append({"port": str(n), "configured": "1" if m else "", "current": name or (m or {}).get("id", ""),
+                     "line": (m or {}).get("phoneNumber") or "", "ext": (m or {}).get("extension") or "",
+                     "kind": "Existing", "workspace": "", "extension": "", "number": ""})
+    return rows
+
+
+def append_port_note(c: WebexClient, workspace_id: str, device_label: str, port: int) -> None:
+    """Add 'ATA/VG <device> port <n>' as a new line of the workspace's notes (unless it is already there)."""
+    ws = c.call("GET", f"/workspaces/{workspace_id}")
+    line = f"ATA/VG {device_label} port {port}"
+    notes = (ws.get("notes") or "").strip()
+    if line in notes.splitlines():
+        return
+    c.call("PUT", f"/workspaces/{workspace_id}",
+           body={"displayName": ws.get("displayName", ""), "notes": f"{notes}\n{line}" if notes else line})
+
+
+def update_ata(c: WebexClient, device_id: str, device_workspace_id: str, rows: list[dict[str, str]],
+               cache: dict[str, str], device_label: str = "") -> str:
+    """Fill open ports. rows are the open ports to fill: port, kind ('Existing' or 'New'), workspace, extension,
+    number. Everything is checked before the first change. The members PUT replaces the list, so the current
+    members are sent back as they are. Once the ports are assigned, 'ATA/VG <device_label> port <n>' is appended to
+    each assigned workspace's notes (a notes failure is reported, not raised). A failure after workspaces were
+    created leaves them."""
+    rows = [{**r, "kind": r["kind"].lower()} for r in rows]
+    members, max_ports = read_ata_ports(c, device_id)
+    taken = {int(m.get("port") or 0) for m in members}
+    location_id = ""
+    if any(r["kind"] == "new" for r in rows):
+        location_id = c.call("GET", f"/workspaces/{device_workspace_id}").get("locationId") or ""
+        if not location_id:
+            raise WebexError("The location of the device's workspace could not be read.")
+    steps: list[tuple[int, str, dict | str]] = []  # (port, "new" body or "existing" id)
+    seen: set[str] = set()
+    for r in rows:
+        port, name = int(r["port"]), r["workspace"].strip()
+        if port in taken or port > max_ports:
+            raise WebexError(f"Port {port} is not open.")
+        if not name:
+            raise WebexError(f"Port {port} needs a workspace name.")
+        if name.lower() in seen:
+            raise WebexError(f"Workspace {name} is listed more than once.")
+        seen.add(name.lower())
+        if r["kind"] == "new":
+            if not (r["extension"].strip() or r["number"].strip()):
+                raise WebexError(f"Port {port} needs an extension or a number for the new workspace.")
+            if workspace_exists(c, {"workspace": name}, cache):
+                raise WebexError(f"Workspace {name} already exists. Choose Existing for port {port}.")
+            steps.append((port, "new", build_workspace_body(
+                {"workspace": name, "extension": r["extension"], "number": r["number"]}, location_id)))
+        else:
+            steps.append((port, "existing", find_workspace_id(c, name)))
+    if not steps:
+        raise WebexError("No open port has a workspace to assign.")
+    keep = [{k: m[k] for k in MEMBER_KEYS if k in m} for m in members]
+    assigned: list[tuple[int, str]] = []
+    added: list[str] = []  # numbers that did not exist and were added to the location
+    for port, kind, what in steps:
+        wid = what if kind == "existing" else create_workspace_adding_number(c, what, location_id, added)
+        assigned.append((port, wid))
+        keep.append({"port": port, "id": wid, "primaryOwner": port == 1 and not members, "lineType": "PRIMARY",
+                     "lineWeight": 1, "hotlineEnabled": False, "hotlineDestination": "",
+                     "allowCallDeclineEnabled": True, "t38FaxCompressionEnabled": False})
+    c.call("PUT", f"/telephony/config/devices/{device_id}/members",
+           body={"members": sorted(keep, key=lambda m: m["port"])})
+    detail = f"Assigned {len(steps)} port(s): " + ", ".join(
+        f"{p}{' (new workspace)' if k == 'new' else ''}" for p, k, _ in steps)
+    if added:
+        detail += f". Added number(s) to the location: {', '.join(added)}"
+    unnoted = []
+    for port, wid in assigned:
+        try:
+            append_port_note(c, wid, device_label, port)
+        except WebexError as e:
+            unnoted.append(f"port {port} ({e})")
+    return detail + (f". Notes not updated: {'; '.join(unnoted)}" if unnoted else ". Notes updated")
 
 
 # --- Move users to another location (by phone number) ---
