@@ -43,6 +43,30 @@ def _upd_row(S, r, i) -> rx.Component:
         rx.table.cell(rx.cond(open_port, rx.input(
             value=r["number"], width="9rem", disabled=~is_new, placeholder="Number (optional)",
             on_change=lambda v: S.set_upd_port(i, "number", v)), "")),
+        background=rx.cond((r["wid"] != "") & (r["wid"] == S.find_target), "var(--accent-3)", ""),
+    )
+
+
+def _port_section(S) -> rx.Component:
+    """The port table and the Update Device button, shared by the Update ATA Or VG and Find Port tabs."""
+    return rx.cond(
+        S.upd_ports.length() > 0,
+        rx.vstack(
+            rx.text(S.upd_device, size="2", weight="medium"),
+            rx.table.root(
+                rx.table.header(rx.table.row(
+                    rx.table.column_header_cell("Port"), rx.table.column_header_cell("Workspace"),
+                    rx.table.column_header_cell("Line"), rx.table.column_header_cell("Assign"),
+                    rx.table.column_header_cell("Workspace To Assign"),
+                    rx.table.column_header_cell("Extension"), rx.table.column_header_cell("Number"))),
+                rx.table.body(rx.foreach(S.upd_ports, lambda r, i: _upd_row(S, r, i))),
+                width="100%",
+            ),
+            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("save", size=16)), "Update Device",
+                      on_click=S.apply_upd, disabled=S.busy | (S.upd_open_count == 0)),
+            spacing="3", align="start", width="100%",
+        ),
+        rx.fragment(),
     )
 
 
@@ -59,30 +83,40 @@ def _update_tab(S) -> list:
                                  rx.fragment()), side="right"),
                      value=S.upd_device, width="100%", list="upd-devices", auto_complete="off",
                      placeholder="Start typing a name or MAC address", on_change=S.set_upd_device),
-            rx.el.datalist(rx.foreach(S.upd_labels, lambda n: rx.el.option(value=n)), id="upd-devices"),
-            rx.el.datalist(rx.foreach(S.upd_workspaces, lambda n: rx.el.option(value=n)), id="upd-workspaces"),
             rx.button(rx.cond(S.upd_reading, rx.spinner(size="2"), rx.icon("refresh-cw", size=16)), "Load Ports",
                       variant="soft", on_click=S.read_upd_ports, disabled=S.upd_reading),
             width="100%", spacing="2"),
               "Click the field to see every ATA and VG in the org, or type to narrow the list."),
+        _port_section(S),
+    ]
+
+
+def _find_tab(S) -> list:
+    return [
+        rx.text("Search workspaces by name, phone number or extension, then open one to load the ATA or VG it is "
+                "configured on. The ports are the same as on the Update ATA Or VG tab.",
+                size="2", color="var(--gray-11)"),
+        field("Port search", rx.hstack(
+            rx.input(value=S.find_text, width="100%", placeholder="Workspace name, phone number or extension",
+                     on_change=S.set_find_text, on_key_down=lambda k: rx.cond(k == "Enter", S.search_find, rx.noop())),
+            rx.button(rx.cond(S.find_searching, rx.spinner(size="2"), rx.icon("search", size=16)), "Search",
+                      on_click=S.search_find, disabled=S.find_searching),
+            width="100%", spacing="2")),
         rx.cond(
-            S.upd_ports.length() > 0,
-            rx.vstack(
-                rx.table.root(
-                    rx.table.header(rx.table.row(
-                        rx.table.column_header_cell("Port"), rx.table.column_header_cell("Workspace"),
-                        rx.table.column_header_cell("Line"), rx.table.column_header_cell("Assign"),
-                        rx.table.column_header_cell("Workspace To Assign"),
-                        rx.table.column_header_cell("Extension"), rx.table.column_header_cell("Number"))),
-                    rx.table.body(rx.foreach(S.upd_ports, lambda r, i: _upd_row(S, r, i))),
-                    width="100%",
-                ),
-                rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("save", size=16)), "Update Device",
-                          on_click=S.apply_upd, disabled=S.busy | (S.upd_open_count == 0)),
-                spacing="3", align="start", width="100%",
+            S.find_results.length() > 0,
+            rx.table.root(
+                rx.table.header(rx.table.row(
+                    rx.table.column_header_cell("Workspace"), rx.table.column_header_cell("Number / Extension"),
+                    rx.table.column_header_cell("Location"), rx.table.column_header_cell(""))),
+                rx.table.body(rx.foreach(S.find_results, lambda r: rx.table.row(
+                    rx.table.row_header_cell(r["name"]), rx.table.cell(r["line"]), rx.table.cell(r["location"]),
+                    rx.table.cell(rx.button("Open Gateway", size="1", variant="soft",
+                                            on_click=S.pick_find(r["id"]), disabled=S.find_searching))))),
+                width="100%",
             ),
             rx.fragment(),
         ),
+        _port_section(S),
     ]
 
 
@@ -151,7 +185,9 @@ paste_csv_tabs(
                                       disabled=S.busy),
                         ],
                     ),
-], extra=("Update ATA Or VG", _update_tab(S))),
+], extra=[("Update ATA Or VG", _update_tab(S)), ("Find Port", _find_tab(S))]),
+            rx.el.datalist(rx.foreach(S.upd_labels, lambda n: rx.el.option(value=n)), id="upd-devices"),
+            rx.el.datalist(rx.foreach(S.upd_workspaces, lambda n: rx.el.option(value=n)), id="upd-workspaces"),
             run_results(S, "MAC"),
             spacing="4", align="start", width="100%",
         )),

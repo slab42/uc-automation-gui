@@ -27,6 +27,11 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
     upd_ports: list[dict[str, str]] = []
     upd_workspaces: list[str] = []
     upd_reading: bool = False
+    find_text: str = ""
+    find_results: list[dict[str, str]] = []
+    find_target: str = ""  # workspace id of the port found, highlighted in the table
+    find_searching: bool = False
+    _upd_locations: dict[str, str] = {}
     _upd_devices: dict[str, dict[str, str]] = {}
     _upd_loaded: str = ""  # device id the ports were read for
 
@@ -41,9 +46,78 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
     @rx.event
     async def set_upd_device(self, value: str):
         self.upd_device = value
+        self.find_target = ""
         if value in self._upd_devices and self._upd_devices[value]["id"] != self._upd_loaded:
             async for ev in self.read_upd_ports():
                 yield ev
+
+    @rx.event
+    def set_find_text(self, value: str):
+        self.find_text = value
+
+    @rx.event
+    async def search_find(self):
+        text = self.find_text.strip()
+        if not text:
+            yield rx.toast.error("Enter a workspace name, phone number or extension.")
+            return
+        self.find_searching = True
+        yield
+        log = self._webex_log("Find ATA/VG Port", "webex-find-ata-port")
+        try:
+            log.info(f"Search: {text}")
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            try:
+                rows = await asyncio.to_thread(w.search_ports, client, text, self._upd_locations)
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            finally:
+                self.find_searching = False
+            self.find_results = rows
+            log.info(f"{len(rows)} workspace(s) found")
+            if not rows:
+                yield rx.toast.info("No workspace matches.")
+        finally:
+            log.close()
+
+    @rx.event
+    async def pick_find(self, workspace_id: str):
+        """Find the gateway the workspace is on and load its ports."""
+        self.find_searching = True
+        yield
+        log = self._webex_log("Find ATA/VG For Workspace", "webex-find-ata-device")
+        try:
+            log.info(f"Workspace: {workspace_id}")
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            try:
+                device = await asyncio.to_thread(w.find_ata_for_workspace, client, workspace_id,
+                                                 list(self._upd_devices.values()))
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            finally:
+                self.find_searching = False
+            if device is None:
+                log.info("Not on a port of any ATA or VG")
+                yield rx.toast.info("That workspace is not on a port of any ATA or VG.")
+                return
+            log.info(f"Device: {device['label']}")
+            self.find_target = workspace_id
+            self.upd_device = device["label"]
+        finally:
+            log.close()
+        self._upd_loaded = ""
+        async for ev in self.read_upd_ports():
+            yield ev
 
     @rx.event
     def set_upd_port(self, index: int, field: str, value: str):
@@ -65,7 +139,7 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
                 yield rx.toast.error(self.webex_message)
                 return
             try:
-                members, max_ports = await asyncio.to_thread(w.read_ata_ports, client, device["id"])
+                members, max_ports = await asyncio.to_thread(w.read_ata_ports, client, device["telId"])
             except UserError as e:
                 log.error(str(e))
                 yield rx.toast.error(str(e))
@@ -100,7 +174,7 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
             cache: dict[str, str] = {}
             yield self._start_run(
                 [(device["mac"] or device["id"],
-                  lambda: w.update_ata(client, device["id"], device["workspaceId"], rows, cache, device["name"]))],
+                  lambda: w.update_ata(client, device["telId"], device["workspaceId"], rows, cache, device["name"]))],
                 "Updating", log, then="_after_upd")
         finally:
             log.close()
@@ -135,6 +209,7 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
                 log.warning(f"Supported models not loaded: {e}")
             try:
                 found = await asyncio.to_thread(w.list_ata_devices, client, {r["id"]: r["name"] for r in rows})
+                self._upd_locations = {r["id"]: r["name"] for r in rows}
                 self._upd_devices = {r["label"]: r for r in found}
                 self.upd_labels = list(self._upd_devices)
                 log.info(f"{len(found)} ATA/VG device(s)")

@@ -42,9 +42,9 @@ def collapsible_card(title: str, is_open, toggle, *children) -> rx.Component:
 
 
 def one_multiple_card(one_title: str, one_children: list, multi_title: str, multi_children: list,
-                      extra: tuple[str, list] | None = None) -> rx.Component:
+                      extra: list[tuple[str, list]] = ()) -> rx.Component:
     """One card holding the single-item and the bulk input as two tabs (single first). extra is an optional
-    third tab, (title, children)."""
+    more tabs after those two, each (title, children)."""
     def body(children):
         return rx.vstack(*children, spacing="3", align="start", width="100%", padding_top="1rem")
     return rx.card(
@@ -52,11 +52,11 @@ def one_multiple_card(one_title: str, one_children: list, multi_title: str, mult
             rx.tabs.list(
                 rx.tabs.trigger(one_title, value="one"),
                 rx.tabs.trigger(multi_title, value="multiple"),
-                *([rx.tabs.trigger(extra[0], value="extra")] if extra else []),
+                *[rx.tabs.trigger(t, value=f"extra{n}") for n, (t, _) in enumerate(extra)],
             ),
             rx.tabs.content(body(one_children), value="one"),
             rx.tabs.content(body(multi_children), value="multiple"),
-            *([rx.tabs.content(body(extra[1]), value="extra")] if extra else []),
+            *[rx.tabs.content(body(c), value=f"extra{n}") for n, (_, c) in enumerate(extra)],
             default_value="one", width="100%",
         ),
         size="3", width="100%",

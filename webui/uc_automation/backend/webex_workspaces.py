@@ -443,7 +443,8 @@ def list_ata_devices(c: WebexClient, location_names: dict[str, str] | None = Non
         name = i.get("displayName") or product
         short = f"{name} ({mac or i.get('serial', '')})"
         where = (location_names or {}).get(i.get("locationId") or "", "")
-        rows.append({"label": f"{short} - {where}" if where else short, "name": short, "id": i.get("id", ""), "mac": mac,
+        rows.append({"label": f"{short} - {where}" if where else short, "name": short, "id": i.get("id", ""),
+                     "telId": i.get("callingDeviceId") or i.get("id", ""), "mac": mac,
                      "model": product, "workspaceId": i.get("workspaceId") or i.get("placeId") or ""})
     return sorted(rows, key=lambda r: r["label"].lower())
 
@@ -464,9 +465,58 @@ def port_table(members: list[dict], max_ports: int) -> list[dict[str, str]]:
         m = by_port.get(n)
         name = f"{(m or {}).get('firstName', '')} {(m or {}).get('lastName', '')}".strip() if m else ""
         rows.append({"port": str(n), "configured": "1" if m else "", "current": name or (m or {}).get("id", ""),
-                     "line": (m or {}).get("phoneNumber") or "", "ext": (m or {}).get("extension") or "",
+                     "wid": (m or {}).get("id") or "", "line": (m or {}).get("phoneNumber") or "", "ext": (m or {}).get("extension") or "",
                      "kind": "Existing", "workspace": "", "extension": "", "number": ""})
     return rows
+
+
+def search_ports(c: WebexClient, text: str, location_names: dict[str, str] | None = None) -> list[dict[str, str]]:
+    """Workspaces matching a name, phone number or extension, as {id, name, line, location}.
+
+    A name is searched in the workspace list. Digits (with + - ( ) and spaces) are also searched as an extension
+    and, from 10 digits, as a phone number among the numbers owned by workspaces."""
+    text = text.strip()
+    if not text:
+        raise WebexError("Enter a workspace name, phone number or extension.")
+    locations = location_names or {}
+    found: dict[str, dict[str, str]] = {}
+
+    def add(wid: str, name: str, line: str, location_id: str) -> None:
+        if wid:
+            found.setdefault(wid, {"id": wid, "name": name, "line": line, "location": locations.get(location_id, "")})
+
+    digits = re.sub(r"\D", "", text)
+    if digits and re.fullmatch(r"[\d\s+\-().]+", text):
+        queries = [{"extension": digits}] + ([{"phoneNumber": normalize_e164(text)}] if len(digits) >= 10 else [])
+        for q in queries:
+            for r in c.call("GET", "/telephony/config/numbers", {**q, "ownerType": "PLACE", "max": 100}).get("phoneNumbers") or []:
+                owner = r.get("owner") or {}
+                line = " ".join(x for x in (r.get("phoneNumber"), f"x{r['extension']}" if r.get("extension") else "") if x)
+                add(owner.get("id", ""), owner_name(owner), line, (r.get("location") or {}).get("id", ""))
+    for i in c.call("GET", "/workspaces", {"displayName": text, "max": 100}).get("items") or []:
+        calling = (i.get("calling") or {}).get("webexCalling") or {}
+        line = " ".join(x for x in (calling.get("phoneNumber"), f"x{calling['extension']}" if calling.get("extension") else "") if x)
+        add(i.get("id", ""), i.get("displayName", ""), line, i.get("locationId") or calling.get("locationId", ""))
+    return sorted(found.values(), key=lambda r: r["name"].lower())
+
+
+def find_ata_for_workspace(c: WebexClient, workspace_id: str, devices: list[dict[str, str]]) -> dict[str, str] | None:
+    """The ATA/VG (one of `devices`, from list_ata_devices) the workspace is on a port of, or None.
+
+    The workspace's device list is tried first (matched by MAC); when it does not show a gateway, every gateway's
+    members are read."""
+    try:
+        listed = c.call("GET", f"/telephony/config/workspaces/{workspace_id}/devices").get("devices") or []
+    except WebexError:
+        listed = []
+    macs = {re.sub(r"[^0-9A-Fa-f]", "", d.get("mac") or "").upper() for d in listed}
+    for d in devices:
+        if d["mac"] and d["mac"] in macs:
+            return d
+    for d in devices:
+        if any(m.get("id") == workspace_id for m in read_ata_ports(c, d["telId"])[0]):
+            return d
+    return None
 
 
 def append_port_note(c: WebexClient, workspace_id: str, device_label: str, port: int) -> None:
