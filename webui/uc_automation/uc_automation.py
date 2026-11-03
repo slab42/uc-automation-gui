@@ -45,6 +45,7 @@ from .pages.route_patterns import route_patterns
 from .pages.translation_patterns import translation_patterns
 from .pages.platform import platform_page
 from .pages.settings import settings
+from .pages.users import users_page
 from .state.advertised_patterns import AdvertisedPatternsState
 from .state.css import CssState
 from .state.cucm import CucmState
@@ -67,8 +68,10 @@ from .state.devices import (
     PhonesState,
     SoftkeyTemplatesState,
 )
+from .state.auth_guard import AuthGuard
 from .state.logs import LogsState
 from .state.settings import SettingsState
+from .state.users import UsersState
 from .state.webex import WebexState
 from .state.webex_devices import BulkAtaState, CucmGatewayState, CucmMigrateState, DeviceMigrateState
 from .state.webex_groups import CallQueuesState, HuntGroupsState as WebexHuntGroupsState, VirtualLinesState
@@ -104,7 +107,10 @@ app = rx.App(
     api_transformer=[uc_bootable.download_app(), uccx_store.download_app()],  # one-time download routes (Make ISO Bootable, UCCX zip export)
 )
 
+app.add_middleware(AuthGuard())  # drops every event from a browser that is not signed in
+
 app.add_page(home, route="/", title=APP_NAME)
+app.add_page(users_page, route="/users", title=f"Users | {APP_NAME}", on_load=UsersState.on_page_load)
 for _p in PLATFORMS:
     if _p.slug in ("cucm", "cuc", "uccx", "cube", "webex", "redsky", "tools"):
         continue

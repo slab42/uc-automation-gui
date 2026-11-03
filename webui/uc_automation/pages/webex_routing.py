@@ -1,5 +1,6 @@
 import reflex as rx
 
+from ..components.access import show_if, show_if_any
 from ..backend.webex_groups import POLICIES
 from ..backend.webex_routing import NUMBER_STATES, NUMBER_TYPES, USAGE_TYPES
 from ..components.tool_widgets import code_block, one_multiple_card, csv_dropzone, field, file_dropzone, paste_csv_tabs, run_results
@@ -53,14 +54,14 @@ def webex_home() -> rx.Component:
         rx.vstack(
             rx.text("Webex Calling / Control Hub", color="var(--gray-11)"),
             *[
-                rx.vstack(
+                show_if_any([i[1] for i in items], rx.vstack(
                     rx.heading(label, size="4"),
                     rx.grid(
-                        *[_dev_gated(_home_card(icon, name, desc, route), route) for name, route, icon, desc in items],
+                        *[show_if(route, _dev_gated(_home_card(icon, name, desc, route), route)) for name, route, icon, desc in items],
                         columns=rx.breakpoints(initial="1", sm="2", lg="3"), spacing="4", width="100%",
                     ),
                     spacing="3", align="start", width="100%",
-                )
+                ))
                 for label, items in GROUPS
             ],
             spacing="4", align="start",

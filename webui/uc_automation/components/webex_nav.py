@@ -4,6 +4,7 @@ import reflex as rx
 
 from ..state.settings import SettingsState
 from ..state.webex_routing import WebexSession
+from .access import show_if, show_if_any
 from .layout import page
 from .org_picker import instance_select, org_select
 
@@ -132,12 +133,12 @@ def _menu_item(name: str, route: str) -> rx.Component:
 def menubar(show_org: bool = True) -> rx.Component:
     return rx.hstack(
         *[
-            rx.menu.root(
+            show_if_any([i[1] for i in items], rx.menu.root(
                 rx.menu.trigger(rx.button(label, rx.icon("chevron-down", size=15), variant="ghost", size="2")),
                 rx.menu.content(
-                    *[_menu_item(name, route) for name, route, _icon, _desc in items],
+                    *[show_if(route, _menu_item(name, route)) for name, route, _icon, _desc in items],
                 ),
-            )
+            ))
             for label, items in GROUPS
         ],
         rx.spacer(),

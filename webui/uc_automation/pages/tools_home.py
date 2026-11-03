@@ -2,6 +2,7 @@
 
 import reflex as rx
 
+from ..components.access import show_if
 from ..components.layout import page
 from ..components.tools_nav import TOOLS
 from .cucm_home import _card
@@ -13,7 +14,7 @@ def tools_home() -> rx.Component:
         rx.vstack(
             rx.text("Cross platform tools and automations", color="var(--gray-11)"),
             rx.grid(
-                *[_card(icon, name, desc, route) for name, route, icon, desc in TOOLS],
+                *[show_if(route, _card(icon, name, desc, route)) for name, route, icon, desc in TOOLS],
                 columns=rx.breakpoints(initial="1", sm="2", lg="3"),
                 spacing="4",
                 width="100%",

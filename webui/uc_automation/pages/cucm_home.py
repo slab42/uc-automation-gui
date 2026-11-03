@@ -1,5 +1,6 @@
 import reflex as rx
 
+from ..components.access import show_if, show_if_any
 from ..components.cucm_nav import GROUPS, cucm_page
 
 def _card(icon, title, desc, href):
@@ -25,16 +26,16 @@ def cucm_home() -> rx.Component:
         rx.vstack(
             rx.text("Cisco Unified Communications Manager", color="var(--gray-11)"),
             *[
-                rx.vstack(
+                show_if_any([i[1] for i in items], rx.vstack(
                     rx.heading(label, size="4"),
                     rx.grid(
-                        *[_card(icon, name, desc, route) for name, route, icon, desc in items],
+                        *[show_if(route, _card(icon, name, desc, route)) for name, route, icon, desc in items],
                         columns=rx.breakpoints(initial="1", sm="2", lg="3"),
                         spacing="4",
                         width="100%",
                     ),
                     spacing="3", align="start", width="100%",
-                )
+                ))
                 for label, items in GROUPS
             ],
             spacing="4",

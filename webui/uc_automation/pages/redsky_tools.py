@@ -2,6 +2,7 @@
 
 import reflex as rx
 
+from ..components.access import show_if, show_if_any
 from ..backend import redsky_alerts as alerts, redsky_geography as geo, redsky_networking as net, redsky_precheck as pre
 from ..backend.redsky_common import AddSpec, CheckSpec, Field
 from ..components.redsky_nav import GROUPS, need_connection, redsky_page
@@ -19,16 +20,16 @@ def redsky_home() -> rx.Component:
         rx.vstack(
             rx.text("RedSky E911 location management", color="var(--gray-11)"),
             *[
-                rx.vstack(
+                show_if_any([i[1] for i in items], rx.vstack(
                     rx.heading(label, size="4"),
                     rx.grid(
-                        *[_card(icon, name, desc, route) for name, route, icon, desc in items],
+                        *[show_if(route, _card(icon, name, desc, route)) for name, route, icon, desc in items],
                         columns=rx.breakpoints(initial="1", sm="2", lg="3"),
                         spacing="4",
                         width="100%",
                     ),
                     spacing="3", align="start", width="100%",
-                )
+                ))
                 for label, items in GROUPS
             ],
             spacing="4",

@@ -25,11 +25,13 @@ to upgrade a package, change its pin on purpose and run `--update`.
   - `logs/` - one log file per operation (git-ignored)
   - `uccx_download/` - the one stored UCCX download (git-ignored, short lived)
 - `.env/credentials.env` - credentials for every platform (git-ignored). The Credentials page edits it.
+- `webui/users.json` - app users and their access (git-ignored, hashed passwords). The Users page (Admin only) edits it.
 - `.doc/webui-reflex.md` - the architecture and feature guide. **Read it before touching `webui/`** and update it in the same commit as any structural or feature change.
 - `uc-automation-gui.code-workspace` - the user's editor workspace (git-ignored, leave it alone)
 
 ## Hard Rules
 
+- **Login and access:** every page goes through `page()` in `components/layout.py`, which shows the sign-in screen and enforces the user's access list (`.doc/webui-reflex.md`, Accounts And Access). Build new pages with `page()` or a `*_page` wrapper, list every new function page in its platform's nav `GROUPS` so it appears in the Users access tree, and hide menu items or cards for it with `components/access.py`. Admin-only handlers must check the Admin role from the session (`UsersState._admin`), not from the page.
 - **Passwords never reach the browser and are never logged** (one exception, by request: the Webex Local Gateway Config Generator output shows the passwords the user typed). Keep them in backend (`_`-prefixed) state vars and in `.env/credentials.env`. The UI only shows "Stored".
 - Manual credential entry (CUBE "Enter Manually") is never saved.
 - Three layers: `backend/` (no Reflex imports), `state/` (calls the backend in a thread), `pages/` + `components/` (layout only).
@@ -38,6 +40,7 @@ to upgrade a package, change its pin on purpose and run `--update`.
 - Every operation writes a log with `OpLog` (`backend/applog.py`): first line `<Title> - Started`, last line `<Title> - Completed`, closed in `try/finally`. New features must log too.
 - Sidebar (`components/layout.py`) collapsed state: every icon (logo, nav items, toggle) must be centered in the 64px strip. Use plain CSS props (`justify_content`, `align_items`, `flex_direction`) with `rx.cond`, never Radix `justify`/`align`/`direction` with a Var (they do not update at runtime). Nav links stay `display="block"` with `width="100%"`, the sidebar hides its scrollbar (`scrollbar_width="none"`) so it cannot shift icons, and hidden labels use `display="none"`. Verify visually after any sidebar change: temporarily set the `SidebarState.collapsed` default to `"1"`, run on spare ports (e.g. `reflex run --frontend-port 3055 --backend-port 8055`), screenshot with headless Chrome at 1200px wide, then restore the default and stop only that PID.
 - No "Built with Reflex" badge on any page: keep `show_built_with_reflex=False` in `webui/rxconfig.py`.
+- **Build number, not a version:** `BUILD` in `webui/uc_automation/config.py`, format `YYYY.M.D` plus a letter, e.g. `2026.11.3a` (year, current month, day, no zero padding). The letter is the commit of that day: `a` for the first, `b` for the next, and so on. Change it only when performing a git commit/sync, in that same commit; if the date changed, restart at `a`. Never edit it otherwise.
 - Exports (CSV, HTML reports) are browser downloads, not files on disk.
 
 ## Adding Things

@@ -9,3 +9,4 @@ __pycache__/
 assets/external/
 logs/
 app_settings.json
+users.json

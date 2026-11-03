@@ -1,8 +1,9 @@
 import reflex as rx
 
+from ..components.access import allowed, platform_visible
 from ..components.layout import page
 from ..components.search_input import search_input
-from ..config import APP_NAME, PLATFORMS, VERSION
+from ..config import APP_NAME, BUILD, PLATFORMS
 from ..state.favorites import FavoritesState
 from ..state.search import SearchState
 from ..state.settings import SettingsState
@@ -37,7 +38,7 @@ def platform_card(p) -> rx.Component:
 
 def result_row(r) -> rx.Component:
     return rx.cond(
-        (r["dev"] == "") | (SettingsState.experimental == "1"),
+        allowed(r["route"]) & ((r["dev"] == "") | (SettingsState.experimental == "1")),
         _result_link(r),
         rx.fragment(),
     )
@@ -70,6 +71,10 @@ def _result_link(r) -> rx.Component:
 
 
 def function_tile(r) -> rx.Component:
+    return rx.cond(allowed(r["route"]), _function_tile(r), rx.fragment())
+
+
+def _function_tile(r) -> rx.Component:
     return rx.link(
         rx.card(
             rx.hstack(
@@ -165,13 +170,13 @@ def home() -> rx.Component:
                 SettingsState.hide_platform_cards == "1",
                 rx.fragment(),
                 rx.grid(
-                    *[platform_card(p) for p in PLATFORMS],
+                    *[rx.cond(platform_visible(p.slug), platform_card(p), rx.fragment()) for p in PLATFORMS],
                     columns=rx.breakpoints(initial="1", sm="2", lg="3"),
                     spacing="4",
                     width="100%",
                 ),
             ),
-            rx.text(f"Version {VERSION}", size="1", color="var(--gray-9)"),
+            rx.text(f"Build {BUILD}", size="1", color="var(--gray-9)"),
             spacing="6",
             align="start",
             width="100%",

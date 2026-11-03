@@ -2,9 +2,12 @@
 
 import reflex as rx
 
-from ..config import APP_NAME, PLATFORMS, VERSION
+from ..config import APP_NAME, BUILD, PLATFORMS
+from ..state.auth import AuthState
 from ..state.favorites import FavoritesState
 from ..state.sidebar import SidebarState
+from .access import platform_visible, show_if
+from .login import account_menu, login_screen, no_access
 
 SIDEBAR_WIDTH = "216px"
 SIDEBAR_WIDTH_COLLAPSED = "64px"
@@ -79,15 +82,17 @@ def sidebar() -> rx.Component:
             ),
             nav_item("Home", "/", "house"),
             nav_heading("Platforms"),
-            *[nav_item(p.label, f"/{p.slug}", p.icon) for p in PLATFORMS],
+            *[rx.cond(platform_visible(p.slug), nav_item(p.label, f"/{p.slug}", p.icon), rx.fragment())
+              for p in PLATFORMS],
             rx.spacer(),
             rx.divider(),
-            nav_item("Logs", "/logs", "scroll-text"),
-            nav_item("Credentials", "/credentials", "key-round"),
-            nav_item("Settings", "/settings", "settings"),
+            rx.cond(AuthState.is_admin, nav_item("Users", "/users", "users"), rx.fragment()),
+            show_if("/logs", nav_item("Logs", "/logs", "scroll-text")),
+            show_if("/credentials", nav_item("Credentials", "/credentials", "key-round")),
+            show_if("/settings", nav_item("Settings", "/settings", "settings")),
             rx.flex(
                 rx.text(
-                    f"v{VERSION}",
+                    BUILD,
                     size="1",
                     color="var(--gray-9)",
                     display=rx.cond(COLLAPSED, "none", "block"),
@@ -163,6 +168,7 @@ def topbar(title: str) -> rx.Component:
             ),
         ),
         rx.spacer(),
+        account_menu(),
         rx.color_mode.button(variant="ghost", size="2"),
         align="center",
         spacing="3",
@@ -179,14 +185,29 @@ def topbar(title: str) -> rx.Component:
 
 
 def page(title: str, *children: rx.Component, subnav: rx.Component | None = None) -> rx.Component:
+    """Every page goes through here: sign-in screen until signed in, then the shell, and the page itself
+    only when the user's access list allows its route."""
     return rx.box(
-        sidebar(),
-        rx.box(
-            topbar(title),
-            subnav if subnav is not None else rx.fragment(),
-            rx.box(*children, padding="1.5rem", max_width="1100px", margin="0 auto"),
-            margin_left=rx.breakpoints(initial="0", md=rx.cond(COLLAPSED, SIDEBAR_WIDTH_COLLAPSED, SIDEBAR_WIDTH)),
-            transition="margin-left 0.15s ease",
-            min_height="100vh",
+        rx.cond(
+            AuthState.signed_in,
+            rx.box(
+                sidebar(),
+                rx.box(
+                    topbar(title),
+                    rx.cond(
+                        AuthState.can_view,
+                        rx.fragment(
+                            subnav if subnav is not None else rx.fragment(),
+                            rx.box(*children, padding="1.5rem", max_width="1100px", margin="0 auto"),
+                        ),
+                        rx.box(no_access(), padding="1.5rem", max_width="1100px", margin="0 auto"),
+                    ),
+                    margin_left=rx.breakpoints(initial="0", md=rx.cond(COLLAPSED, SIDEBAR_WIDTH_COLLAPSED, SIDEBAR_WIDTH)),
+                    transition="margin-left 0.15s ease",
+                    min_height="100vh",
+                ),
+            ),
+            login_screen(),
         ),
+        on_mount=AuthState.check_session,
     )

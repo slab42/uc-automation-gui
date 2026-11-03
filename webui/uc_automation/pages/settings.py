@@ -2,7 +2,7 @@ import reflex as rx
 from reflex_base.style import set_color_mode
 
 from ..components.layout import page
-from ..config import APP_NAME, VERSION
+from ..config import APP_NAME, BUILD
 from ..state.settings import SettingsState as S
 
 
@@ -82,7 +82,7 @@ def settings() -> rx.Component:
                 rx.divider(),
                 row("Application", rx.text(APP_NAME, color="var(--gray-11)")),
                 rx.divider(),
-                row("Version", rx.badge(VERSION, variant="soft")),
+                row("Build", rx.badge(BUILD, variant="soft")),
                 width="100%",
             ),
             size="3",

@@ -2,6 +2,7 @@
 
 import reflex as rx
 
+from ..components.access import show_if, show_if_any
 from ..components.cube_nav import GROUPS, cred_picker, cube_page
 from ..components.cuc_widgets import list_input_parts, hidden_note
 from ..components.tool_widgets import code_block, file_dropzone, run_progress, run_results
@@ -20,16 +21,16 @@ def cube_home() -> rx.Component:
         rx.vstack(
             rx.text("Cisco Unified Border Element", color="var(--gray-11)"),
             *[
-                rx.vstack(
+                show_if_any([i[1] for i in items], rx.vstack(
                     rx.heading(label, size="4"),
                     rx.grid(
-                        *[_card(icon, name, desc, route) for name, route, icon, desc in items],
+                        *[show_if(route, _card(icon, name, desc, route)) for name, route, icon, desc in items],
                         columns=rx.breakpoints(initial="1", sm="2", lg="3"),
                         spacing="4",
                         width="100%",
                     ),
                     spacing="3", align="start", width="100%",
-                )
+                ))
                 for label, items in GROUPS
             ],
             spacing="4",

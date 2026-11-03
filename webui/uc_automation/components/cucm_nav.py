@@ -3,6 +3,7 @@
 import reflex as rx
 
 from ..state.cucm import CucmState
+from .access import show_if, show_if_any
 from .layout import page
 from .org_picker import instance_select, org_select
 
@@ -91,14 +92,14 @@ def menubar(on_connection_change=None, on_org_change=None, show_instance: bool =
                                 show_instance)
     return rx.hstack(
         *[
-            rx.menu.root(
+            show_if_any([i[1] for i in items], rx.menu.root(
                 rx.menu.trigger(
                     rx.button(label, rx.icon("chevron-down", size=15), variant="ghost", size="2"),
                 ),
                 rx.menu.content(
-                    *[rx.menu.item(name, on_click=rx.redirect(route)) for name, route, _icon, _desc in items],
+                    *[show_if(route, rx.menu.item(name, on_click=rx.redirect(route))) for name, route, _icon, _desc in items],
                 ),
-            )
+            ))
             for label, items in GROUPS
         ],
         rx.spacer(),

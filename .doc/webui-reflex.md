@@ -1,7 +1,7 @@
 # Reflex web UI (`webui/`)
 
 The only front end of this repo (the old CLI scripts and the `gui/` wrapper were removed; see git history). Each feature is
-Python backend code (AXL, REST or SSH calls) plus a Reflex page. Version: `VERSION` in
+Python backend code (AXL, REST or SSH calls) plus a Reflex page. Build number: `BUILD` in
 `webui/uc_automation/config.py`.
 
 Run: `python3 main.py` from the repo root (creates `webui/.venv` on first run), or `cd webui && .venv/bin/reflex run` (UI on :3000, backend on :8000, localhost only).
@@ -73,6 +73,13 @@ backend/webex_auth.py        Webex OAuth login, token storage/refresh ([WEBEX:de
 backend/applog.py            operation logs: OpLog writer, pruning (`prune_logs`), plus list/read/export helpers for the Logs page
 backend/app_settings.py      `webui/app_settings.json` (git-ignored): log retention days and max size, defaults 90 days / 2048 MB
 backend/ini_store.py         comment-preserving credentials.env editor
+backend/users.py             app users (`webui/users.json`, git-ignored): scrypt password hashes, in-memory sign-in sessions, per-user route lists, `can_open`
+state/auth.py                AuthState (root): session token (browser LocalStorage `auth_token`), sign in, first-run Admin setup, sign out, change own password
+state/auth_guard.py          AuthGuard middleware: drops every event from a browser that is not signed in (and from a page the user may not open)
+state/users.py               UsersState (Admin only): users, access tree, password reset; builds the permission catalog from `state/search.INDEX`
+pages/users.py               Users page (`/users`)
+components/login.py          sign-in / first-run setup screens, account menu (top bar), change password dialog
+components/access.py         `show_if`, `show_if_any`, `allowed`, `platform_visible`: hide menu items, cards and tiles the user may not open
 state/logs.py                LogsState: Logs page (search, read, export; no delete or import)
 state/favorites.py           FavoritesState: favorite and recent function routes (browser LocalStorage `favorite_routes`, `recent_routes`)
 state/search.py              SearchState: home page search over the GROUPS of the CUCM, CUC and Webex menus (platform, section, link)
@@ -122,7 +129,7 @@ components/search_input.py   search_input(value, on_change, placeholder): every 
 components/org_picker.py     org_select(): the organization dropdown beside each platform's connection dropdown
 pages/organizations.py       Credentials > Organizations tab and organization window
 components/cucm_nav.py       CUCM top menu bar. GROUPS drives the menu and the CUCM home cards
-components/layout.py         sidebar, top bar, page() wrapper (sidebar collapses to icons via the toggle by the version, flag in state/sidebar.py, kept in browser LocalStorage)
+components/layout.py         sidebar, top bar, page() wrapper (sidebar collapses to icons via the toggle by the build number, flag in state/sidebar.py, kept in browser LocalStorage)
 pages/<resource>.py          one config per resource (columns, add form)
 uc_automation.py             app + every add_page()
 ```
@@ -542,8 +549,7 @@ None of this proves the behavior on a real cluster. Say so when reporting, and t
 ## Known gaps
 
 - Web logs live in `webui/logs/`. No rotation or cleanup yet.
-- **No login.** Anyone who can reach the port can use the stored credentials. Keep it on localhost or
-  behind an authenticating proxy.
+- Login exists (see **Accounts And Access**), but there is one user store per machine and no password recovery screen. Per-page enforcement on the server is best effort (see that section). Keep the app on localhost or behind a proxy.
 - Template CSVs are embedded in code (Download Template buttons); there is no examples folder.
 - Phone delete does not clean up orphaned directory numbers.
 - Phone button template list cannot show the base template (AXL does not return it).
@@ -606,3 +612,16 @@ built with `one_multiple_card` (`components/tool_widgets.py`): the single input 
 - Every function page (a route in `INDEX`) gets a star in the top bar (`components/layout.topbar`): grey outline, filled with the theme accent color when a favorite; clicking toggles it. The top bar's `on_mount` calls `FavoritesState.visit`, which records the page as recently used. Not clicked through in a browser.
 - Settings > Home Page > **Hide Platform Cards** (`SettingsState.hide_platform_cards`, browser LocalStorage `hide_platform_cards`, per browser) hides the platform card grid on the home page. The sidebar and search are unaffected.
 - Settings > **Experimental** (`SettingsState.experimental`, browser LocalStorage `experimental`, off by default) shows pages under development. Routes listed in `webex_nav.IN_DEVELOPMENT` (Naming Check, CUCM-Webex Phone Migrate) are hidden from the Webex menu, the Webex home cards and home search while it is off; with it on they show an "In Development" badge in the menu. Direct URLs still open. To mark another page, add its route to that set.
+
+## Accounts And Access
+
+- Every page asks for a sign in. `components/layout.page()` is the one gate: until `AuthState.signed_in` it shows the sign-in screen (or the
+  first-run setup screen), then the shell, and the page body only when `AuthState.can_view` (the user's access list allows the route; otherwise a "no access" notice).
+  New pages need nothing extra as long as they are built with `page()` (all the `*_page` wrappers do).
+- **First run:** no `webui/users.json` means no Admin yet, so the sign-in screen is replaced by "Create Admin Account" (choose a password, 8 characters or more). Admin (`admin`) always has full access, cannot be restricted, disabled or deleted, and is the only account that sees **Users** (sidebar, above Logs). Forgot the Admin password: stop the app and delete the `admin` entry in `webui/users.json`, then the setup screen returns (other users stay).
+- **Users page** (`/users`): user table (Add User), and for the selected user: account enabled switch, Reset Password, Delete User, and the access tree: platform, then section, then page, each with a checkbox (a platform or section box ticks or clears everything under it, shown ticked only when all of it is). **Select All**, **Deselect All**, Expand All, Collapse All, then **Save Access**. A new user starts with no access. The tree comes from `state/search.INDEX` (every menu item) plus System > Logs, Credentials, Settings, so a new tool shows up there with no extra work. Access is stored as a list of routes, so a page added later is not granted to anyone automatically.
+- **Rules** (`backend/users.can_open`): Home and the Webex login return page are open to every signed-in user; a platform home (`/cucm`) opens when any page under it is granted; `/users` is Admin only. Menu items, home cards, search results, favorite/recent tiles and the sidebar hide what the user cannot open (`components/access.py`).
+- **Passwords and sessions:** scrypt hashes with a random salt in `webui/users.json` (mode 600); password inputs are uncontrolled and feed backend vars, never shown or logged. Sign in makes a random token kept in memory (`backend/users._sessions`, 12 hours idle) and in browser LocalStorage `auth_token`, so a reload keeps the user signed in; a backend restart signs everyone out. 5 wrong passwords for a name in 10 minutes lock that name for 5 minutes. Changing or resetting a password, disabling or deleting a user drops that user's sessions (own password change keeps the current one).
+- **Server side guard** (`state/auth_guard.AuthGuard`, registered with `app.add_middleware`): every event is checked before it runs. Reflex's own page-load plumbing and `AuthState` events pass; anything else needs a live session, and for an ordinary user the page named in the event (normalized to a registered route by Reflex; `/index` is the home page) must be one they may open. The page name comes from the browser, so this stops casual use, not a hand-made event from a signed-in user for a page they cannot open. Admin-only handlers (`UsersState`) check the Admin role themselves from the session, whatever page the event names.
+- **Logs:** Sign In (success and failure, user name only), Sign Out, Set Up Admin Account, Change Own Password, Add User, Update User Access (lists the pages), Reset User Password, Delete User. No passwords.
+- Not covered: the stored platform credentials are shared by everyone who can open Credentials or run a tool (access is per page, not per customer or per connection); the one-time download routes (`/bootable/<token>`, `/uccx-export/<token>`) rely on their random token and the upload endpoints were not checked against the guard. Checked: user store, guard (blocked and allowed events over the real websocket), sign in/out, restricted user views. Not checked: password reset and delete dialogs in a browser.
