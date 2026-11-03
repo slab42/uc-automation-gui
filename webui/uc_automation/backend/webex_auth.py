@@ -14,7 +14,7 @@ when a bearer token was pasted from developer.webex.com; those have no refresh t
 import secrets
 import threading
 import time
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
 import requests
 
@@ -169,6 +169,19 @@ def _int(value: str) -> int:
         return 0
 
 
+def parse_authorization_url(url: str) -> tuple[str, str]:
+    """(client_id, scopes) from the OAuth Authorization URL shown on the Integration page at developer.webex.com."""
+    q = parse_qs(urlparse(url.strip()).query)
+    client_id = (q.get("client_id") or [""])[0].strip()
+    scopes = " ".join((q.get("scope") or [""])[0].split())
+    if not client_id or not scopes:
+        raise WebexAuthError("That is not an OAuth Authorization URL: it needs client_id and scope parameters.")
+    redirect = (q.get("redirect_uri") or [""])[0]
+    if redirect and redirect != REDIRECT_URI:
+        raise WebexAuthError(f"The Integration's Redirect URI is {redirect}. It must be {REDIRECT_URI}.")
+    return client_id, scopes
+
+
 def save_client(name: str, client_id: str, client_secret: str | None, scopes: str) -> None:
     """client_secret None/'' keeps the stored one. Changing the client id drops any stored login."""
     old = _config(name)
@@ -286,6 +299,31 @@ def _whoami(token: str) -> str:
     j = r.json()
     emails = j.get("emails") or [""]
     return f"{j.get('displayName', '')} ({emails[0]})".strip()
+
+
+def describe_login(name: str, token: str) -> list[str]:
+    """Log lines about a login for troubleshooting 403s: how it signed in, its granted scopes, and who the token is
+    (the token owner's admin roles and org). Never contains the token. Never raises."""
+    cfg = _config(name)
+    scopes = (cfg.get("scopes") or DEFAULT_SCOPES).split()
+    if cfg.get("auth_mode") == "token":
+        lines = [f"Webex login {name}: pasted token, its scopes are not known (it carries the scopes of the account it came from)"]
+    else:
+        lines = [f"Webex login {name}: OAuth, client_id {cfg.get('client_id') or '-'}, "
+                 f"{len(scopes)} scope(s): {' '.join(scopes)}"]
+    try:
+        r = requests.get(ME_URL, headers={"Authorization": f"Bearer {token}"}, timeout=TIMEOUT)
+        j = r.json() if r.status_code == 200 else {}
+        if not j:
+            return lines + [f"GET /people/me returned {r.status_code}"]
+        lines.append(f"Token owner: {j.get('displayName', '')} ({(j.get('emails') or [''])[0]}), orgId {j.get('orgId', '')}, "
+                     f"type {j.get('type', '')}, roles {len(j.get('roles') or [])}, licenses {len(j.get('licenses') or [])}")
+        for role in j.get("roles") or []:
+            rr = requests.get(f"https://webexapis.com/v1/roles/{role}", headers={"Authorization": f"Bearer {token}"}, timeout=TIMEOUT)
+            lines.append(f"  role {role}: {rr.json().get('name', '?') if rr.status_code == 200 else rr.status_code}")
+    except (requests.RequestException, ValueError) as e:
+        lines.append(f"Could not read /people/me: {e}")
+    return lines
 
 
 class _Invalid(WebexAuthError):

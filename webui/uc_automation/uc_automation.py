@@ -35,7 +35,7 @@ from .pages.partitions import partitions
 from .pages.tools import em_bulk_login, phone_count, set_user_pin
 from .pages.system import codec_lists, device_pools, locations, regions
 from .pages.webex_routing import add_numbers, call_forward, call_queues, hunt_groups as webex_hunt_groups, virtual_lines, webex_home
-from .pages.webex_locations import e911, schedules
+from .pages.webex_locations import copy_location, e911, migrate_pstn, schedules
 from .pages.webex_tools import hardware_compatibility
 from .pages.webex_naming import naming_check
 from .pages.webex_devices import bulk_ata, cucm_migrate, device_migrate
@@ -72,7 +72,7 @@ from .state.settings import SettingsState
 from .state.webex import WebexState
 from .state.webex_devices import BulkAtaState, CucmMigrateState, DeviceMigrateState
 from .state.webex_groups import CallQueuesState, HuntGroupsState as WebexHuntGroupsState, VirtualLinesState
-from .state.webex_locations import E911State, SchedulesState
+from .state.webex_locations import CopyLocationState, E911State, MigratePstnState, SchedulesState
 from .state.webex_tools import HardwareCompatState
 from .state.webex_naming import NamingCheckState
 from .state.webex_users import (
@@ -130,6 +130,8 @@ for _route, _title, _page, _state in [
     ("/webex/migrate", "Migrate", migrate, MigrateState),
     ("/webex/schedules", "Schedules", schedules, SchedulesState),
     ("/webex/e911", "E911", e911, E911State),
+    ("/webex/copy-location", "Copy Location", copy_location, CopyLocationState),
+    ("/webex/migrate-pstn", "Migrate PSTN", migrate_pstn, MigratePstnState),
     ("/webex/hardware-compatibility", "Check Hardware Compatibility", hardware_compatibility, HardwareCompatState),
     ("/webex/naming-check", "Naming Check", naming_check, NamingCheckState),
 ]:

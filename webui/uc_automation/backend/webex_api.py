@@ -25,7 +25,7 @@ class WebexError(UserError):
 
 
 # Core (non-calling) APIs: they want the base64 org id, the telephony APIs accept the bare UUID.
-CORE_PATHS = ("/people", "/workspaces", "/devices")
+CORE_PATHS = ("/people", "/workspaces", "/devices", "/locations")
 _UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 
 
@@ -40,6 +40,7 @@ class WebexClient:
     def __init__(self, token: str, org_id: str = ""):
         self._token = token
         self.org_id = org_id
+        self.log = None  # optional OpLog: every request and every failure is written to it
         self.cache: dict = {}  # per-run lookups (license ids and the like)
         # One session per client: reuses the TLS connection across calls (and across the worker threads of a bulk run).
         self._session = requests.Session()
@@ -47,11 +48,17 @@ class WebexClient:
         self._session.mount("https://", adapter)
 
     @classmethod
-    def connect(cls, org: str) -> "WebexClient":
+    def connect(cls, org: str, log=None) -> "WebexClient":
         """Check the login assigned to a saved org (renewing it if needed) and build a client for that org.
+        With `log`, writes the login's scopes and the token owner's roles first, then every request.
         Raises WebexAuthError."""
         login, org_id = webex_auth.resolve(org)
-        return cls(webex_auth.ensure_token(login), org_id)
+        client = cls(webex_auth.ensure_token(login), org_id)
+        if log is not None:
+            client.log = log
+            for line in webex_auth.describe_login(login, client._token):
+                log.info(line)
+        return client
 
     def call(self, method: str, path: str, params: dict | None = None, body: dict | None = None,
              files: dict | None = None) -> dict:
@@ -88,14 +95,33 @@ class WebexClient:
                 time.sleep(min(int(r.headers.get("Retry-After", "2") or 2), 60))
                 continue
             break
+        self._log_response(method, url, params, r)
         if r.status_code == 401:
             raise WebexError("Webex rejected the token (401). Log in again on the Credentials page.")
         if r.status_code >= 300:
             text = _error_text(r)
-            if r.status_code == 400:
+            if r.status_code in (400, 403):
                 text += f" ({method} {url.removeprefix(BASE).split('?')[0]})"
+            if r.status_code == 403 and r.headers.get("TrackingID"):
+                text += f" [TrackingID {r.headers['TrackingID']}]"
             raise WebexError(text)
         return r
+
+
+    def _log_response(self, method: str, url: str, params: dict | None, r: requests.Response) -> None:
+        if self.log is None:
+            return
+        path = url.removeprefix(BASE).split("?")[0]
+        query = " ".join(f"{k}={v}" for k, v in (params or {}).items())
+        line = f"{method} {path}{' ?' + query if query else ''} -> {r.status_code} (TrackingID {r.headers.get('TrackingID', '-')})"
+        if r.status_code < 300:
+            self.log.info(line)
+            return
+        self.log.error(line)
+        self.log.error(f"  response body: {r.text.strip()[:2000]}")
+        for h in ("WWW-Authenticate", "Retry-After"):
+            if r.headers.get(h):
+                self.log.error(f"  {h}: {r.headers[h]}")
 
 
 def _json(r: requests.Response) -> dict:

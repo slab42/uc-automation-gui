@@ -25,11 +25,13 @@ CUCM_MIGRATE = "/webex/cucm-phone-migrate"
 MIGRATE = "/webex/migrate"
 SCHEDULES = "/webex/schedules"
 E911 = "/webex/e911"
+MIGRATE_PSTN = "/webex/migrate-pstn"
+COPY_LOCATION = "/webex/copy-location"
 HARDWARE = "/webex/hardware-compatibility"
 NAMING = "/webex/naming-check"
 
 # Routes still under development: the menu item shows a badge
-IN_DEVELOPMENT = {NAMING, CUCM_MIGRATE}
+IN_DEVELOPMENT = {NAMING, CUCM_MIGRATE, COPY_LOCATION}
 
 # (menu label, [(item label, route, icon, description)])
 GROUPS = [
@@ -46,6 +48,9 @@ GROUPS = [
         ("Schedules", SCHEDULES, "calendar-days",
          "Export, update, copy and clean up location holiday schedules."),
         ("E911", E911, "siren", "RedSky E911 status of every location, and opt-out."),
+        ("Copy Location", COPY_LOCATION, "copy",
+         "In development. Create a new location from an existing one: time zone, languages, address, calling settings and schedules."),
+        ("Migrate PSTN", MIGRATE_PSTN, "phone-call", "Move a location to a different PSTN trunk, route group or cloud connection."),
     ]),
     ("Users", [
         ("Delete Users", DELETE_USERS, "user-x", "Delete users listed in a Control Hub CSV export."),

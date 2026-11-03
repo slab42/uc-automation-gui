@@ -35,6 +35,7 @@ class CucState(OrgState):
     form_server: str = ""
     form_username: str = ""
     form_org: str = ""
+    form_subscriber: str = ""
     _password: str = ""
     password_key: int = 0
     form_has_password: bool = False
@@ -127,6 +128,7 @@ class CucState(OrgState):
         self.form_server = c["server"]
         self.form_username = c["username"]
         self.form_org = c.get("org", "")
+        self.form_subscriber = c.get("subscriber", "")
         self.form_has_password = c["has_password"] == "yes"
         self._password = ""
         self.password_key += 1
@@ -135,7 +137,7 @@ class CucState(OrgState):
 
     @rx.event
     def new_connection(self):
-        self.form_name = self.form_server = self.form_username = ""
+        self.form_name = self.form_server = self.form_username = self.form_subscriber = ""
         self.form_org = self._default_org()
         self.form_has_password = False
         self._password = ""
@@ -176,8 +178,9 @@ class CucState(OrgState):
         log = OpLog("Save CUC connection", "cuc-credentials-save")
         try:
             log.info(f"Saving connection {self.form_name} ({self.form_server}) as {self.form_username} in organization {self.form_org}")
+            log.info(f"Subscriber: {self.form_subscriber or 'none'}")
             cuc_connections.save(self.form_name, self.form_server, self.form_username, self._password,
-                                  org=self.form_org)
+                                  org=self.form_org, subscriber=self.form_subscriber)
         finally:
             log.close()
         self._after_save()
@@ -227,7 +230,8 @@ class CucState(OrgState):
                 log.error(f"Test failed unexpectedly: {e!r}")
                 return
             cuc_connections.save(self.form_name, self.form_server, self.form_username,
-                                 self._password, version=major, schema_version=schema, org=self.form_org)
+                                 self._password, version=major, schema_version=schema, org=self.form_org,
+                                 subscriber=self.form_subscriber)
             self._after_save()
             self.testing = False
             self.test_ok = True

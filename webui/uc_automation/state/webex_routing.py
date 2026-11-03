@@ -110,7 +110,7 @@ class WebexSession(OrgState):
     async def _connect(self, log: OpLog):
         """A checked WebexClient, or None after showing why not (the caller then returns)."""
         try:
-            return await asyncio.to_thread(WebexClient.connect, self.webex_active)
+            return await asyncio.to_thread(WebexClient.connect, self.webex_active, log)
         except UserError as e:
             log.error(str(e))
             self.webex_ok, self.webex_message = False, str(e)

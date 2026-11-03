@@ -1,10 +1,11 @@
 import reflex as rx
 
-from ..components.tool_widgets import code_block, confirm_dialog, csv_dropzone, paste_csv_tabs, run_results
+from ..backend.countries import COUNTRIES
+from ..components.tool_widgets import code_block, confirm_dialog, csv_dropzone, field, paste_csv_tabs, run_results
 from ..components.webex_nav import webex_page
 from ..components.search_input import search_input
 from ..components.webex_picker import picker
-from ..state.webex_locations import E911State, SchedulesState
+from ..state.webex_locations import CopyLocationState, E911State, MigratePstnState, SchedulesState
 from .webex_routing import need_login
 
 _LOCATION_COLS = (("Location", "name"),)
@@ -316,6 +317,187 @@ def e911() -> rx.Component:
             confirm_dialog(S, "Opt these locations out of RedSky?",
                            "Sets " + S.selected.length().to_string() + " location(s) to OPTED_OUT.",
                            "Opt out", S.run_opt_out),
+            spacing="4", align="start", width="100%",
+        )),
+    )
+
+
+def migrate_pstn() -> rx.Component:
+    S = MigratePstnState
+    return webex_page(
+        "Migrate PSTN",
+        need_login(rx.vstack(
+            rx.tabs.root(
+                rx.tabs.list(
+                    rx.tabs.trigger("Single Location", value="single"),
+                    rx.tabs.trigger("Multiple Locations", value="multiple"),
+                ),
+                rx.tabs.content(
+                    rx.vstack(
+                        picker(S, "Location", columns=_LOCATION_COLS),
+                        rx.cond(
+                            S.has_selection,
+                            rx.card(
+                                rx.vstack(
+                                    rx.heading("Move " + S.selected_row["name"] + " to a different PSTN connection", size="4"),
+                                    rx.cond(
+                                        S.detail_loading,
+                                        rx.hstack(rx.spinner(size="2"), rx.text("Reading the connection...", size="2"),
+                                                  align="center", spacing="2"),
+                                        rx.vstack(
+                                            rx.hstack(rx.text("Current connection", size="2", weight="medium"),
+                                                      rx.badge(rx.cond(S.current_text != "", S.current_text, "None")),
+                                                      align="center", spacing="3", wrap="wrap"),
+                                            rx.hstack(
+                                                rx.text("New connection", size="2", weight="medium"),
+                                                rx.select(S.target_labels, value=S.target_label, on_change=S.set_target_label,
+                                                          placeholder="Select a trunk, route group or cloud connection",
+                                                          min_width="22rem"),
+                                                align="center", spacing="3", wrap="wrap",
+                                            ),
+                                            rx.text("Numbers keep their location. Integrated CCP and Cisco PSTN cannot be "
+                                                    "set through the API.", size="2", color="var(--gray-11)"),
+                                            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("arrow-right-left", size=16)),
+                                                      "Migrate PSTN...", on_click=S.set_confirm_open(True),
+                                                      disabled=S.busy | (S.target_label == "")),
+                                            spacing="3", align="start", width="100%",
+                                        ),
+                                    ),
+                                    spacing="3", align="start", width="100%",
+                                ),
+                                size="3", width="100%",
+                            ),
+                            rx.fragment(),
+                        ),
+                        spacing="4", align="start", width="100%", padding_top="1rem",
+                    ),
+                    value="single",
+                ),
+                rx.tabs.content(
+                    rx.box(
+                        rx.card(
+                            rx.vstack(
+                                rx.heading("Migrate Multiple Locations", size="4"),
+                                rx.text("Name the locations to move, pick the new connection, then migrate them all. Names "
+                                        "are matched case-insensitively.", size="2", color="var(--gray-11)"),
+                                paste_csv_tabs(
+                                    S.paste_pstn, lambda v: S.set_paste("pstn", v),
+                                    "Paste one location name per line. A header row is optional.",
+                                    "SFO Office\nNYC Office",
+                                    rx.button(rx.icon("list-checks", size=16), "Find Locations", variant="soft",
+                                              on_click=S.match_from_text, disabled=S.rows.length() == 0),
+                                    [
+                                        rx.text("First column, header row skipped.", size="2", color="var(--gray-11)"),
+                                        code_block("Location\nSFO Office\nNYC Office\n"),
+                                        csv_dropzone("pstn_upload"),
+                                        rx.button(rx.icon("list-checks", size=16), "Find Locations", variant="soft",
+                                                  on_click=S.match_from_csv(rx.upload_files(upload_id="pstn_upload")),
+                                                  disabled=S.rows.length() == 0),
+                                    ],
+                                ),
+                                rx.cond(S.bulk_note != "", rx.text(S.bulk_note, size="2", color="var(--gray-11)"), rx.fragment()),
+                                rx.cond(
+                                    S.bulk_ids.length() > 0,
+                                    rx.vstack(
+                                        rx.hstack(
+                                            rx.text("New connection", size="2", weight="medium"),
+                                            rx.select(S.target_labels, value=S.target_label, on_change=S.set_target_label,
+                                                      placeholder="Select a trunk, route group or cloud connection",
+                                                      min_width="22rem"),
+                                            align="center", spacing="3", wrap="wrap",
+                                        ),
+                                        rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("arrow-right-left", size=16)),
+                                                  "Migrate " + S.bulk_ids.length().to_string() + " Location(s)...",
+                                                  on_click=S.set_bulk_confirm_open(True),
+                                                  disabled=S.busy | (S.target_label == "")),
+                                        spacing="3", align="start", width="100%",
+                                    ),
+                                    rx.fragment(),
+                                ),
+                                spacing="3", align="start", width="100%",
+                            ),
+                            size="3", width="100%",
+                        ),
+                        padding_top="1rem", width="100%",
+                    ),
+                    value="multiple",
+                ),
+                default_value="single", width="100%",
+            ),
+            run_results(S, "Location"),
+            confirm_dialog(S, "Migrate these locations' PSTN connections?",
+                           S.bulk_ids.length().to_string() + " location(s) will use " + S.target_label +
+                           ". Calls to and from their numbers follow the new connection.", "Migrate",
+                           S.run_migrate_bulk, open_var=S.bulk_confirm_open, set_open=S.set_bulk_confirm_open),
+            confirm_dialog(S, "Migrate this location's PSTN connection?",
+                           S.selected_label + " will use " + S.target_label + ". Calls to and from its numbers "
+                           "follow the new connection.", "Migrate", S.run_migrate),
+            spacing="4", align="start", width="100%",
+        )),
+    )
+
+
+_ADDRESS_FIELDS = (("address1", "Address 1"), ("address2", "Address 2"), ("city", "City"), ("state", "State"),
+                   ("postalCode", "Postal Code"), ("country", "Country"))
+
+
+def _country_input(S) -> rx.Component:
+    """Country code box with a searchable list (type a code or part of a name)."""
+    return rx.fragment(
+        rx.input(value=S.form_address.get("country", ""), on_change=lambda v: S.set_form_address("country", v),
+                 placeholder="Country (code or name)", list="copy-location-countries", auto_complete="off",
+                 width="12rem", max_width="100%"),
+        rx.el.datalist(*[rx.el.option(name, value=code) for code, name in COUNTRIES.items()],
+                       id="copy-location-countries"),
+    )
+
+
+def copy_location() -> rx.Component:
+    S = CopyLocationState
+    return webex_page(
+        "Copy Location",
+        need_login(rx.vstack(
+            rx.callout("This tool is still under development. Review the result before relying on it.",
+                       icon="construction", color_scheme="amber", width="100%"),
+            picker(S, "Source location", columns=(("Location", "name"), ("PSTN Connection", "pstn"))),
+            rx.cond(
+                S.has_selection,
+                rx.card(
+                    rx.vstack(
+                        rx.heading("Copy " + S.selected_row["name"] + " to a new location", size="4"),
+                        rx.text("Creates the new location with the source's time zone, languages and address, then "
+                                "enables it for Webex Calling. Numbers, users, devices, the routing prefix and the "
+                                "PSTN connection are not copied (use Migrate PSTN for the connection).",
+                                size="2", color="var(--gray-11)"),
+                        field("New location name", rx.input(value=S.form_name, on_change=S.set_form_name,
+                                                            placeholder="Name of the new location", max_length=80,
+                                                            width="22rem", max_width="100%")),
+                        rx.text("Address (optional). Leave blank to use the source location's address.",
+                                size="2", weight="medium"),
+                        rx.flex(
+                            *[_country_input(S) if key == "country" else
+                              rx.input(value=S.form_address.get(key, ""),
+                                       on_change=lambda v, key=key: S.set_form_address(key, v),
+                                       placeholder=label, width="12rem", max_width="100%")
+                              for key, label in _ADDRESS_FIELDS],
+                            spacing="3", wrap="wrap",
+                        ),
+                        rx.checkbox("Copy calling settings (caller ID name, outside dial digit, emergency header)",
+                                    checked=S.copy_settings, on_change=S.set_copy_settings),
+                        rx.checkbox("Copy schedules (holiday and business hours)",
+                                    checked=S.copy_schedules, on_change=S.set_copy_schedules),
+                        rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("copy", size=16)), "Copy Location...",
+                                  on_click=S.set_confirm_open(True), disabled=S.busy | (S.form_name.strip() == "")),
+                        spacing="3", align="start", width="100%",
+                    ),
+                    size="3", width="100%",
+                ),
+                rx.fragment(),
+            ),
+            run_results(S, "Location"),
+            confirm_dialog(S, "Copy this location?",
+                           "Creates " + S.form_name + " from " + S.selected_label + " and enables it for Webex Calling.",
+                           "Copy", S.run_copy),
             spacing="4", align="start", width="100%",
         )),
     )

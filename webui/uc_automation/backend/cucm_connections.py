@@ -1,10 +1,11 @@
 """Saved CUCM connections, stored as [CUCM:<name>] sections in .env/credentials.env.
 
 Keys: server, username, password, version (detected CUCM major release),
-schema_version (AXL schema folder used for that release).
+schema_version (AXL schema folder used for that release), subscribers (comma separated
+`host` or `host|em`, `|em` marks a subscriber running Extension Mobility).
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from . import ini_store
 from .paths import CREDENTIALS_PATH
@@ -18,6 +19,21 @@ class CucmConnection:
     password: str
     version: str = ""
     schema_version: str = ""
+    subscribers: list[dict[str, str]] = field(default_factory=list)
+
+
+def parse_subscribers(raw: str) -> list[dict[str, str]]:
+    """'a|em,b' -> [{'host': 'a', 'em': 'yes'}, {'host': 'b', 'em': 'no'}]."""
+    out = []
+    for item in raw.split(","):
+        host, _, flag = item.strip().partition("|")
+        if host.strip():
+            out.append({"host": host.strip(), "em": "yes" if flag.strip().lower() == "em" else "no"})
+    return out
+
+
+def format_subscribers(subs: list[dict[str, str]]) -> str:
+    return ",".join(s["host"] + ("|em" if s.get("em") == "yes" else "") for s in subs)
 
 
 def _section(name: str) -> str:
@@ -38,6 +54,7 @@ def list_public() -> list[dict[str, str]]:
             "version": f.get("version", ""),
             "schema_version": f.get("schema_version", ""),
             "org": f.get("org", ""),
+            "subscribers": f.get("subscribers", ""),
             "has_password": "yes" if s["secrets"].get("password") else "no",
         })
     return out
@@ -54,17 +71,20 @@ def load(name: str) -> CucmConnection | None:
         password=kv.get("password", ""),
         version=kv.get("version", ""),
         schema_version=kv.get("schema_version", ""),
+        subscribers=parse_subscribers(kv.get("subscribers", "")),
     )
 
 
 def save(name: str, server: str, username: str, password: str | None,
          version: str | None = None, schema_version: str | None = None,
-         org: str | None = None) -> None:
-    """password None/'' keeps the stored one. Changing server/username clears stale version info."""
+         org: str | None = None, subscribers: list[dict[str, str]] | None = None) -> None:
+    """password None/'' keeps the stored one. subscribers None keeps the stored list. Changing server/username clears stale version info."""
     old = load(name)
     values: dict[str, str | None] = {"server": server, "username": username}
     if org is not None:
         values["org"] = org
+    if subscribers is not None:
+        values["subscribers"] = format_subscribers(subscribers)
     if password:
         values["password"] = password
     elif old is None:

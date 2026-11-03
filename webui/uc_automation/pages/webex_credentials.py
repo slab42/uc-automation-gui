@@ -133,9 +133,13 @@ def _oauth_fields() -> rx.Component:
     return rx.vstack(
         rx.text(
             "Create an Integration at developer.webex.com/my-apps with Redirect URI " + REDIRECT_URI
-            + " and the scopes below, then paste its Client ID and Secret.",
+            + ", then paste its OAuth Authorization URL and Client Secret.",
             size="2", color=MUTED,
         ),
+        _field("OAuth Authorization URL",
+               rx.input(value=S.form_auth_url, on_change=S.set_form_auth_url, width="100%", auto_complete="off",
+                        placeholder="https://webexapis.com/v1/authorize?client_id=..."),
+               "Copy it from the Integration page. The Client ID and the permissions (scopes) are read from it."),
         _field("Client ID", rx.input(value=S.form_client_id, on_change=S.set_form_client_id, width="100%",
                                      auto_complete="off")),
         _field(
@@ -145,8 +149,8 @@ def _oauth_fields() -> rx.Component:
                      on_change=S.set_client_secret, auto_complete="new-password", width="100%"),
             "Stored in .env/credentials.env and never shown again.",
         ),
-        _field("Scopes", rx.text_area(value=S.form_scopes, on_change=S.set_form_scopes, width="100%", rows="4"),
-               "Space separated. Must be a subset of the scopes ticked on the Integration."),
+        _field("Scopes", rx.text_area(value=S.form_scopes, read_only=True, width="100%", rows="4"),
+               "Read from the OAuth Authorization URL. Paste a new URL after changing the Integration's scopes."),
         rx.hstack(
             rx.button("Save integration", variant="soft", on_click=S.save_client),
             rx.button(rx.icon("log-in", size=16), "Log in with Webex", on_click=S.login, disabled=~S.has_client),

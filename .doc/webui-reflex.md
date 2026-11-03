@@ -65,7 +65,7 @@ backend/webex_voicemail.py   Voicemail report: internal vs external mailbox per 
 backend/webex_devices.py     Webex-Webex Phone Migrate (move a phone between Webex orgs)
 backend/webex_cucm_migrate.py CUCM-Webex Phone Migrate (either direction)
 backend/webex_workspaces.py  Create workspaces, add devices to workspaces, move users to another location (Move Users job)
-backend/webex_locations.py   Location schedules (export/update/copy/remove past) and RedSky E911 status/opt-out
+backend/webex_locations.py   Location schedules (export/update/copy/remove past), RedSky E911 status/opt-out and PSTN connection migration
 backend/webex_tools.py       Hardware compatibility check (supported models + validateMacs)
 backend/webex_naming.py      Naming Check: list locations, queues, hunt groups, auto attendants, workspaces, virtual lines; regex check; rename
 backend/webex_auth.py        Webex OAuth login, token storage/refresh ([WEBEX:default]); `ensure_token()` for API code
@@ -80,7 +80,7 @@ state/webex_tools.py         Check Hardware Compatibility state
 state/webex_naming.py        Naming Check state
 state/webex_devices.py       Bulk ATA/VG, Webex-Webex Phone Migrate and CUCM-Webex Phone Migrate states
 state/webex_users.py         Delete Users, Reset PIN, Voicemail, Add Workspace, Add Device, Migrate states
-state/webex_locations.py     Schedules and E911 states
+state/webex_locations.py     Schedules, E911 and Migrate PSTN states
 state/webex_groups.py        PickerMixin (searchable list + selection) and the Call Queues / Hunt Groups / Virtual Lines states
 state/webex_routing.py       WebexSession (login status in the menu bar, checked on page load) + Add Numbers / Call Forward states
 state/webex.py               WebexState: Webex tab on the credentials page and the /webex/callback page
@@ -164,7 +164,10 @@ uc_automation.py             app + every add_page()
 ### Connections
 
 - Stored in `.env/credentials.env` as `[CUCM:<name>]` with `server`, `username`, `password`,
-  `version` (detected CUCM release) and `schema_version` (AXL schema folder used).
+  `version` (detected CUCM release) and `schema_version` (AXL schema folder used), plus an optional `subscribers` line
+  (comma separated `host` or `host|em`; `|em` = the subscriber runs Extension Mobility). The form lists subscribers
+  with an EM checkbox each (`form_subs`, `add_subscriber`, `toggle_sub_em`, `remove_subscriber` in `state/cucm.py`);
+  nothing uses them for calls yet. Not tested against a real CUCM.
 - Passwords never reach the browser. The password input is uncontrolled and feeds a **backend var**
   (`_password`, underscore prefix = not sent to the client). Saved passwords show only as "Stored".
 - The Test button calls `getCCMVersion`, derives the major release (for example 14.0), picks the
@@ -174,7 +177,8 @@ uc_automation.py             app + every add_page()
 
 ### CUC credentials
 
-- Credentials > CUC works like CUCM: `[CUC:<name>]` with `server`, `username`, `password`, `version`, `schema_version`.
+- Credentials > CUC works like CUCM: `[CUC:<name>]` with `server`, `username`, `password`, `version`, `schema_version` and an optional
+  `subscriber` (at most one host, a plain input with no Add button, saved with the cluster when filled in; nothing uses it for calls yet).
   The page builders in `pages/credentials.py` (`_conn_tab`) are shared and take the state class.
 - Test calls `GET https://<server>/vmrest/version`, takes the major release, picks the closest schema folder under
   `schemas/cuc/<version>/` (only 15.0 today) and saves both. Port 443, basic auth, TLS not verified.
@@ -287,7 +291,7 @@ uc_automation.py             app + every add_page()
 Webex has no username/password token API, so login is the OAuth authorization code flow with a Webex Integration
 (created once at developer.webex.com/my-apps; Redirect URI `http://localhost:3000/webex/callback`).
 
-- Credentials > Webex: save Client ID, Client Secret and scopes, then "Log in with Webex". The browser goes to Webex's
+- Credentials > Webex: paste the Integration's OAuth Authorization URL (Client ID and scopes are parsed from it by `webex_auth.parse_authorization_url`, which also checks the Redirect URI) and the Client Secret, save, then "Log in with Webex". The browser goes to Webex's
   login page and returns to `/webex/callback`, which verifies the one-time `state`, exchanges the code and stores
   `access_token` (about 14 days) and `refresh_token` (about 90 days) in the connection's `[WEBEX:<name>]` section.
 - Tokens, the client secret and the refresh token are in `ini_store.SECRET_KEYS`: never sent to the browser.
@@ -359,6 +363,8 @@ Webex has no username/password token API, so login is the OAuth authorization co
   locations or one), Remove past events (one-time holiday events ended before today; tick what to delete). Locations come from
   the Calling API. E911: status table (2 calls per location, 5 in parallel), export, and opt-out of ticked locations (tick by
   hand or from a CSV of names).
+- **Locations > Copy Location** (`/webex/copy-location`, `CopyLocationState`, **in development**: in `webex_nav.IN_DEVELOPMENT`, amber menu badge, hidden unless the experimental setting is on, callout on the page; the core `POST /locations` call returned 403 for the partner login tested, `backend/webex_locations.copy_location`): pick a source location (the list also shows each location's PSTN connection, `GET /telephony/pstn/locations/{id}/connection`, 5 reads in parallel, "Unknown" when one fails), enter the new name (max 80 characters, must not exist) and optionally override the address. One run: `GET /locations/{id}` (time zone, languages, address, coordinates, notes), `POST /locations`, then `POST /telephony/config/locations` to enable Webex Calling. Optional checkboxes copy the calling settings (`externalCallerIdName`, `outsideDialDigit`, `enforceOutsideDialDigit`, `pAccessNetworkInfo`, `useChargeNumberForPChargeInfo`, GET on the source then PUT on the copy) and the schedules (`copy_schedule_to`); a failure there is noted in the row detail and does not fail the copy. Numbers, users, devices, routing prefix and PSTN connection are never copied. If enabling Webex Calling fails the new core location stays and the message says so. Not tested against a real org.
+- **Locations > Migrate PSTN** (`/webex/migrate-pstn`, `MigratePstnState`, `backend/webex_locations.py`): pick a location; it shows the current connection (`GET /telephony/pstn/locations/{id}/connection`) and offers trunks, route groups (`/telephony/config/premisePstn/trunks`, `routeGroups`) and the cloud connection options (`.../connectionOptions`, premises option skipped, plus the NON_INTEGRATED_CCP connections any other location already uses, read once per page load, because the options endpoint is per location and can omit a provider) as the new connection. Migrate (confirm dialog) is a `PUT` on the connection: `premiseRouteType` + `premiseRouteId` for a trunk or route group, `id` for a cloud option. Integrated CCP and Cisco PSTN cannot be set through the API. The current connection is always offered too. **Migrate PSTN has Single Location and Multiple Locations tabs. The Multiple Locations tab: paste location names (Paste Text first) or a CSV, Find Locations matches them (names case-insensitive, unmatched ones are listed) and reads the connection options of the first matched location, then one new connection is applied to all of them (one `PUT` each, per-row results). Needs the `spark-admin:telephony_pstn_read/write` scopes. Not tested against a real org.
 - **Tools > Naming Check** (`/webex/naming-check`, `NamingCheckState`, `backend/webex_naming.py`; **in development**; Rules and Regex tabs, the Regex tab turns a plain-English description into a regex with `describe_to_regex` (fixed phrase rules, no AI. Sequence mode: ordered steps like "location name, a space, then 5 letters" become one anchored regex (`_sequence_regex`); otherwise rule mode: starts/ends with, contains, allowed characters, no spaces, length) with a copy button, a Use As Rule button and the same quick reference as the info popover: `webex_nav.IN_DEVELOPMENT` puts an amber badge on its menu item and the page shows a callout; remove the route from that set when it is finished): one regex per item type (locations, call queues, hunt groups, auto attendants, workspaces, virtual lines; empty skips the type) with a hints select per row (`HINTS`) and an info popover beside the Rules heading (`_REGEX_HELP` in `pages/webex_naming.py`: anchors, wildcards, brackets, shortcuts); `{location}` in a regex expands to the item's escaped location name. Run Check lists the items and shows PASS/FAIL with a CSV export. A suggested name for each failure comes from the optional find/replace regex, else from automatic fixes (`suggest`: spacing, odd characters, case variants plus the rule's literal prefix/suffix, first candidate that passes); it is kept only if it changes the name, fits `MAX_LEN` (30 characters for queues, hunt groups and auto attendants, Webex rejects longer) and passes the rule, and the Suggested Name cell is editable (red when it does not pass; `valid` marks renamable rows); Rename Suggested (confirm dialog) renames those: `PUT /locations/{id}` (name), `/workspaces/{id}` (displayName), `/telephony/config/virtualLines/{id}` (displayName), and `/telephony/config/locations/{loc}/{queues|huntGroups|autoAttendants}/{id}` (name). Not tested against a real org.
 - **Tools > Check Hardware Compatibility** (`/webex/hardware-compatibility`): one phone or a CSV (`model,mac`). Model is checked
   against `GET /telephony/config/supportedDevices` (model code or display name), MACs against `validateMacs` in batches of 50

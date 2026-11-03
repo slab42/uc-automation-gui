@@ -64,10 +64,46 @@ def _saved_row(c, S, tested: bool = True) -> rx.Component:
     )
 
 
-def _form(S, placeholder: str, server_hint: str) -> rx.Component:
+def _sub_row(s, S) -> rx.Component:
+    return rx.hstack(
+        rx.text(s["host"], size="2", weight="medium"),
+        rx.spacer(),
+        rx.checkbox("EM", checked=s["em"] == "yes", on_change=lambda v: S.toggle_sub_em(s["host"], v)),
+        rx.icon_button(rx.icon("trash-2", size=15), variant="ghost", color_scheme="red",
+                       on_click=S.remove_subscriber(s["host"])),
+        align="center",
+        width="100%",
+        padding="0.4rem 0.75rem",
+        border="1px solid var(--gray-5)",
+        border_radius="var(--radius-3)",
+    )
+
+
+def _subscribers(S) -> rx.Component:
+    return _field(
+        "Subscribers",
+        rx.vstack(
+            rx.foreach(S.form_subs, lambda s: _sub_row(s, S)),
+            rx.hstack(
+                rx.input(value=S.sub_host, placeholder="10.0.0.11", on_change=S.set_sub_host, flex="1"),
+                rx.checkbox("EM", checked=S.sub_em, on_change=S.set_sub_em),
+                rx.button("Add", variant="soft", on_click=S.add_subscriber),
+                align="center",
+                spacing="3",
+                width="100%",
+            ),
+            spacing="2",
+            width="100%",
+        ),
+        "Optional. Tick EM for a subscriber running Extension Mobility. Saved with the connection.",
+    )
+
+
+def _form(S, placeholder: str, server_hint: str, subscribers: bool = False, title: str = "Connection",
+          subscriber: bool = False) -> rx.Component:
     return rx.card(
         rx.vstack(
-            rx.heading("Connection", size="4"),
+            rx.heading(title, size="4"),
             _org_field(S),
             _field(
                 "Name",
@@ -85,6 +121,15 @@ def _form(S, placeholder: str, server_hint: str) -> rx.Component:
                 ),
                 server_hint,
             ),
+            _subscribers(S) if subscribers else rx.fragment(),
+            _field(
+                "Subscriber",
+                rx.input(
+                    value=S.form_subscriber, placeholder="10.0.0.21",
+                    on_change=lambda v: S.set_form("subscriber", v), width="100%",
+                ),
+                "Optional. The one subscriber server. Saved with the cluster when filled in.",
+            ) if subscriber else rx.fragment(),
             _field(
                 "Username",
                 rx.input(
@@ -135,11 +180,13 @@ def _form(S, placeholder: str, server_hint: str) -> rx.Component:
     )
 
 
-def _conn_tab(S, placeholder: str, server_hint: str, tested: bool = True) -> rx.Component:
+def _conn_tab(S, placeholder: str, server_hint: str, tested: bool = True, subscribers: bool = False,
+              title: str = "Connection", saved_title: str = "Saved Connections",
+              subscriber: bool = False) -> rx.Component:
     return rx.grid(
-        _form(S, placeholder, server_hint),
+        _form(S, placeholder, server_hint, subscribers, title, subscriber),
         rx.vstack(
-            rx.heading("Saved connections", size="4"),
+            rx.heading(saved_title, size="4"),
             rx.cond(
                 S.connections.length() > 0,
                 rx.vstack(
@@ -159,11 +206,13 @@ def _conn_tab(S, placeholder: str, server_hint: str, tested: bool = True) -> rx.
 
 
 def _cucm_tab() -> rx.Component:
-    return _conn_tab(CucmState, "e.g. lab-cucm", "The publisher. AXL is reached on port 8443.")
+    return _conn_tab(CucmState, "e.g. lab-cucm", "The publisher. AXL is reached on port 8443.", subscribers=True, title="Clusters",
+                     saved_title="Saved Clusters")
 
 
 def _cuc_tab() -> rx.Component:
-    return _conn_tab(CucState, "e.g. lab-cuc", "The Unity Connection server. The REST API is reached on port 443.")
+    return _conn_tab(CucState, "e.g. lab-cuc", "The Unity Connection server. The REST API is reached on port 443.",
+                     title="Cluster", saved_title="Saved Clusters", subscriber=True)
 
 
 def _uccx_tab() -> rx.Component:
@@ -417,9 +466,10 @@ def credentials() -> rx.Component:
             rx.tabs.content(
                 rx.box(
                     organizations_tab({
-                        "cucm": _form(CucmState, "e.g. lab-cucm", "The publisher. AXL is reached on port 8443."),
+                        "cucm": _form(CucmState, "e.g. lab-cucm", "The publisher. AXL is reached on port 8443.", subscribers=True, title="Clusters"),
                         "cuc": _form(CucState, "e.g. lab-cuc",
-                                     "The Unity Connection server. The REST API is reached on port 443."),
+                                     "The Unity Connection server. The REST API is reached on port 443.",
+                                     title="Cluster", subscriber=True),
                         "uccx": _form(UccxState, "e.g. lab-uccx",
                                       "The UCCX server. The admin API is reached on port 443 and Finesse on 8445."),
                         "cube": _cube_form(),

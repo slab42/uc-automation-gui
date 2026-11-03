@@ -1,4 +1,4 @@
-"""States for Webex > Locations: Schedules (export, update from CSV, copy, remove past events) and E911."""
+"""States for Webex > Locations: Schedules (export, update from CSV, copy, remove past events), E911 and Migrate PSTN."""
 
 import asyncio
 import re
@@ -496,3 +496,250 @@ class E911State(WebexSession, RunMixin, PasteMixin):
 
     def _after_opt_out(self, log: OpLog):
         return [type(self).reload]
+
+
+class MigratePstnState(WebexSession, RunMixin, PickerMixin, PasteMixin):
+    connection: dict[str, str] = {}
+    targets: list[dict[str, str]] = []
+    target_label: str = ""
+    confirm_open: bool = False
+    detail_loading: bool = False
+    paste_pstn: str = ""
+    bulk_ids: list[str] = []       # locations matched from the pasted names or CSV
+    bulk_note: str = ""
+    bulk_confirm_open: bool = False
+    _cloud: list[dict[str, str]] | None = None  # cloud connections in use org wide, read once per page load
+
+    def _fetch_rows(self, client):
+        return L.list_locations(client)
+
+    def _noun(self) -> str:
+        return "locations"
+
+    @rx.var
+    def target_labels(self) -> list[str]:
+        return [t["label"] for t in self.targets]
+
+    @rx.var
+    def current_text(self) -> str:
+        c = self.connection
+        if not c:
+            return ""
+        text = c.get("name") or c.get("type", "")
+        return f"{text} ({c['type']})" if c.get("name") and c.get("type") else text
+
+    @rx.event
+    def set_confirm_open(self, value: bool):
+        self.confirm_open = value
+
+    @rx.event
+    async def reload(self):
+        self._cloud = None
+        self.bulk_ids, self.bulk_note = [], ""
+        async for ev in self._load_rows():
+            yield ev
+
+    @rx.event
+    def set_target_label(self, value: str):
+        self.target_label = value
+
+    @rx.event
+    def set_bulk_confirm_open(self, value: bool):
+        self.bulk_confirm_open = value
+
+    @rx.event
+    async def match_from_csv(self, files: list[rx.UploadFile]):
+        async for ev in self._match_names(files):
+            yield ev
+
+    @rx.event
+    async def match_from_text(self):
+        async for ev in self._from_paste(self._match_names, "pstn", columns=("Location",), flatten=True,
+                                         item_split=r"\t", markers=("location", "name", "locationname")):
+            yield ev
+
+    async def _match_names(self, files: list[rx.UploadFile]):
+        """Match location names (first column, header row skipped) and load the connections they can move to."""
+        if not files:
+            yield rx.toast.error("Choose a CSV file first.")
+            return
+        try:
+            names = L.parse_location_names_csv(await files[0].read())
+        except ValueError as e:
+            yield rx.toast.error(str(e))
+            return
+        by_name = {r["name"].lower(): r["id"] for r in self.rows}
+        missing = [n for n in names if n.lower() not in by_name]
+        self.bulk_ids = list(dict.fromkeys(by_name[n.lower()] for n in names if n.lower() in by_name))
+        self.bulk_note = (f"{len(self.bulk_ids)} of {len(names)} location(s) matched."
+                          + (f" Not found: {', '.join(missing)}" if missing else ""))
+        self.selected_id, self.connection, self.targets, self.target_label = "", {}, [], ""
+        yield rx.clear_selected_files("pstn_upload")
+        if not self.bulk_ids:
+            return
+        self.detail_loading = True
+        yield
+        log = self._webex_log("Read PSTN connection options", "webex-read-pstn")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            try:
+                if self._cloud is None:
+                    self._cloud = await asyncio.to_thread(L.org_cloud_connections, client, self.rows)
+                # The options are read for the first matched location; Webex checks each location on the PUT.
+                self.targets = await asyncio.to_thread(L.pstn_targets, client, self.bulk_ids[0], self._cloud)
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            log.info(f"{len(self.bulk_ids)} location(s) matched, {len(self.targets)} target(s)")
+        finally:
+            log.close()
+            self.detail_loading = False
+
+    @rx.event
+    async def run_migrate_bulk(self):
+        if not self.bulk_confirm_open or self.busy:
+            return
+        self.bulk_confirm_open = False
+        chosen = [r for r in self.rows if r["id"] in self.bulk_ids]
+        target = next((t for t in self.targets if t["label"] == self.target_label), None)
+        if not chosen or target is None:
+            yield rx.toast.error("Match some locations and select a new PSTN connection.")
+            return
+        log = self._webex_log("Migrate locations PSTN", "webex-migrate-pstn")
+        try:
+            log.info(f"{len(chosen)} location(s) -> {target['label']}")
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            yield self._start_run([(r["name"], lambda r=r: L.set_connection(client, r["id"], target)) for r in chosen],
+                                  "Migrating", log)
+        finally:
+            log.close()
+
+    @rx.event
+    async def select_row(self, row_id: str):
+        self.selected_id = row_id
+        self.connection, self.targets, self.target_label, self.results = {}, [], "", []
+        loc = self.selected_row
+        if not loc:
+            return
+        self.detail_loading = True
+        yield
+        log = self._webex_log("Read location PSTN connection", "webex-read-pstn")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            try:
+                self.connection = await asyncio.to_thread(L.get_connection, client, loc["id"])
+                if self._cloud is None:
+                    self._cloud = await asyncio.to_thread(L.org_cloud_connections, client, self.rows)
+                self.targets = await asyncio.to_thread(L.pstn_targets, client, loc["id"], self._cloud, self.connection)
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            log.info(f"{loc['name']}: {self.current_text}, {len(self.targets)} target(s)")
+        finally:
+            log.close()
+            self.detail_loading = False
+
+    @rx.event
+    async def run_migrate(self):
+        if not self.confirm_open or self.busy:
+            return
+        self.confirm_open = False
+        loc = self.selected_row
+        target = next((t for t in self.targets if t["label"] == self.target_label), None)
+        if not loc or target is None:
+            yield rx.toast.error("Select a location and a new PSTN connection.")
+            return
+        log = self._webex_log("Migrate location PSTN", "webex-migrate-pstn")
+        try:
+            log.info(f"{loc['name']}: {self.current_text} -> {target['label']}")
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            yield self._start_run([(loc["name"], lambda: L.set_connection(client, loc["id"], target))],
+                                  "Migrating", log, then="_after_migrate")
+        finally:
+            log.close()
+
+    def _after_migrate(self, log: OpLog):
+        return [type(self).select_row(self.selected_id)]
+
+
+class CopyLocationState(WebexSession, RunMixin, PickerMixin):
+    form_name: str = ""
+    form_address: dict[str, str] = {}
+    copy_settings: bool = True
+    copy_schedules: bool = True
+    confirm_open: bool = False
+
+    def _fetch_rows(self, client):
+        return L.list_locations_with_pstn(client)
+
+    def _noun(self) -> str:
+        return "locations"
+
+    @rx.event
+    def set_confirm_open(self, value: bool):
+        self.confirm_open = value
+
+    @rx.event
+    def set_form_name(self, value: str):
+        self.form_name = value
+
+    @rx.event
+    def set_form_address(self, key: str, value: str):
+        self.form_address = {**self.form_address, key: value.upper() if key == "country" else value}
+
+    @rx.event
+    def set_copy_settings(self, value: bool):
+        self.copy_settings = value
+
+    @rx.event
+    def set_copy_schedules(self, value: bool):
+        self.copy_schedules = value
+
+    @rx.event
+    def select_row(self, row_id: str):
+        self.selected_id = row_id
+        self.results = []
+
+    @rx.event
+    async def run_copy(self):
+        if not self.confirm_open or self.busy:
+            return
+        self.confirm_open = False
+        source, name = self.selected_row, self.form_name.strip()
+        if not source or not name:
+            yield rx.toast.error("Select the source location and enter the new name.")
+            return
+        address = {k: v for k, v in self.form_address.items() if v.strip()}
+        log = self._webex_log("Copy location", "webex-copy-location")
+        try:
+            log.info(f"{source['name']} -> {name}; calling settings: {self.copy_settings}, "
+                     f"schedules: {self.copy_schedules}, address overrides: {', '.join(address) or 'none'}")
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            settings, scheds = self.copy_settings, self.copy_schedules
+            yield self._start_run(
+                [(name, lambda: L.copy_location(client, source, name, address, settings, scheds))],
+                "Copying", log, then="_after_copy")
+        finally:
+            log.close()
+
+    def _after_copy(self, log: OpLog):
+        if any(r["status"] == "OK" for r in self.results):
+            self.form_name, self.form_address = "", {}
+            return [type(self).reload]

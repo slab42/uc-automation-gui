@@ -26,6 +26,9 @@ class CucmState(OrgState):
     form_server: str = ""
     form_username: str = ""
     form_org: str = ""
+    form_subs: list[dict[str, str]] = []
+    sub_host: str = ""
+    sub_em: bool = False
     _password: str = ""
     password_key: int = 0
     form_has_password: bool = False
@@ -111,6 +114,9 @@ class CucmState(OrgState):
         self.form_server = c["server"]
         self.form_username = c["username"]
         self.form_org = c.get("org", "")
+        self.form_subs = cucm_connections.parse_subscribers(c.get("subscribers", ""))
+        self.sub_host = ""
+        self.sub_em = False
         self.form_has_password = c["has_password"] == "yes"
         self._password = ""
         self.password_key += 1
@@ -121,6 +127,9 @@ class CucmState(OrgState):
     def new_connection(self):
         self.form_name = self.form_server = self.form_username = ""
         self.form_org = self._default_org()
+        self.form_subs = []
+        self.sub_host = ""
+        self.sub_em = False
         self.form_has_password = False
         self._password = ""
         self.password_key += 1
@@ -132,6 +141,36 @@ class CucmState(OrgState):
         setattr(self, f"form_{field}", value.strip())
         self.test_ok = False
         self.test_message = ""
+
+    @rx.event
+    def set_sub_host(self, value: str):
+        self.sub_host = value.strip()
+
+    @rx.event
+    def set_sub_em(self, checked: bool):
+        self.sub_em = checked
+
+    @rx.event
+    def add_subscriber(self):
+        host = self.sub_host
+        if not host:
+            return rx.toast.error("Enter the subscriber IP address or hostname.")
+        if host.lower() == self.form_server.lower() or any(s["host"].lower() == host.lower() for s in self.form_subs):
+            return rx.toast.error(f"{host} is already listed.")
+        if "," in host or "|" in host:
+            return rx.toast.error("Subscriber cannot contain ',' or '|'.")
+        self.form_subs = [*self.form_subs, {"host": host, "em": "yes" if self.sub_em else "no"}]
+        self.sub_host = ""
+        self.sub_em = False
+
+    @rx.event
+    def toggle_sub_em(self, host: str, checked: bool):
+        self.form_subs = [{**s, "em": "yes" if checked else "no"} if s["host"] == host else s
+                          for s in self.form_subs]
+
+    @rx.event
+    def remove_subscriber(self, host: str):
+        self.form_subs = [s for s in self.form_subs if s["host"] != host]
 
     @rx.event
     def set_password(self, value: str):
@@ -160,8 +199,9 @@ class CucmState(OrgState):
         log = OpLog("Save connection", "credentials-save")
         try:
             log.info(f"Saving connection {self.form_name} ({self.form_server}) as {self.form_username} in organization {self.form_org}")
+            log.info(f"Subscribers: {cucm_connections.format_subscribers(self.form_subs) or 'none'}")
             cucm_connections.save(self.form_name, self.form_server, self.form_username, self._password,
-                                  org=self.form_org)
+                                  org=self.form_org, subscribers=self.form_subs)
             cucm_axl.forget(self.form_server)
         finally:
             log.close()
@@ -212,7 +252,8 @@ class CucmState(OrgState):
                 log.error(f"Test failed unexpectedly: {e!r}")
                 return
             cucm_connections.save(self.form_name, self.form_server, self.form_username,
-                                  self._password, version=major, schema_version=schema, org=self.form_org)
+                                  self._password, version=major, schema_version=schema, org=self.form_org,
+                                  subscribers=self.form_subs)
             cucm_axl.forget(self.form_server)
             self._after_save()
             self.testing = False

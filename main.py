@@ -24,6 +24,9 @@ VENV = WEBUI / ".venv"
 REQUIREMENTS = WEBUI / "requirements.txt"
 REFLEX = VENV / "bin" / "reflex"
 PYTHON = VENV / "bin" / "python"
+# gTTS pins click<8.2 (only its unused CLI needs it) while reflex needs click>=8.2, so it is installed without deps.
+# Its other dependency, requests, is already in requirements.txt.
+GTTS = "gTTS==2.5.4"
 
 
 def find_python() -> str | None:
@@ -58,6 +61,7 @@ def setup(upgrade: bool = False) -> int:
     print("Updating requirements ..." if upgrade else "Installing requirements ...")
     cmd = [str(PYTHON), "-m", "pip", "install", "-q", *(["--upgrade"] if upgrade else []), "-r", str(REQUIREMENTS)]
     subprocess.run(cmd, check=True)
+    subprocess.run([str(PYTHON), "-m", "pip", "install", "-q", "--no-deps", GTTS], check=True)
     return 0
 
 

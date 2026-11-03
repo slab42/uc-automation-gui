@@ -1,7 +1,8 @@
 """Saved CUC connections, stored as [CUC:<name>] sections in .env/credentials.env.
 
 Keys: server, username, password, version (detected CUC major release),
-schema_version (REST schema folder used for that release).
+schema_version (REST schema folder used for that release),
+subscriber (optional, at most one subscriber host).
 """
 
 from dataclasses import dataclass
@@ -18,6 +19,7 @@ class CucConnection:
     password: str
     version: str = ""
     schema_version: str = ""
+    subscriber: str = ""
 
 
 def _section(name: str) -> str:
@@ -38,6 +40,7 @@ def list_public() -> list[dict[str, str]]:
             "version": f.get("version", ""),
             "schema_version": f.get("schema_version", ""),
             "org": f.get("org", ""),
+            "subscriber": f.get("subscriber", ""),
             "has_password": "yes" if s["secrets"].get("password") else "no",
         })
     return out
@@ -54,17 +57,20 @@ def load(name: str) -> CucConnection | None:
         password=kv.get("password", ""),
         version=kv.get("version", ""),
         schema_version=kv.get("schema_version", ""),
+        subscriber=kv.get("subscriber", ""),
     )
 
 
 def save(name: str, server: str, username: str, password: str | None,
          version: str | None = None, schema_version: str | None = None,
-         org: str | None = None) -> None:
-    """password None/'' keeps the stored one. Changing server/username clears stale version info."""
+         org: str | None = None, subscriber: str | None = None) -> None:
+    """password None/'' keeps the stored one. subscriber None keeps it, '' clears it. Changing server/username clears stale version info."""
     old = load(name)
     values: dict[str, str | None] = {"server": server, "username": username}
     if org is not None:
         values["org"] = org
+    if subscriber is not None:
+        values["subscriber"] = subscriber
     if password:
         values["password"] = password
     elif old is None:

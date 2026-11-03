@@ -68,6 +68,7 @@ class PickerMixin(rx.State, mixin=True):
     async def _load_rows(self):
         self.loading = True
         self.list_error = ""
+        self.rows, self.selected_id = [], ""  # clear first: a list from another org must not linger while this one loads
         yield
         log = self._webex_log(f"List {self._noun()}", f"webex-list-{self._noun().replace(' ', '-')}")
         try:

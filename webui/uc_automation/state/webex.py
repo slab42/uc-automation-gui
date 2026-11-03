@@ -32,6 +32,7 @@ class WebexState(WebexSession):
     info: dict[str, str] = {}
     form_client_id: str = ""
     form_scopes: str = ""
+    form_auth_url: str = ""
     _client_secret: str = ""
     secret_key: int = 0
     mode: str = "token"
@@ -110,8 +111,15 @@ class WebexState(WebexSession):
         self._pasted_token = value
 
     @rx.event
-    def set_form_scopes(self, value: str):
-        self.form_scopes = value
+    def set_form_auth_url(self, value: str):
+        """Pasting the Integration's OAuth Authorization URL fills the Client ID and the scopes from it."""
+        self.form_auth_url = value
+        if not value.strip():
+            return
+        try:
+            self.form_client_id, self.form_scopes = webex_auth.parse_authorization_url(value)
+        except WebexAuthError as e:
+            return rx.toast.error(str(e))
 
     def _target(self) -> str:
         """The login name being edited, or '' (after the caller shows why) when it is not valid."""
@@ -192,6 +200,7 @@ class WebexState(WebexSession):
         self.info = webex_auth.public_status(self.login_name)
         self.form_client_id = self.info["client_id"]
         self.form_scopes = self.info["scopes"]
+        self.form_auth_url = ""
 
     @rx.event
     async def on_credentials_load(self):
