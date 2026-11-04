@@ -20,7 +20,8 @@ class DeviceReportState(CucmState):
     pool_search: str = ""
     running: bool = False
     report_rows: list[dict[str, str]] = []
-    skipped: int = 0
+    kinds: list[str] = list(r.KINDS)
+    registration: bool = True
     error: str = ""
 
     @rx.var
@@ -28,9 +29,30 @@ class DeviceReportState(CucmState):
         return MODES
 
     @rx.var
+    def all_kinds(self) -> list[str]:
+        return r.KINDS
+
+    @rx.var
     def totals(self) -> dict[str, str]:
-        keys = ("registered", "unregistered", "total", "gateways")
-        return {k: f"{sum(int(x[k]) for x in self.report_rows):,}" for k in keys}
+        return {k: f"{sum(int(x[k]) for x in self.report_rows if x[k]):,}" if self.report_rows[0][k] != "" else ""
+                for k in ("registered", "unregistered", "total", "gateways")} if self.report_rows else {}
+
+    @rx.var
+    def reg_available(self) -> bool:
+        """Registration only applies to phones, analog phones and CTI devices."""
+        return any(k != "Gateways" for k in self.kinds)
+
+    @rx.var
+    def show_reg(self) -> bool:
+        return bool(self.report_rows) and self.report_rows[0]["registered"] != ""
+
+    @rx.event
+    def toggle_kind(self, kind: str, checked: bool):
+        self.kinds = [k for k in r.KINDS if (k in self.kinds and k != kind) or (k == kind and checked)]
+
+    @rx.event
+    def set_registration(self, value: bool):
+        self.registration = value
 
     @rx.event
     def set_mode(self, value: str | list[str]):
@@ -54,6 +76,10 @@ class DeviceReportState(CucmState):
         if self.mode == "Search" and not pool_filter.strip():
             self.error = "Enter part of a device pool name to search for."
             return
+        if not self.kinds:
+            self.error = "Select at least one kind of device."
+            return
+        kinds, registration = list(self.kinds), self.registration and self.reg_available
         self.running = True
         self.error = ""
         yield
@@ -61,8 +87,9 @@ class DeviceReportState(CucmState):
         try:
             log.info(f"Connection: {conn.name} ({conn.server}) as {conn.username}")
             log.info(f"Device pools: {pool_filter.strip() or 'all'}")
+            log.info(f"Devices: {', '.join(kinds)}; registration: {'yes' if registration else 'no'}")
             try:
-                rows, skipped = await asyncio.to_thread(r.device_report, conn, pool_filter)
+                rows = await asyncio.to_thread(r.device_report, conn, pool_filter, kinds, registration)
             except AxlError as e:
                 self.error = str(e)
                 log.error(f"Report failed: {e}")
@@ -70,10 +97,10 @@ class DeviceReportState(CucmState):
                 self.error = f"Unexpected error: {e}"
                 log.error(f"Report failed unexpectedly: {e!r}")
             else:
-                self.report_rows, self.skipped = rows, skipped
+                self.report_rows = rows
                 if not rows:
                     self.error = "No device pools match."
-                log.info(f"{len(rows)} device pool(s); {skipped} analog/CTI devices skipped")
+                log.info(f"{len(rows)} device pool(s)")
                 for x in rows:
                     log.debug(f"{x['devicePool']}: registered {x['registered']}, unregistered {x['unregistered']}, "
                               f"gateways {x['gateways']}")

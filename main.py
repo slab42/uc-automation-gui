@@ -22,8 +22,10 @@ from pathlib import Path
 WEBUI = Path(__file__).resolve().parent / "webui"
 VENV = WEBUI / ".venv"
 REQUIREMENTS = WEBUI / "requirements.txt"
-REFLEX = VENV / "bin" / "reflex"
-PYTHON = VENV / "bin" / "python"
+BIN = VENV / ("Scripts" if os.name == "nt" else "bin")
+EXE = ".exe" if os.name == "nt" else ""
+REFLEX = BIN / f"reflex{EXE}"
+PYTHON = BIN / f"python{EXE}"
 # gTTS pins click<8.2 (only its unused CLI needs it) while reflex needs click>=8.2, so it is installed without deps.
 # Its other dependency, requests, is already in requirements.txt.
 GTTS = "gTTS==2.5.4"
@@ -72,6 +74,11 @@ def main() -> int:
         if code:
             return code
     os.chdir(WEBUI)
+    if os.name == "nt":
+        try:
+            return subprocess.run([str(REFLEX), "run"]).returncode
+        except KeyboardInterrupt:
+            return 0
     os.execv(str(REFLEX), [str(REFLEX), "run"])
 
 

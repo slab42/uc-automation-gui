@@ -3,7 +3,8 @@
 import reflex as rx
 
 from ..state.cucm import CucmState
-from .access import show_if, show_if_any
+from ..state.settings import SettingsState
+from .access import group_visible, show_if
 from .layout import page
 from .org_picker import instance_select, org_select
 
@@ -28,6 +29,9 @@ PHONE_COUNT = "/cucm/phone-count-by-dp"
 SET_PIN = "/cucm/set-user-pin"
 HOME_CLUSTER = "/cucm/home-cluster-locator"
 DEVICE_REPORT = "/cucm/device-report"
+
+# Hidden unless Settings > experimental is on; amber badge in the menu
+IN_DEVELOPMENT = {DEVICE_REPORT}
 
 # (menu label, [(item label, route, icon, description)])
 GROUPS = [
@@ -91,19 +95,31 @@ def _connection_picker(on_change, on_org_change, show_instance: bool = True) -> 
     )
 
 
+def _menu_item(name: str, route: str) -> rx.Component:
+    if route not in IN_DEVELOPMENT:
+        return rx.menu.item(name, on_click=rx.redirect(route))
+    return rx.cond(
+        SettingsState.experimental == "1",
+        rx.menu.item(
+            rx.hstack(name, rx.badge("In Development", color_scheme="amber", size="1"), align="center", spacing="2"),
+            on_click=rx.redirect(route)),
+        rx.fragment(),
+    )
+
+
 def menubar(on_connection_change=None, on_org_change=None, show_instance: bool = True) -> rx.Component:
     picker = _connection_picker(on_connection_change or CucmState.select_active, on_org_change or CucmState.select_org,
                                 show_instance)
     return rx.hstack(
         *[
-            show_if_any([i[1] for i in items], rx.menu.root(
+            rx.cond(group_visible([i[1] for i in items], IN_DEVELOPMENT), rx.menu.root(
                 rx.menu.trigger(
                     rx.button(label, rx.icon("chevron-down", size=15), variant="ghost", size="2"),
                 ),
                 rx.menu.content(
-                    *[show_if(route, rx.menu.item(name, on_click=rx.redirect(route))) for name, route, _icon, _desc in items],
+                    *[show_if(route, _menu_item(name, route)) for name, route, _icon, _desc in items],
                 ),
-            ))
+            ), rx.fragment())
             for label, items in GROUPS
         ],
         rx.spacer(),

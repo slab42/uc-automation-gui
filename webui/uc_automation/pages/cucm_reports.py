@@ -28,10 +28,10 @@ def device_report() -> rx.Component:
                     )),
                     rx.table.row(
                         rx.table.row_header_cell("Total"),
-                        rx.table.cell(S.totals["registered"], justify="end"),
-                        rx.table.cell(S.totals["unregistered"], justify="end"),
-                        rx.table.cell(S.totals["total"], justify="end"),
-                        rx.table.cell(S.totals["gateways"], justify="end"),
+                        rx.table.cell(S.totals.get("registered", ""), justify="end"),
+                        rx.table.cell(S.totals.get("unregistered", ""), justify="end"),
+                        rx.table.cell(S.totals.get("total", ""), justify="end"),
+                        rx.table.cell(S.totals.get("gateways", ""), justify="end"),
                         font_weight="bold",
                     ),
                 ),
@@ -60,8 +60,19 @@ def device_report() -> rx.Component:
                           disabled=S.report_rows.length() == 0),
                 align="center", spacing="3", wrap="wrap", width="100%",
             ),
-            rx.text("Phones only: analog and CTI devices are skipped. Registration comes from RisPort70.",
-                    size="2", color="var(--gray-11)"),
+            rx.callout("This report is still under development. The registration and gateway lookups have not been "
+                       "tested against a real CUCM.", icon="construction", color_scheme="amber", width="100%"),
+            rx.hstack(
+                rx.text("Devices:", size="2", weight="bold"),
+                rx.foreach(S.all_kinds, lambda k: rx.checkbox(
+                    k, checked=S.kinds.contains(k), on_change=lambda v: S.toggle_kind(k, v))),
+                rx.divider(orientation="vertical", size="1"),
+                rx.checkbox("Pull Registration", checked=S.registration & S.reg_available,
+                            disabled=~S.reg_available, on_change=S.set_registration),
+                align="center", spacing="4", wrap="wrap",
+            ),
+            rx.text("Only the selected devices are queried. Turning off registration skips RisPort70, which is the "
+                    "slowest part.", size="2", color="var(--gray-11)"),
             rx.cond(S.error != "", rx.callout(S.error, icon="triangle-alert", color_scheme="red", width="100%"),
                     rx.fragment()),
             rx.cond(
@@ -72,8 +83,7 @@ def device_report() -> rx.Component:
                     S.report_rows.length() > 0,
                     rx.vstack(
                         table,
-                        rx.text(S.report_rows.length().to_string(), " device pools. ", S.skipped.to_string(),
-                                " analog/CTI devices skipped.", size="2", color="var(--gray-11)"),
+                        rx.text(S.report_rows.length().to_string(), " device pools.", size="2", color="var(--gray-11)"),
                         spacing="2", align="start", width="100%",
                     ),
                     rx.fragment(),
