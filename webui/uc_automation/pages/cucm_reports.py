@@ -1,0 +1,86 @@
+import reflex as rx
+
+from ..components.cucm_nav import cucm_page
+from ..components.search_input import search_input
+from ..state.cucm_reports import DeviceReportState
+from .tools import _need_connection
+
+
+def device_report() -> rx.Component:
+    S = DeviceReportState
+    table = rx.card(
+        rx.scroll_area(
+            rx.table.root(
+                rx.table.header(rx.table.row(
+                    rx.table.column_header_cell("Device Pool"),
+                    rx.table.column_header_cell("Registered", justify="end"),
+                    rx.table.column_header_cell("Unregistered", justify="end"),
+                    rx.table.column_header_cell("Total Devices", justify="end"),
+                    rx.table.column_header_cell("Gateways", justify="end"),
+                )),
+                rx.table.body(
+                    rx.foreach(S.report_rows, lambda x: rx.table.row(
+                        rx.table.cell(x["devicePool"]),
+                        rx.table.cell(x["registered"], justify="end"),
+                        rx.table.cell(x["unregistered"], justify="end"),
+                        rx.table.cell(x["total"], justify="end"),
+                        rx.table.cell(x["gateways"], justify="end"),
+                    )),
+                    rx.table.row(
+                        rx.table.row_header_cell("Total"),
+                        rx.table.cell(S.totals["registered"], justify="end"),
+                        rx.table.cell(S.totals["unregistered"], justify="end"),
+                        rx.table.cell(S.totals["total"], justify="end"),
+                        rx.table.cell(S.totals["gateways"], justify="end"),
+                        font_weight="bold",
+                    ),
+                ),
+                variant="ghost", width="100%",
+            ),
+            max_height="60vh",
+        ),
+        padding="0", width="100%",
+    )
+    return cucm_page(
+        "Device Report",
+        _need_connection(S, rx.vstack(
+            rx.hstack(
+                rx.segmented_control.root(
+                    rx.foreach(S.modes, lambda m: rx.segmented_control.item(m, value=m)),
+                    value=S.mode, on_change=S.set_mode,
+                ),
+                rx.cond(S.mode == "Search",
+                        search_input(S.pool_search, S.set_pool_search, "Device pool name contains",
+                                     width="320px", max_width="100%"),
+                        rx.fragment()),
+                rx.spacer(),
+                rx.button(rx.cond(S.running, rx.spinner(size="2"), rx.icon("play", size=16)), "Run Report",
+                          on_click=S.run_report, disabled=S.running),
+                rx.button(rx.icon("download", size=16), "Export", variant="soft", on_click=S.export_csv,
+                          disabled=S.report_rows.length() == 0),
+                align="center", spacing="3", wrap="wrap", width="100%",
+            ),
+            rx.text("Phones only: analog and CTI devices are skipped. Registration comes from RisPort70.",
+                    size="2", color="var(--gray-11)"),
+            rx.cond(S.error != "", rx.callout(S.error, icon="triangle-alert", color_scheme="red", width="100%"),
+                    rx.fragment()),
+            rx.cond(
+                S.running,
+                rx.hstack(rx.spinner(size="2"), rx.text("Building the report. Large clusters take a while...", size="2"),
+                          align="center", spacing="2"),
+                rx.cond(
+                    S.report_rows.length() > 0,
+                    rx.vstack(
+                        table,
+                        rx.text(S.report_rows.length().to_string(), " device pools. ", S.skipped.to_string(),
+                                " analog/CTI devices skipped.", size="2", color="var(--gray-11)"),
+                        spacing="2", align="start", width="100%",
+                    ),
+                    rx.fragment(),
+                ),
+            ),
+            spacing="4", align="start", width="100%",
+        )),
+        on_connection_change=S.switch_connection,
+        on_org_change=S.switch_org,
+    )

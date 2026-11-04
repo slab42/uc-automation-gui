@@ -32,10 +32,13 @@ from .pages.home import home
 from .pages.hunt_groups import hunt_groups
 from .pages.logs import logs
 from .pages.partitions import partitions
+from .pages.cucm_reports import device_report
+from .state.cucm_reports import DeviceReportState
 from .pages.tools import em_bulk_login, phone_count, set_user_pin
 from .pages.system import codec_lists, device_pools, locations, regions
 from .pages.webex_routing import add_numbers, call_forward, call_queues, hunt_groups as webex_hunt_groups, virtual_lines, webex_home
 from .pages.webex_locations import copy_location, e911, migrate_pstn, schedules
+from .pages.webex_reports import locations_report
 from .pages.webex_tools import hardware_compatibility
 from .pages.webex_naming import naming_check
 from .pages.webex_devices import bulk_ata, cucm_gateway, cucm_migrate, device_migrate
@@ -76,6 +79,7 @@ from .state.webex import WebexState
 from .state.webex_devices import BulkAtaState, CucmGatewayState, CucmMigrateState, DeviceMigrateState
 from .state.webex_groups import CallQueuesState, HuntGroupsState as WebexHuntGroupsState, VirtualLinesState
 from .state.webex_locations import CopyLocationState, E911State, MigratePstnState, SchedulesState
+from .state.webex_reports import LocationsReportState
 from .state.webex_tools import HardwareCompatState
 from .state.webex_naming import NamingCheckState
 from .state.webex_users import (
@@ -140,6 +144,7 @@ for _route, _title, _page, _state in [
     ("/webex/migrate-pstn", "Migrate PSTN", migrate_pstn, MigratePstnState),
     ("/webex/hardware-compatibility", "Check Hardware Compatibility", hardware_compatibility, HardwareCompatState),
     ("/webex/naming-check", "Naming Check", naming_check, NamingCheckState),
+    ("/webex/locations-report", "Locations Report", locations_report, LocationsReportState),
 ]:
     app.add_page(_page, route=_route, title=f"{_title} | {APP_NAME}", on_load=_state.load_page)
 for _route, _title, _page, _state in [
@@ -263,5 +268,7 @@ for _route, _title, _page, _state in [
 
 app.add_page(home_cluster_locator, route="/cucm/home-cluster-locator", title=f"Home Cluster Locator | {APP_NAME}",
              on_load=HomeClusterState.load_connections)
+app.add_page(device_report, route="/cucm/device-report", title=f"Device Report | {APP_NAME}",
+             on_load=DeviceReportState.load_connections)
 app.add_page(phone_count, route="/cucm/phone-count-by-dp", title=f"Phone Count By DP | {APP_NAME}",
              on_load=PhoneCountState.on_page_load)

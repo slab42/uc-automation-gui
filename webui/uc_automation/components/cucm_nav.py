@@ -27,6 +27,7 @@ EM_BULK = "/cucm/em-bulk-login"
 PHONE_COUNT = "/cucm/phone-count-by-dp"
 SET_PIN = "/cucm/set-user-pin"
 HOME_CLUSTER = "/cucm/home-cluster-locator"
+DEVICE_REPORT = "/cucm/device-report"
 
 # (menu label, [(item label, route, icon, description)])
 GROUPS = [
@@ -63,6 +64,9 @@ GROUPS = [
         ("Phone Count By DP", PHONE_COUNT, "chart-column", "Count phones per device pool and export the result."),
         ("Set User PIN", SET_PIN, "key-round", "Set Extension Mobility PINs for one user or from a CSV."),
         ("Home Cluster Locator", HOME_CLUSTER, "locate", "Find which cluster of the organization a user is marked as home on."),
+    ]),
+    ("Reports", [
+        ("Device Report", DEVICE_REPORT, "clipboard-list", "Registered and unregistered phones and gateway count per device pool."),
     ]),
 ]
 

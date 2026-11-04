@@ -31,6 +31,7 @@ MIGRATE_PSTN = "/webex/migrate-pstn"
 COPY_LOCATION = "/webex/copy-location"
 HARDWARE = "/webex/hardware-compatibility"
 NAMING = "/webex/naming-check"
+LOCATIONS_REPORT = "/webex/locations-report"
 
 # Routes still under development: the menu item shows a badge
 IN_DEVELOPMENT = {NAMING, CUCM_MIGRATE, COPY_LOCATION}
@@ -85,6 +86,8 @@ GROUPS = [
     ("Reports", [
         ("Voicemail", VOICEMAIL, "voicemail",
          "Show whether a user, or every user in a location, has an internal or external mailbox."),
+        ("Locations Report", LOCATIONS_REPORT, "map-pin",
+         "Count the users and workspaces with Webex Calling enabled in every location."),
     ]),
 ]
 

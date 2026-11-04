@@ -8,9 +8,9 @@ def labeled(label: str, control: rx.Component) -> rx.Component:
 
 
 def org_select(S, on_change=None) -> rx.Component:
-    """Org: dropdown for a platform state (hidden until an organization exists)."""
+    """Org: dropdown for a platform state (hidden unless there are two or more)."""
     return rx.cond(
-        S.org_options.length() > 0,
+        S.org_options.length() > 1,
         labeled("Org:", rx.select(S.org_options, value=S.active_org, on_change=on_change or S.select_org, size="1",
                                   placeholder="Organization")),
         rx.fragment(),

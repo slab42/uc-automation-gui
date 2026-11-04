@@ -28,6 +28,8 @@ backend/uc_bootable.py       Make ISO Bootable: pycdlib El Torito boot record, t
 backend/tts_ulaw.py          Text To U-Law Audio: gTTS speech, PyAV decode/resample/u-law WAV (all in memory), prompt CSV parsing
 backend/cucm_home.py         Home Cluster Locator: UDS clusterUser lookup per cluster
 backend/cucm_tools.py        tools: EM bulk login/logout/check, phone count by device pool, set user PIN
+backend/cucm_reports.py      Reports: Device Report (AXL phones and pools, RisPort70 registration, SQL gateway count per device pool)
+state/cucm_reports.py        DeviceReportState; page in pages/cucm_reports.py
 backend/keys.py              composite row keys (pattern + partition) shared by backend and state
 backend/cucm_devices.py      phones, CTI route points (delete cleans up orphaned DNs), softkey templates, common device configs, button templates, MPP workflows
 backend/organizations.py     customer organizations ([ORG:<name>]), per-organization filtering and grouping helpers
@@ -62,6 +64,7 @@ backend/webex_groups.py      Call queues and hunt groups: lists, create from CSV
 backend/webex_virtual_lines.py  Virtual line busy/unanswered voicemail greeting upload
 backend/webex_users.py       Delete users, reset voicemail PIN
 backend/webex_voicemail.py   Voicemail report: internal vs external mailbox per user (single user or a location)
+backend/webex_reports.py     Locations Report: Calling users and Calling workspaces per location (state/webex_reports.py, pages/webex_reports.py)
 backend/webex_devices.py     Webex-Webex Phone Migrate (move a phone between Webex orgs)
 backend/webex_cucm_migrate.py CUCM-Webex Phone Migrate (either direction)
 backend/webex_cucm_gateway.py CUCM-Webex Analog Gateway Migrate (read ports from CUCM, workspaces and device in Webex)
@@ -344,7 +347,7 @@ Webex has no username/password token API, so login is the OAuth authorization co
 - Create CSVs are header based (`name,location,firstName,lastName,phoneNumber,extension,policy,destination,agent1,agent2,...`),
   unlike the scripts' fixed column positions. The queue create no longer sends the script's hardcoded org-specific announcement
   file id: all greetings are DEFAULT.
-- **Users** (Delete Users, Reset PIN), **Reports** (Voicemail: `/webex/voicemail`, one email or every Calling user of a location via the Add Numbers style location datalist; reads `GET /people/{id}/features/voicemail`, shows internal/external and, for external, the destination email; internal message counts are not available to an admin login), **Workspaces** (Add Workspace, Copy Workspace, Add Device, Migrate), **Locations** (Schedules, E911) are menu groups
+- **Users** (Delete Users, Reset PIN), **Reports** (Locations Report: `/webex/locations-report`, Run Report, for the ticked Users and/or Workspaces (only those are read; columns, badges and CSV follow), counts Calling users (`GET /people?callingData=true`, a person with a Calling `locationId`) and Calling workspaces (`GET /workspaces?calling=webexCalling`) per location, matched on the decoded location id, with a `(No Location Match)` row, totals and CSV export; not tested against a real org. Voicemail: `/webex/voicemail`, one email or every Calling user of a location via the Add Numbers style location datalist; reads `GET /people/{id}/features/voicemail`, shows internal/external and, for external, the destination email; internal message counts are not available to an admin login), **Workspaces** (Add Workspace, Copy Workspace, Add Device, Migrate), **Locations** (Schedules, E911) are menu groups
   in `webex_nav.GROUPS`. Destructive actions (delete users, migrate, copy/update/remove schedule events, RedSky opt-out) go
   through `tool_widgets.confirm_dialog` (`S.confirm_open`). Delete Users and Migrate are two-step: load/review a plan first,
   then confirm.
@@ -411,6 +414,10 @@ selected), add, import with Add/Modify, result tables, and the connection picker
 `update_fn`. Action pages (Directory Numbers > Move Partition, Alternate Numbers) use both so import means "Move" /
 "Remove alternate numbers". Orphans finds DNs with pattern usage 2 (Device) and no `devicenumplanmap` row; the usage
 number and SQL are unverified, so test on a lab CUCM.
+
+### CUCM Reports
+
+- **Reports > Device Report** (`/cucm/device-report`): All Device Pools or Search (name contains). Per pool: Registered, Unregistered, Total Devices, Gateways, plus a totals row and CSV export. Phones come from `listPhone` (analog and CTI products skipped), registration from RisPort70 `selectCmDevice` by name in batches of 1000 (`https://<server>:8443/realtimeservice2/services/RISService70`, the AXL account needs the Standard RealtimeAndTraceCollection role; anything not reported Registered counts as unregistered), gateways from SQL (`device` joined to `devicepool` and `typeclass` where the class name is `Gateway`, all gateway types). Not tested against a real CUCM; the RIS request and the typeclass name are unverified.
 
 ### Objects identified by pattern + partition
 
