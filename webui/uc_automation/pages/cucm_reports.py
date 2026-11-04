@@ -72,12 +72,16 @@ def device_report() -> rx.Component:
                 align="center", spacing="4", wrap="wrap",
             ),
             rx.text("Only the selected devices are queried. Turning off registration skips RisPort70, which is the "
-                    "slowest part.", size="2", color="var(--gray-11)"),
+                    "slowest part (paced at 15 requests per minute, about 4 seconds per 1,000 devices).", size="2", color="var(--gray-11)"),
             rx.cond(S.error != "", rx.callout(S.error, icon="triangle-alert", color_scheme="red", width="100%"),
+                    rx.fragment()),
+            rx.cond(S.warning != "", rx.callout(S.warning, icon="triangle-alert", color_scheme="amber", width="100%"),
                     rx.fragment()),
             rx.cond(
                 S.running,
-                rx.hstack(rx.spinner(size="2"), rx.text("Building the report. Large clusters take a while...", size="2"),
+                rx.hstack(rx.spinner(size="2"),
+                          rx.text(rx.cond(S.progress != "", S.progress, "Building the report. Large clusters take a while..."),
+                                  size="2"),
                           align="center", spacing="2"),
                 rx.cond(
                     S.report_rows.length() > 0,

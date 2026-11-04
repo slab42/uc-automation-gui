@@ -4,7 +4,10 @@ Device pools, device counts and gateway counts come from SQL (one query per kind
 selected), the registration state from RisPort70 (SelectCmDevice, port 8443, same credentials) and only when asked for.
 """
 
+import threading
+import time
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 
 import requests
 import urllib3
@@ -17,6 +20,11 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 RIS_BATCH = 1000   # RisPort70 returns at most 1000 devices per request
 RIS_URL = "https://{server}:8443/realtimeservice2/services/RISService70"
+RIS_MIN_INTERVAL = 4.2   # RisPort70 allows 15 requests per minute per node
+RATE_WAIT = 60           # seconds to wait when RisPort70 still reports the rate limit
+RATE_RETRIES = 3
+_ris_lock = threading.Lock()
+_ris_last: dict[str, float] = {}
 KINDS = ["Phones", "Analog Phones", "CTI Devices", "Gateways"]
 _DEVICE_SQL = (
     "select dp.name as pool, d.name as name, tm.name as model from device d "
@@ -33,22 +41,23 @@ def _xml_escape(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def registered_names(conn: CucmConnection, names: list[str], device_class: str = "Phone") -> set[str]:
-    """Names (upper case) of the devices in `names` that RisPort70 reports as Registered."""
-    found: set[str] = set()
-    for i in range(0, len(names), RIS_BATCH):
-        items = "".join(f"<soap:item><soap:Item>{_xml_escape(n)}</soap:Item></soap:item>"
-                        for n in names[i:i + RIS_BATCH])
-        body = (
-            '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" '
-            'xmlns:soap="http://schemas.cisco.com/ast/soap"><soapenv:Header/><soapenv:Body>'
-            "<soap:selectCmDevice><soap:StateInfo></soap:StateInfo><soap:CmSelectionCriteria>"
-            f"<soap:MaxReturnedDevices>{RIS_BATCH}</soap:MaxReturnedDevices><soap:DeviceClass>{device_class}</soap:DeviceClass>"
-            "<soap:Model>255</soap:Model><soap:Status>Registered</soap:Status><soap:NodeName></soap:NodeName>"
-            f"<soap:SelectBy>Name</soap:SelectBy><soap:SelectItems>{items}</soap:SelectItems>"
-            "<soap:Protocol>Any</soap:Protocol><soap:DownloadStatus>Any</soap:DownloadStatus>"
-            "</soap:CmSelectionCriteria></soap:selectCmDevice></soapenv:Body></soapenv:Envelope>"
-        )
+class RateLimited(AxlError):
+    """RisPort70 kept refusing requests after every retry."""
+
+
+def _throttle(server: str) -> None:
+    """Block until at least RIS_MIN_INTERVAL seconds have passed since the last RIS call to `server`."""
+    with _ris_lock:
+        wait = _ris_last.get(server, 0.0) + RIS_MIN_INTERVAL - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+        _ris_last[server] = time.monotonic()
+
+
+def _ris_call(conn: CucmConnection, body: str) -> ET.Element:
+    """One selectCmDevice call, paced, retried when RisPort70 reports the rate limit. Returns the parsed response."""
+    for attempt in range(RATE_RETRIES + 1):
+        _throttle(conn.server)
         try:
             resp = requests.post(RIS_URL.format(server=conn.server), data=body.encode(), timeout=60, verify=False,
                                  auth=HTTPBasicAuth(conn.username, conn.password),
@@ -66,12 +75,51 @@ def registered_names(conn: CucmConnection, names: list[str], device_class: str =
         except ET.ParseError:
             raise AxlError(f"Unexpected RisPort70 response from {conn.server} (HTTP {resp.status_code}).")
         fault = root.find(".//faultstring")
-        if fault is not None:
-            raise AxlError(f"RisPort70: {fault.text or 'fault'}")
+        if fault is None:
+            return root
+        text = fault.text or "fault"
+        if "exceeded allowed rate" not in text.lower():
+            raise AxlError(f"RisPort70: {text}")
+        if attempt == RATE_RETRIES:
+            raise RateLimited(f"RisPort70: {text}")
+        time.sleep(RATE_WAIT)
+    raise RateLimited("RisPort70: rate limit")  # not reached
+
+
+def registered_names(conn: CucmConnection, names: list[str], device_class: str = "Phone",
+                     progress: Callable[[str], None] | None = None) -> tuple[set[str], bool]:
+    """(names in `names` (upper case) that RisPort70 reports as Registered, complete).
+
+    Calls are paced under RisPort70's 15 per minute limit. If the limit still blocks a batch after the retries,
+    the names found so far are returned with complete False. `progress` gets a status line per batch."""
+    found: set[str] = set()
+    total = max(1, -(-len(names) // RIS_BATCH))
+    for n_batch, i in enumerate(range(0, len(names), RIS_BATCH), 1):
+        if progress:
+            minutes = max(1, round((total - n_batch + 1) * RIS_MIN_INTERVAL / 60))
+            progress(f"Reading registration, batch {n_batch} of {total} (about {minutes} min left)")
+        items = "".join(f"<soap:item><soap:Item>{_xml_escape(n)}</soap:Item></soap:item>"
+                        for n in names[i:i + RIS_BATCH])
+        body = (
+            '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" '
+            'xmlns:soap="http://schemas.cisco.com/ast/soap"><soapenv:Header/><soapenv:Body>'
+            "<soap:selectCmDevice><soap:StateInfo></soap:StateInfo><soap:CmSelectionCriteria>"
+            f"<soap:MaxReturnedDevices>{RIS_BATCH}</soap:MaxReturnedDevices><soap:DeviceClass>{device_class}</soap:DeviceClass>"
+            "<soap:Model>255</soap:Model><soap:Status>Registered</soap:Status><soap:NodeName></soap:NodeName>"
+            f"<soap:SelectBy>Name</soap:SelectBy><soap:SelectItems>{items}</soap:SelectItems>"
+            "<soap:Protocol>Any</soap:Protocol><soap:DownloadStatus>Any</soap:DownloadStatus>"
+            "</soap:CmSelectionCriteria></soap:selectCmDevice></soapenv:Body></soapenv:Envelope>"
+        )
+        try:
+            root = _ris_call(conn, body)
+        except RateLimited:
+            if n_batch == 1:
+                raise
+            return found, False
         for el in root.iter():
             if el.tag.split("}")[-1] == "Name" and el.text:
                 found.add(el.text.strip().upper())
-    return found
+    return found, True
 
 
 def _kind(model: str) -> str:
@@ -80,8 +128,12 @@ def _kind(model: str) -> str:
 
 
 def device_report(conn: CucmConnection, pool_filter: str = "", kinds: list[str] | None = None,
-                  registration: bool = True) -> list[dict[str, str]]:
-    """[{devicePool, registered, unregistered, total, gateways}] for the selected kinds of device.
+                  registration: bool = True, progress: Callable[[str], None] | None = None
+                  ) -> tuple[list[dict[str, str]], bool]:
+    """([{devicePool, registered, unregistered, total, gateways}], registration complete) for the selected kinds.
+
+    When registration is incomplete (RisPort70 rate limit), registered holds the count found so far and
+    unregistered is blank.
 
     `pool_filter` is a case-insensitive "contains" match on the device pool name; blank means every pool.
     `kinds` is a subset of KINDS (default all). Registration is only read when `registration` is true and a
@@ -93,7 +145,7 @@ def device_report(conn: CucmConnection, pool_filter: str = "", kinds: list[str] 
     if q:
         pools = [p for p in pools if q in p.lower()]
     if not pools:
-        return []
+        return [], True
     wanted = set(pools)
     by_pool: dict[str, list[str]] = {p: [] for p in pools}
     if want_dev:
@@ -101,10 +153,11 @@ def device_report(conn: CucmConnection, pool_filter: str = "", kinds: list[str] 
             if d.get("pool") in wanted and _kind(d.get("model", "")) in want_dev:
                 by_pool[d["pool"]].append(d["name"])
     reg: set[str] = set()
+    complete = True
     do_reg = registration and bool(want_dev)
     if do_reg:
         names = [n for v in by_pool.values() for n in v]
-        reg = registered_names(conn, names, "Any" if "CTI Devices" in want_dev else "Phone")
+        reg, complete = registered_names(conn, names, "Any" if "CTI Devices" in want_dev else "Phone", progress)
     gw_count: dict[str, int] = {}
     if "Gateways" in kinds:
         for r in sql_rows(conn, _GATEWAY_SQL, 2):
@@ -116,6 +169,6 @@ def device_report(conn: CucmConnection, pool_filter: str = "", kinds: list[str] 
     for p in sorted(pools, key=str.lower):
         names = by_pool[p]
         up = sum(1 for n in names if n.upper() in reg)
-        rows.append({"devicePool": p, "registered": str(up) if do_reg else "", "unregistered": str(len(names) - up) if do_reg else "",
+        rows.append({"devicePool": p, "registered": str(up) if do_reg else "", "unregistered": str(len(names) - up) if do_reg and complete else "",
                      "total": str(len(names)), "gateways": str(gw_count.get(p, 0))})
-    return rows
+    return rows, complete

@@ -23,6 +23,8 @@ class DeviceReportState(CucmState):
     kinds: list[str] = list(r.KINDS)
     registration: bool = True
     error: str = ""
+    warning: str = ""
+    progress: str = ""
 
     @rx.var
     def modes(self) -> list[str]:
@@ -66,6 +68,7 @@ class DeviceReportState(CucmState):
     def clear_report(self):
         self.report_rows = []
         self.error = ""
+        self.warning = ""
 
     @rx.event
     async def run_report(self):
@@ -82,14 +85,29 @@ class DeviceReportState(CucmState):
         kinds, registration = list(self.kinds), self.registration and self.reg_available
         self.running = True
         self.error = ""
+        self.warning = ""
+        self.progress = ""
         yield
         log = OpLog("Device report", "device-report")
         try:
             log.info(f"Connection: {conn.name} ({conn.server}) as {conn.username}")
             log.info(f"Device pools: {pool_filter.strip() or 'all'}")
             log.info(f"Devices: {', '.join(kinds)}; registration: {'yes' if registration else 'no'}")
+            latest = {"msg": ""}
+
+            def note(msg: str) -> None:
+                latest["msg"] = msg
+                log.info(msg)
+
             try:
-                rows = await asyncio.to_thread(r.device_report, conn, pool_filter, kinds, registration)
+                task = asyncio.create_task(asyncio.to_thread(
+                    r.device_report, conn, pool_filter, kinds, registration, note))
+                while not task.done():
+                    await asyncio.wait([task], timeout=1.5)
+                    if latest["msg"] != self.progress:
+                        self.progress = latest["msg"]
+                        yield
+                rows, complete = task.result()
             except AxlError as e:
                 self.error = str(e)
                 log.error(f"Report failed: {e}")
@@ -98,6 +116,10 @@ class DeviceReportState(CucmState):
                 log.error(f"Report failed unexpectedly: {e!r}")
             else:
                 self.report_rows = rows
+                if not complete:
+                    self.warning = ("RisPort70 rate limit reached (15 requests per minute). Registered counts are partial "
+                                    "and Unregistered is blank. Try again later, or filter to fewer device pools.")
+                    log.warning(self.warning)
                 if not rows:
                     self.error = "No device pools match."
                 log.info(f"{len(rows)} device pool(s)")
@@ -107,6 +129,7 @@ class DeviceReportState(CucmState):
         finally:
             log.close()
             self.running = False
+            self.progress = ""
 
     @rx.event
     def export_csv(self):
