@@ -276,7 +276,7 @@ app.add_page(home_cluster_locator, route="/cucm/home-cluster-locator", title=f"H
              on_load=HomeClusterState.load_connections)
 app.add_page(device_report, route="/cucm/device-report", title=f"Device Report | {APP_NAME}",
              on_load=DeviceReportState.load_connections)
-app.add_page(pool_export, route="/cucm/device-pool-export", title=f"Device Pool Export | {APP_NAME}",
+app.add_page(pool_export, route="/cucm/device-export-webex", title=f"Device Export for Webex | {APP_NAME}",
              on_load=PoolExportState.load_connections)
 app.add_page(phone_count, route="/cucm/phone-count-by-dp", title=f"Phone Count By DP | {APP_NAME}",
              on_load=PhoneCountState.on_page_load)

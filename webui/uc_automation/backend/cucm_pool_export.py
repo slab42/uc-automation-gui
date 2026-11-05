@@ -1,4 +1,4 @@
-"""CUCM Device Pool Export: phones in chosen device pools with owner, lines and BLFs, as an Excel workbook.
+"""CUCM Device Export for Webex: phones in chosen device pools with owner, lines and BLFs, as an Excel workbook.
 
 Device names come from SQL, the rest of each phone from AXL getPhone (a few threads), end users from SQL.
 The owner of a device is found in this order: the device Owner User ID, the end user's associated devices,

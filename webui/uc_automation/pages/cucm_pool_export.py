@@ -44,7 +44,7 @@ def pool_export() -> rx.Component:
         padding="0", width="100%",
     )
     return cucm_page(
-        "Device Pool Export",
+        "Device Export for Webex",
         _need_connection(S, rx.vstack(
             rx.hstack(
                 search_input(S.pool_search, S.set_pool_search, "Device pool name contains (blank lists all)",

@@ -29,7 +29,7 @@ PHONE_COUNT = "/cucm/phone-count-by-dp"
 SET_PIN = "/cucm/set-user-pin"
 HOME_CLUSTER = "/cucm/home-cluster-locator"
 DEVICE_REPORT = "/cucm/device-report"
-POOL_EXPORT = "/cucm/device-pool-export"
+POOL_EXPORT = "/cucm/device-export-webex"
 
 # Hidden unless Settings > experimental is on; amber badge in the menu
 IN_DEVELOPMENT = {DEVICE_REPORT, POOL_EXPORT}
@@ -63,6 +63,7 @@ GROUPS = [
         ("Common Device Configs", "/cucm/common-device-configs", "settings-2", "Common device configurations."),
         ("Phone Button Templates", "/cucm/phone-button-templates", "grid-3x3", "Phone button templates."),
         ("Physical Phones (MPP)", "/cucm/mpp-phones", "refresh-cw", "Migrate 78xx/88xx phones to MPP firmware or prep them for Webex Calling."),
+        ("Device Export for Webex", POOL_EXPORT, "file-spreadsheet", "Excel export of the phones, users, lines and BLFs in chosen device pools."),
     ]),
     ("Tools", [
         ("EM Bulk Login", EM_BULK, "log-in", "Log Extension Mobility users in or out, or check sessions, from a CSV."),
@@ -72,7 +73,6 @@ GROUPS = [
     ]),
     ("Reports", [
         ("Device Report", DEVICE_REPORT, "clipboard-list", "Registered and unregistered phones and gateway count per device pool."),
-        ("Device Pool Export", POOL_EXPORT, "file-spreadsheet", "Excel export of the phones, users, lines and BLFs in chosen device pools."),
     ]),
 ]
 

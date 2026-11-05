@@ -1,4 +1,4 @@
-"""State for CUCM > Reports > Device Pool Export."""
+"""State for CUCM > Devices > Device Export for Webex."""
 
 import asyncio
 from datetime import datetime
@@ -92,7 +92,7 @@ class PoolExportState(CucmState):
         self.clear_result()
         self.progress = ""
         yield
-        log = OpLog("Device pool export", "device-pool-export")
+        log = OpLog("Device export for Webex", "device-export-webex")
         try:
             log.info(f"Connection: {conn.name} ({conn.server}) as {conn.username}")
             log.info(f"Device pools: {', '.join(pools)}; registration: {'yes' if registration else 'no'}")
@@ -151,7 +151,7 @@ class PoolExportState(CucmState):
             return rx.toast.error("Nothing to download. Run the export first.")
         server = (self.active_info or {}).get("server", "cucm")
         stamp = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
-        return rx.download(data=self._xlsx, filename=f"device-pool-export-{server}-{stamp}.xlsx")
+        return rx.download(data=self._xlsx, filename=f"device-export-webex-{server}-{stamp}.xlsx")
 
     @rx.event
     def switch_connection(self, name: str):
