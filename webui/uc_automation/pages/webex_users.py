@@ -5,9 +5,11 @@ from ..components.webex_nav import webex_page
 from ..components.webex_picker import picker
 from ..state.webex_users import (
     AddWorkspaceState,
+    UpgradeLicenseState,
     CopyWorkspaceState,
     CreateWorkspaceState,
     DeleteUsersState,
+    GetWorkspaceState,
     MigrateState,
     ResetPinState,
     VoicemailState,
@@ -151,6 +153,28 @@ rx.grid(
                                                               on_change=lambda v: S.set_form("number", v))),
                     field("Extension (optional)", rx.input(value=S.form_extension, width="100%",
                                                            on_change=lambda v: S.set_form("extension", v))),
+                    field("Calling License (optional)",
+                          rx.select(["Default", "Professional Workspace", "Common Area Workspace"],
+                                    value=rx.cond(S.form_license == "", "Default", S.form_license), width="100%",
+                                    on_change=lambda v: S.set_form("license", v)),
+                          "Needs a phone number or extension and a location. Default lets Webex pick the oldest "
+                          "suitable license."),
+                    rx.vstack(
+                        rx.hstack(rx.text("Device Model (optional)", size="2", weight="medium"), _models_info(S),
+                                  spacing="2", align="center"),
+                        rx.input(value=S.form_model, width="100%", placeholder="Cisco 8845",
+                                 list="create-workspace-models", auto_complete="off",
+                                 on_change=lambda v: S.set_form("model", v)),
+                        rx.el.datalist(rx.foreach(S.model_rows, lambda r: rx.el.option(r["name"], value=r["model"])),
+                                       id="create-workspace-models"),
+                        rx.text("Add a device to the new workspace. Needs the MAC address too.",
+                                size="1", color="var(--gray-10)"),
+                        spacing="1", align="start", width="100%",
+                    ),
+                    field("Device MAC Address (optional)", rx.input(value=S.form_mac, width="100%",
+                                                                    placeholder="AA:BB:CC:DD:EE:FF",
+                                                                    on_change=lambda v: S.set_form("mac", v)),
+                          "Any separators are fine; it must have 12 hex digits."),
                     columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%",
                 ),
 rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add Workspace",
@@ -160,15 +184,18 @@ paste_csv_tabs(
                     S.paste_workspace, lambda v: S.set_paste("workspace", v),
                     "One workspace per line, columns separated by tabs (straight from Excel), pipes, semicolons "
                     "or commas. The header row is optional; without it the order is workspace, location, type, "
-                    "capacity, number, extension (everything after workspace is optional).",
-                    "Lobby Room,Dallas,meetingRoom,8,+12145550100,",
+                    "capacity, number, extension, model, mac, license (everything after workspace is optional; model and "
+                    "mac together add a device; license is Professional Workspace or Common Area Workspace and needs "
+                    "a number or extension).",
+                    "Lobby Room,Dallas,meetingRoom,8,+12145550100,,Cisco 8845,AA:BB:CC:DD:EE:FF,Common Area Workspace",
                     rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), "Add Workspaces",
                               on_click=S.create_from_text, disabled=S.busy),
                     [
-                        rx.text("Header row required: workspace. location, type, capacity, number and extension "
-                                "are optional.", size="2", color="var(--gray-11)"),
-                        code_block("workspace,location,type,capacity,number,extension\n"
-                                   "Lobby Room,Dallas,meetingRoom,8,+12145550100,\n"),
+                        rx.text("Header row required: workspace. location, type, capacity, number, extension, model, "
+                                "mac and license are optional (model and mac together add a device; license is "
+                                "Professional Workspace or Common Area Workspace).", size="2", color="var(--gray-11)"),
+                        code_block("workspace,location,type,capacity,number,extension,model,mac,license\n"
+                                   "Lobby Room,Dallas,meetingRoom,8,+12145550100,,Cisco 8845,AA:BB:CC:DD:EE:FF,Common Area Workspace\n"),
                         csv_dropzone("workspace_upload"),
                         rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
                                   "Add Workspaces",
@@ -314,6 +341,125 @@ def _models_info(S) -> rx.Component:
             ),
             max_width="34rem",
         ),
+    )
+
+
+def upgrade_license() -> rx.Component:
+    S = UpgradeLicenseState
+
+    def search(value, name: str, list_id: str, options):
+        return rx.fragment(
+            rx.input(value=value, width="100%", list=list_id, placeholder="Start typing to search",
+                     auto_complete="off", on_change=lambda v: S.set_form(name, v)),
+            rx.el.datalist(rx.foreach(options, lambda n: rx.el.option(value=n)), id=list_id),
+        )
+
+    return webex_page(
+        "Upgrade Calling License",
+        need_login(rx.vstack(
+            rx.callout("Upgrades a workspace from the Common Area Workspace license to the Professional Workspace "
+                       "license. This is one way: there is no downgrade. The workspace keeps its location, number "
+                       "and extension, and one that already has the Professional license is left as it is.",
+                       icon="info", width="100%"),
+            one_multiple_card(
+                "One Workspace", [
+                    field("Workspace name", search(S.form_workspace, "workspace", "license-workspaces",
+                                                   S.workspace_names)),
+                    field("Location (optional)", search(S.form_location, "location", "license-locations",
+                                                        S.location_names),
+                          "Only needed when two workspaces share a name."),
+                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("badge-check", size=16)),
+                              "Upgrade License", on_click=S.upgrade_single, disabled=S.busy),
+                ], "Multiple Workspaces", [
+                    paste_csv_tabs(
+                        S.paste_license, lambda v: S.set_paste("license", v),
+                        "One workspace per line, columns separated by tabs (straight from Excel), pipes, "
+                        "semicolons or commas: workspace, then an optional location. A header row is optional.",
+                        "Room 101,Dallas\nRoom 102,Dallas",
+                        rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("badge-check", size=16)),
+                                  "Upgrade Licenses", on_click=S.upgrade_from_text, disabled=S.busy),
+                        [
+                            rx.text("Header row required: workspace. location is optional.", size="2",
+                                    color="var(--gray-11)"),
+                            code_block("workspace,location\nRoom 101,Dallas\n"),
+                            csv_dropzone("license_upload"),
+                            rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("upload", size=16)),
+                                      "Upgrade Licenses",
+                                      on_click=S.upgrade_from_csv(rx.upload_files(upload_id="license_upload")),
+                                      disabled=S.busy),
+                        ],
+                    ),
+                ]),
+            run_results(S, "Workspace"),
+            spacing="4", align="start", width="100%",
+        )),
+    )
+
+
+def get_workspace() -> rx.Component:
+    S = GetWorkspaceState
+
+    def search(value, name: str, list_id: str, options):
+        return rx.fragment(
+            rx.input(value=value, width="100%", list=list_id, placeholder="Start typing to search",
+                     auto_complete="off", on_change=lambda v: S.set_form(name, v)),
+            rx.el.datalist(rx.foreach(options, lambda n: rx.el.option(value=n)), id=list_id),
+        )
+
+    return webex_page(
+        "Get Workspace",
+        need_login(rx.vstack(
+            rx.card(
+                rx.vstack(
+                    rx.grid(
+                        field("Workspace name", search(S.form_workspace, "workspace", "get-workspaces",
+                                                       S.workspace_names)),
+                        field("Location (optional)", search(S.form_location, "location", "get-locations",
+                                                            S.location_names),
+                              "Only needed when two workspaces share a name."),
+                        columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%",
+                    ),
+                    rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("search", size=16)),
+                              "Get Workspace", on_click=S.get_workspace, disabled=S.busy),
+                    spacing="3", align="start", width="100%",
+                ),
+                size="3", width="100%",
+            ),
+            rx.cond(
+                S.shown != "",
+                rx.vstack(
+                    rx.heading(S.shown, size="4"),
+                    rx.card(
+                        rx.table.root(
+                            rx.table.body(rx.foreach(S.summary, lambda r: rx.table.row(
+                                rx.table.row_header_cell(r["label"]),
+                                rx.table.cell(r["value"]),
+                            ))),
+                            variant="ghost", width="100%",
+                        ),
+                        size="3", width="100%",
+                    ),
+                    rx.cond(S.unread.length() > 0,
+                            rx.callout("Could not read: " + S.unread.join(", "), icon="triangle-alert",
+                                       color_scheme="orange", width="100%"),
+                            rx.fragment()),
+                    rx.heading("Calling Settings", size="4"),
+                    rx.foreach(S.settings, lambda r: rx.card(
+                        rx.vstack(
+                            rx.heading(r["label"], size="3"),
+                            rx.code_block(r["text"], language="json", width="100%"),
+                            spacing="2", align="start", width="100%",
+                        ),
+                        width="100%",
+                    )),
+                    rx.heading("Workspace Record", size="4"),
+                    rx.card(rx.code_block(S.raw, language="json", width="100%"), width="100%"),
+                    spacing="3", align="start", width="100%",
+                ),
+                rx.fragment(),
+            ),
+            spacing="4", align="start", width="100%",
+        )),
     )
 
 

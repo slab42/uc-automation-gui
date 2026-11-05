@@ -209,8 +209,12 @@ class WorkspaceCreateMixin(rx.State, mixin=True):
                 return
             self.location_names = [r["name"] for r in rows]
             log.info(f"{len(rows)} location(s)")
+            await self._load_extra(client, log)
         finally:
             log.close()
+
+    async def _load_extra(self, client, log):
+        """Hook for a page that loads more lists on page load."""
 
     async def _make_action(self, client, cache: dict[str, str], log):
         """The function that creates one workspace from a row, or None (after a toast) when it cannot be prepared."""
@@ -360,6 +364,7 @@ class WorkspaceCreateMixin(rx.State, mixin=True):
             self.form_workspace = ""
             self.form_number = ""
             self.form_extension = ""
+            self.form_mac = ""
 
     @rx.event
     async def confirm_numbers(self):
@@ -381,6 +386,18 @@ class WorkspaceCreateMixin(rx.State, mixin=True):
 class CreateWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin, WorkspaceCreateMixin):
     form_type: str = ""
     form_capacity: str = ""
+    form_model: str = ""
+    form_mac: str = ""
+    form_license: str = ""
+    model_rows: list[dict[str, str]] = []
+
+    async def _load_extra(self, client, log):
+        try:
+            devices = await asyncio.to_thread(get_supported_devices, client)
+            self.model_rows = model_import_rows(devices)
+            log.info(f"{len(self.model_rows)} supported model(s)")
+        except UserError as e:
+            log.warning(f"Supported models not loaded: {e}")
 
     @rx.event
     async def create_single(self):
@@ -388,9 +405,14 @@ class CreateWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin, Works
             return
         row = {"workspace": self.form_workspace.strip(), "location": self.form_location.strip(),
                "type": "" if self.form_type == "notSet" else self.form_type, "capacity": self.form_capacity.strip(),
-               "number": self.form_number.strip(), "extension": self.form_extension.strip()}
+               "number": self.form_number.strip(), "extension": self.form_extension.strip(),
+               "model": self.form_model.strip(), "mac": self.form_mac.strip(),
+               "license": "" if self.form_license == "Default" else self.form_license}
         if not row["workspace"]:
             yield rx.toast.error("Enter the workspace name.")
+            return
+        if bool(row["model"]) != bool(row["mac"]):
+            yield rx.toast.error("Enter both the model and the MAC address to add a device, or leave both empty.")
             return
         if row["location"] and self.location_names and row["location"].lower() not in {n.lower() for n in self.location_names}:
             yield rx.toast.error("Pick the location from the list, or clear it.")
@@ -407,7 +429,7 @@ class CreateWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin, Works
     @rx.event
     async def create_from_text(self):
         async for ev in self._from_paste(self._create_from_csv, "workspace", columns=w.WORKSPACE_COLUMNS,
-                                         markers=("workspace",)):
+                                         header_if=lambda cells: cells[0].lower() == "workspace"):
             yield ev
 
     async def _create_from_csv(self, files: list[rx.UploadFile]):
@@ -425,6 +447,16 @@ class CreateWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin, Works
             yield rx.toast.error("The CSV has no data rows.")
             return
         self._focus_pane(False)
+        try:
+            for r in rows:
+                w.normalize_license(r["license"])
+        except w.WebexError as e:
+            yield rx.toast.error(str(e))
+            return
+        half = [r["workspace"] for r in rows if bool(r["model"]) != bool(r["mac"])]
+        if half:
+            yield rx.toast.error("Give both model and mac, or neither, for: " + self._shorten(half, 4))
+            return
         async for ev in self._begin(rows, "Add workspaces from CSV", "webex-add-workspaces-csv"):
             yield ev
 
@@ -521,6 +553,190 @@ class CopyWorkspaceState(WebexSession, RunMixin, PasteMixin, WorkspaceCreateMixi
         log.info(f"Copying from {name}: {len(settings)} calling setting(s) read"
                  + (f", {len(unread)} could not be read ({', '.join(unread)})" if unread else ""))
         return lambda r: w.copy_workspace(client, source, r, cache, settings, unread)
+
+
+class UpgradeLicenseState(WebexSession, PanesMixin, RunMixin, PasteMixin):
+    form_workspace: str = ""
+    form_location: str = ""
+    paste_license: str = ""
+    workspace_names: list[str] = []
+    location_names: list[str] = []
+
+    @rx.event
+    def set_form(self, name: str, value: str):
+        setattr(self, f"form_{name}", value)
+
+    @rx.event
+    async def load_page(self):
+        """Page load: check the login, then list the workspaces and locations for the search lists."""
+        await self._refresh_session()
+        if not self.webex_ok:
+            return
+        log = self._webex_log("List locations and workspaces", "webex-list-workspaces")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                return
+            try:
+                rows = await asyncio.to_thread(list_locations, client)
+                names = await asyncio.to_thread(w.list_workspace_names, client)
+            except UserError as e:
+                log.error(str(e))
+                return
+            self.location_names = [r["name"] for r in rows]
+            self.workspace_names = names
+            log.info(f"{len(rows)} location(s), {len(names)} workspace(s)")
+        finally:
+            log.close()
+
+    async def _upgrade(self, rows: list[dict[str, str]], log, then: str):
+        client = await self._connect(log)
+        if client is None:
+            yield rx.toast.error(self.webex_message)
+            return
+        cache: dict[str, str] = {}
+        log.info(f"Upgrade to {w.LICENSE_PROFESSIONAL}: {len(rows)} workspace(s)")
+        items = [(r["workspace"], lambda r=r: w.upgrade_license(client, r, cache)) for r in rows]
+        yield self._start_run(items, "Upgrading", log, then=then)
+
+    @rx.event
+    async def upgrade_single(self):
+        if self.busy:
+            return
+        row = {"workspace": self.form_workspace.strip(), "location": self.form_location.strip()}
+        if not row["workspace"]:
+            yield rx.toast.error("Enter the workspace name.")
+            return
+        self._focus_pane(True)
+        log = self._webex_log("Workspace upgrade calling license", "webex-workspace-upgrade-license")
+        try:
+            async for ev in self._upgrade([row], log, "_after_single"):
+                yield ev
+        finally:
+            log.close()
+
+    def _after_single(self, log):
+        if self.result_fail_count == 0 and self.results:
+            self.form_workspace = ""
+
+    def _after_csv(self, log):
+        return [rx.clear_selected_files("license_upload")]
+
+    @rx.event
+    async def upgrade_from_csv(self, files: list[rx.UploadFile]):
+        async for ev in self._upgrade_from_csv(files):
+            yield ev
+
+    @rx.event
+    async def upgrade_from_text(self):
+        async for ev in self._from_paste(self._upgrade_from_csv, "license", columns=w.LICENSE_COLUMNS,
+                                         markers=("workspace",)):
+            yield ev
+
+    async def _upgrade_from_csv(self, files: list[rx.UploadFile]):
+        if self.busy:
+            return
+        if not files:
+            yield rx.toast.error("Choose a CSV file first.")
+            return
+        try:
+            rows = w.parse_workspace_csv(await files[0].read())
+        except ValueError as e:
+            yield rx.toast.error(str(e))
+            return
+        if not rows:
+            yield rx.toast.error("The CSV has no data rows.")
+            return
+        self._focus_pane(False)
+        log = self._webex_log("Workspace upgrade calling license from CSV", "webex-workspace-upgrade-license-csv")
+        try:
+            log.info(f"CSV file: {files[0].filename}")
+            async for ev in self._upgrade(rows, log, "_after_csv"):
+                yield ev
+            if not self.busy:
+                yield rx.clear_selected_files("license_upload")
+        finally:
+            log.close()
+
+
+class GetWorkspaceState(WebexSession, RunMixin):
+    form_workspace: str = ""
+    form_location: str = ""
+    workspace_names: list[str] = []
+    location_names: list[str] = []
+    summary: list[dict[str, str]] = []
+    settings: list[dict[str, str]] = []
+    unread: list[str] = []
+    raw: str = ""
+    shown: str = ""
+    _locations: list[dict[str, str]] = []
+
+    @rx.event
+    def set_form(self, name: str, value: str):
+        setattr(self, f"form_{name}", value)
+
+    @rx.event
+    async def load_page(self):
+        """Page load: check the login, then list the locations and the workspaces for the search lists."""
+        await self._refresh_session()
+        if not self.webex_ok:
+            return
+        log = self._webex_log("List locations and workspaces", "webex-list-workspaces")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                return
+            try:
+                rows = await asyncio.to_thread(list_locations, client)
+                names = await asyncio.to_thread(w.list_workspace_names, client)
+            except UserError as e:
+                log.error(str(e))
+                return
+            self._locations = rows
+            self.location_names = [r["name"] for r in rows]
+            self.workspace_names = names
+            log.info(f"{len(rows)} location(s), {len(names)} workspace(s)")
+        finally:
+            log.close()
+
+    @rx.event
+    async def get_workspace(self):
+        if self.busy:
+            return
+        name, location = self.form_workspace.strip(), self.form_location.strip()
+        if not name:
+            yield rx.toast.error("Enter the workspace name.")
+            return
+        log = self._webex_log("Get workspace", "webex-get-workspace")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            self.busy = True
+            self.summary, self.settings, self.unread, self.raw, self.shown = [], [], [], "", ""
+            yield
+            try:
+                if not self._locations:
+                    self._locations = await asyncio.to_thread(list_locations, client)
+                info = await asyncio.to_thread(w.get_workspace_details, client, name, location, {},
+                                               self._locations)
+            except (UserError, w.WebexError) as e:
+                log.error(f"{name}: {e}")
+                yield rx.toast.error(str(e))
+                return
+            finally:
+                self.busy = False
+            self.summary, self.settings, self.unread, self.raw = (info["summary"], info["settings"],
+                                                                  info["unread"], info["raw"])
+            self.shown = name
+            log.info(f"{name}: calling record {info['calling']}")
+            log.info(f"{name}: license ids on the workspace {info['license_ids']}")
+            log.info(f"Org license names: {'; '.join(info['licenses'])}")
+            log.info(f"{name}: {len(self.settings)} setting(s) read"
+                     + (f", not readable: {', '.join(self.unread)}" if self.unread else ""))
+        finally:
+            log.close()
 
 
 class AddWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin):

@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 APP_NAME = "slab42 UC-Automations"
-BUILD = "2026.11.4f"  # YYYY.M.D + letter; bump only on git commit (see CLAUDE.md)
+BUILD = "2026.11.5a"  # YYYY.M.D + letter; bump only on git commit (see CLAUDE.md)
 
 
 @dataclass(frozen=True)

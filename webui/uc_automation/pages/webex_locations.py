@@ -11,10 +11,11 @@ from .webex_routing import need_login
 _LOCATION_COLS = (("Location", "name"),)
 
 
-def _schedule_select(S) -> rx.Component:
+def _schedule_select(S, options=None) -> rx.Component:
     return rx.hstack(
         rx.text("Schedule", size="2", weight="medium"),
-        rx.select(S.schedule_labels, value=S.schedule_label, on_change=S.set_schedule_label,
+        rx.select(S.schedule_labels if options is None else options, value=S.schedule_label,
+                  on_change=S.set_schedule_label,
                   placeholder="Select a schedule", min_width="16rem"),
         align="center", spacing="3", wrap="wrap",
     )
@@ -100,7 +101,7 @@ def _copy_panel(S) -> rx.Component:
             rx.text("Creates the schedule where it is missing. Where a schedule of the same type and name exists, "
                     "missing events are added and events with the same name but different details are updated; "
                     "events that exist only at the target are left alone.", size="2", color="var(--gray-11)"),
-            _schedule_select(S),
+            _schedule_select(S, S.copy_schedule_labels),
             rx.hstack(
                 rx.segmented_control.root(
                     rx.segmented_control.item("All Other Locations", value="all"),
@@ -108,8 +109,13 @@ def _copy_panel(S) -> rx.Component:
                     value=S.copy_scope, on_change=S.set_copy_scope,
                 ),
                 rx.cond(S.copy_scope == "one",
-                        rx.select(S.location_names, value=S.copy_target, on_change=S.set_copy_target,
-                                  placeholder="Target location", min_width="16rem"),
+                        rx.fragment(
+                            rx.input(value=S.copy_target, on_change=S.set_copy_target,
+                                     placeholder="Target location (type to search)", list="copy-schedule-targets",
+                                     auto_complete="off", min_width="16rem"),
+                            rx.el.datalist(rx.foreach(S.location_names, lambda n: rx.el.option(value=n)),
+                                           id="copy-schedule-targets"),
+                        ),
                         rx.fragment()),
                 spacing="3", align="center", wrap="wrap",
             ),

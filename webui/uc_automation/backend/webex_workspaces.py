@@ -6,6 +6,7 @@ webex/migration_userWorkspace_location.py (reference only). Not tested against a
 
 import csv
 import io
+import json
 import re
 import time
 
@@ -20,19 +21,19 @@ MOVE_PATH = "/telephony/config/jobs/person/moveLocation"
 
 # --- Create workspaces ---
 
-WORKSPACE_COLUMNS = ("workspace", "location", "type", "capacity", "number", "extension")
+WORKSPACE_COLUMNS = ("workspace", "location", "type", "capacity", "number", "extension", "model", "mac", "license")
 WORKSPACE_TYPES = ("notSet", "focus", "huddle", "meetingRoom", "open", "desk", "other")
 
 
 def parse_workspace_csv(data: bytes) -> list[dict[str, str]]:
-    """Header row required: workspace (display name). location, type, capacity, number and extension are optional."""
+    """Header row required: workspace (display name). Everything else is optional; model and mac together add a device."""
     reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig", errors="replace")))
     if not reader.fieldnames:
         raise ValueError("The CSV file is empty.")
     lookup = {(h or "").strip().lower(): h for h in reader.fieldnames}
     if "workspace" not in lookup:
         raise ValueError("The CSV needs a header row with a workspace column "
-                         "(location, type, capacity, number and extension are optional).")
+                         "(location, type, capacity, number, extension, model, mac and license are optional).")
     rows = []
     for raw in reader:
         row = {f: (raw.get(lookup[f]) or "").strip() if f in lookup else "" for f in WORKSPACE_COLUMNS}
@@ -126,10 +127,26 @@ def add_location_number(c: WebexClient, number: str, location_id: str) -> None:
 
 
 def create_workspace(c: WebexClient, row: dict[str, str], cache: dict[str, str]) -> str:
+    model, mac = row.get("model", "").strip(), row.get("mac", "").strip()
+    if bool(model) != bool(mac):
+        raise WebexError("model and mac must both be given to add a device (or both left empty).")
+    mac = normalize_mac(mac) if mac else ""
     location_id = find_location_id(c, row["location"], cache) if row.get("location") else ""
     body = build_workspace_body(row, location_id)
-    c.call("POST", "/workspaces", body=body)
-    return f"Created workspace {body['displayName']}"
+    kind = normalize_license(row.get("license", ""))
+    if kind:
+        if "calling" not in body:
+            raise WebexError("A phone number or extension (and a location) is needed to set a calling license.")
+        body["calling"]["webexCalling"]["licenses"] = workspace_license_ids(c, kind)
+    created = c.call("POST", "/workspaces", body=body)
+    message = f"Created workspace {body['displayName']}" + (f" with the {kind} license" if kind else "")
+    if not mac:
+        return message
+    try:
+        c.call("POST", "/devices", body={"mac": mac, "model": model, "workspaceId": created["id"]})
+    except WebexError as e:
+        raise WebexError(f"{message}, but adding {model} {mac} failed: {e}") from e
+    return f"{message} with {model} {mac}"
 
 
 def create_workspace_adding_number(c: WebexClient, body: dict, location_id: str, added: list[str]) -> str:
@@ -270,6 +287,145 @@ def copy_workspace(c: WebexClient, source: dict, row: dict[str, str], cache: dic
         if failed:
             detail += f"; not copied: {'; '.join(failed)}"
     return detail
+
+
+# --- Upgrade the Calling license ---
+
+LICENSE_PROFESSIONAL = "Professional Workspace"
+LICENSE_COMMON = "Common Area Workspace"
+LICENSE_CHOICES = (LICENSE_PROFESSIONAL, LICENSE_COMMON)
+LICENSE_COLUMNS = ("workspace", "location")
+
+
+def license_kind(name: str) -> str:
+    """Which workspace Calling license a /licenses name is: Professional Workspace, Common Area Workspace or ''.
+    A professional workspace uses the same license as a user, "Webex Calling - Professional" (confirmed). The
+    common area one is matched loosely ("common", or "workspace" in the name) because its exact name is not known."""
+    n = name.lower()
+    if "common" in n or "workspace" in n:
+        return LICENSE_COMMON
+    if n.strip() == "webex calling - professional":
+        return LICENSE_PROFESSIONAL
+    return ""
+
+
+def normalize_license(text: str) -> str:
+    """The license kind a row's license cell names ('' for none, which leaves the choice to Webex). Accepts
+    'professional' or 'common area' in any case, with or without 'workspace'. Raises WebexError otherwise."""
+    t = text.strip().lower()
+    if not t or t in ("default", "none"):
+        return ""
+    if t.startswith("pro"):
+        return LICENSE_PROFESSIONAL
+    if t.startswith("common"):
+        return LICENSE_COMMON
+    raise WebexError(f"License '{text}' must be Professional Workspace or Common Area Workspace.")
+
+
+def workspace_license_ids(c: WebexClient, kind: str) -> list[str]:
+    """Ids of the org's licenses of this kind (cached per run). Raises WebexError when there is none."""
+    if "workspace_licenses" not in c.cache:
+        found: dict[str, list[str]] = {k: [] for k in LICENSE_CHOICES}
+        items = c.call("GET", "/licenses").get("items") or []
+        c.cache["license_names"] = sorted({i.get("name") or "" for i in items})
+        for item in items:
+            k = license_kind(item.get("name") or "")
+            if k:
+                found[k].append(item["id"])
+        c.cache["workspace_licenses"] = found
+    ids = c.cache["workspace_licenses"][kind]
+    if not ids:
+        names = "; ".join(c.cache.get("license_names") or []) or "none"
+        raise WebexError(f"No {kind} license was found in this org. Licenses in the org: {names}")
+    return ids
+
+
+def upgrade_license(c: WebexClient, row: dict[str, str], cache: dict[str, str]) -> str:
+    """Upgrade a Webex Calling workspace from the Common Area Workspace to the Professional Workspace license
+    (one way only, there is no downgrade). The update
+    is a full PUT (type, capacity and notes are dropped when omitted), so the current values are sent back with
+    the new license and the workspace's own location, number and extension."""
+    location_id = find_location_id(c, row["location"], cache) if row.get("location") else ""
+    ws = c.call("GET", f"/workspaces/{find_workspace_id(c, row['workspace'], location_id)}")
+    calling = ws.get("calling") or {}
+    if calling.get("type") != "webexCalling":
+        raise WebexError(f"{ws.get('displayName', row['workspace'])} does not have Webex Calling.")
+    wc = calling.get("webexCalling") or {}
+    kind = LICENSE_PROFESSIONAL
+    ids = workspace_license_ids(c, kind)
+    if set(wc.get("licenses") or []) & set(ids):
+        return f"Already has the {kind} license"
+    calling_body = {"locationId": wc.get("locationId") or ws.get("locationId") or "", "licenses": ids}
+    for f in ("phoneNumber", "extension"):
+        if wc.get(f):
+            calling_body[f] = wc[f]
+    body = {"displayName": ws["displayName"], "calling": {"type": "webexCalling", "webexCalling": calling_body}}
+    for f in ("capacity", "type", "notes", "hotdeskingStatus"):
+        if ws.get(f) not in (None, ""):
+            body[f] = ws[f]
+    c.call("PUT", f"/workspaces/{ws['id']}", body=body)
+    return f"Upgraded to the {kind} license"
+
+
+# --- Get a workspace ---
+
+# Read-only extras shown by Get Workspace (not copied to a new workspace), under /telephony/config/workspaces/{id}
+EXTRA_SETTINGS = (
+    ("Numbers", "/numbers"),
+    ("Emergency callback number", "/emergencyCallbackNumber"),
+    ("Devices", "/devices"),
+    ("Monitoring", "/monitoring"),
+)
+
+
+def _pretty(body) -> str:
+    return json.dumps(body, indent=2, ensure_ascii=False)
+
+
+def get_workspace_details(c: WebexClient, name: str, location: str, cache: dict[str, str],
+                          locations: list[dict[str, str]]) -> dict:
+    """Everything known about one workspace: a summary (location, calling type, license names, number...) as
+    label/value rows, and each calling setting as label/JSON text. 'unread' lists settings that could not be read."""
+    location_id = find_location_id(c, location, cache) if location else ""
+    ws = c.call("GET", f"/workspaces/{find_workspace_id(c, name, location_id)}")
+    calling = ws.get("calling") or {}
+    wc = calling.get("webexCalling") or {}
+    loc_names = {l["id"]: l["name"] for l in locations}
+    loc_id = ws.get("locationId") or wc.get("locationId") or ""
+    try:
+        by_id = {i["id"]: i.get("name") or i["id"] for i in c.call("GET", "/licenses").get("items") or []}
+    except WebexError:
+        by_id = {}
+    license_ids = wc.get("licenses") or []
+    summary = [
+        ("Name", ws.get("displayName", "")),
+        ("Workspace ID", ws.get("id", "")),
+        ("Location", loc_names.get(loc_id, loc_id)),
+        ("Calling type", calling.get("type", "")),
+        ("Calling location", loc_names.get(wc.get("locationId", ""), wc.get("locationId", ""))),
+        ("Calling license", ", ".join(by_id.get(i, i) for i in license_ids)
+         or ("" if calling.get("type") == "webexCalling" else "None")),
+        ("Phone number", wc.get("phoneNumber", "")),
+        ("Extension", wc.get("extension", "")),
+        ("Type", ws.get("type", "")),
+        ("Capacity", str(ws.get("capacity") or "")),
+        ("Hot desking", ws.get("hotdeskingStatus", "")),
+        ("Supported devices", ws.get("supportedDevices", "")),
+        ("Notes", ws.get("notes", "")),
+    ]
+    settings: list[dict[str, str]] = []
+    unread: list[str] = []
+    if calling.get("type") == "webexCalling":
+        for label, path in CALLING_SETTINGS + EXTRA_SETTINGS:
+            try:
+                body = c.call("GET", _settings_url(ws["id"], path))
+            except WebexError:
+                unread.append(label)
+                continue
+            settings.append({"label": label, "text": _pretty({k: v for k, v in body.items() if k not in READ_ONLY_KEYS})})
+    return {"summary": [{"label": k, "value": v} for k, v in summary if v],
+            "settings": settings, "unread": unread, "raw": _pretty(ws),
+            "licenses": sorted(set(by_id.values())), "license_ids": license_ids, "calling": _pretty(calling)}
 
 
 # --- Add devices to workspaces ---

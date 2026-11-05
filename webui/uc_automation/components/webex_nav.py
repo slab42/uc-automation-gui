@@ -20,6 +20,8 @@ VOICEMAIL = "/webex/voicemail"
 CREATE_WORKSPACE = "/webex/create-workspace"
 ADD_WORKSPACE = "/webex/add-workspace"
 COPY_WORKSPACE = "/webex/copy-workspace"
+UPGRADE_LICENSE = "/webex/upgrade-license"
+GET_WORKSPACE = "/webex/get-workspace"
 BULK_ATA = "/webex/bulk-ata"
 DEVICE_MIGRATE = "/webex/webex-phone-migrate"
 CUCM_MIGRATE = "/webex/cucm-phone-migrate"
@@ -64,6 +66,10 @@ GROUPS = [
          "Create one workspace, or many from pasted text or a CSV."),
         ("Copy Workspace", COPY_WORKSPACE, "copy",
          "Create workspaces that copy the type, capacity and notes of an existing workspace."),
+        ("Get Workspace", GET_WORKSPACE, "search",
+         "Show a workspace's location, calling license, number and every calling setting."),
+        ("Upgrade Calling License", UPGRADE_LICENSE, "badge-check",
+         "Upgrade workspaces from the Common Area Workspace to the Professional Workspace license."),
         ("Add Device", ADD_WORKSPACE, "monitor-smartphone", "Add devices to workspaces by MAC address."),
         ("Migrate", MIGRATE, "arrow-right-left", "Move users to another location by phone number."),
     ]),

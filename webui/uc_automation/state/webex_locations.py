@@ -13,6 +13,8 @@ from .run_mixin import RunMixin
 from .webex_groups import PickerMixin
 from .webex_routing import PasteMixin, WebexSession, _one
 
+ALL_SCHEDULES = "All Schedules"
+
 
 def _safe(text: str) -> str:
     return re.sub(r"[^A-Za-z0-9]+", "_", text).strip("_")
@@ -30,7 +32,7 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
     _plan: list[dict] = []
 
     # copy
-    copy_scope: str = "all"       # all | one
+    copy_scope: str = "one"       # all | one
     copy_target: str = ""
 
     # remove past events
@@ -51,6 +53,11 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
         return [s["label"] for s in self.schedules]
 
     @rx.var
+    def copy_schedule_labels(self) -> list[str]:
+        """Source choices for Copy: every schedule, plus a choice that copies all of them."""
+        return ([ALL_SCHEDULES] if self.schedules else []) + self.schedule_labels
+
+    @rx.var
     def location_names(self) -> list[str]:
         return [r["name"] for r in self.rows if r["id"] != self.selected_id]
 
@@ -62,7 +69,7 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
     @rx.var
     def target_count(self) -> int:
         if self.copy_scope == "one":
-            return 1 if self.copy_target else 0
+            return 1 if self.copy_target in self.location_names else 0
         return sum(1 for r in self.rows if r["id"] != self.selected_id)
 
     @rx.event
@@ -249,8 +256,10 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
         if not self.confirm_open or self.busy:
             return
         self.confirm_open = False
-        source, sched = self.selected_row, self._picked_schedule()
-        if not source or not sched:
+        source = self.selected_row
+        all_scheds = self.schedule_label == ALL_SCHEDULES
+        scheds = list(self.schedules) if all_scheds else [s for s in [self._picked_schedule()] if s]
+        if not source or not scheds:
             yield rx.toast.error("Select the source location and schedule.")
             return
         if self.copy_scope == "one":
@@ -262,21 +271,24 @@ class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
             return
         log = self._webex_log("Copy location schedule", "webex-copy-schedule")
         try:
-            log.info(f"{sched['label']} from {source['name']} to {len(targets)} location(s)")
+            log.info(f"{self.schedule_label} from {source['name']} to {len(targets)} location(s)")
             client = await self._connect(log)
             if client is None:
                 yield rx.toast.error(self.webex_message)
                 return
+            bodies = []
             try:
-                detail = await asyncio.to_thread(L.get_schedule, client, source["id"], sched["type"], sched["id"])
+                for sched in scheds:
+                    detail = await asyncio.to_thread(L.get_schedule, client, source["id"], sched["type"], sched["id"])
+                    bodies.append((sched, L.copy_body(sched, detail)))
             except UserError as e:
                 log.error(str(e))
                 yield rx.toast.error(str(e))
                 return
-            body = L.copy_body(sched, detail)
-            s_type, s_name = sched["type"], sched["name"]
-            items = [(t["name"], lambda tid=t["id"]: L.copy_schedule_to(client, body, s_type, s_name, tid))
-                     for t in targets]
+            items = [(f"{t['name']}: {sched['name']}" if all_scheds else t["name"],
+                      lambda tid=t["id"], sched=sched, body=body:
+                      L.copy_schedule_to(client, body, sched["type"], sched["name"], tid))
+                     for t in targets for sched, body in bodies]
             yield self._start_run(items, "Copying", log)
         finally:
             log.close()
