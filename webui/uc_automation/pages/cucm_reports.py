@@ -13,6 +13,7 @@ def device_report() -> rx.Component:
             rx.table.root(
                 rx.table.header(rx.table.row(
                     rx.table.column_header_cell("Device Pool"),
+                    rx.cond(S.grouping != "Off", rx.table.column_header_cell("Pools", justify="end"), rx.fragment()),
                     rx.table.column_header_cell("Registered", justify="end"),
                     rx.table.column_header_cell("Unregistered", justify="end"),
                     rx.table.column_header_cell("Total Devices", justify="end"),
@@ -21,6 +22,7 @@ def device_report() -> rx.Component:
                 rx.table.body(
                     rx.foreach(S.report_rows, lambda x: rx.table.row(
                         rx.table.cell(x["devicePool"]),
+                        rx.cond(S.grouping != "Off", rx.table.cell(x["pools"], justify="end"), rx.fragment()),
                         rx.table.cell(x["registered"], justify="end"),
                         rx.table.cell(x["unregistered"], justify="end"),
                         rx.table.cell(x["total"], justify="end"),
@@ -28,6 +30,7 @@ def device_report() -> rx.Component:
                     )),
                     rx.table.row(
                         rx.table.row_header_cell("Total"),
+                        rx.cond(S.grouping != "Off", rx.table.cell(), rx.fragment()),
                         rx.table.cell(S.totals.get("registered", ""), justify="end"),
                         rx.table.cell(S.totals.get("unregistered", ""), justify="end"),
                         rx.table.cell(S.totals.get("total", ""), justify="end"),
@@ -57,7 +60,7 @@ def device_report() -> rx.Component:
                 rx.button(rx.cond(S.running, rx.spinner(size="2"), rx.icon("play", size=16)), "Run Report",
                           on_click=S.run_report, disabled=S.running),
                 rx.button(rx.icon("download", size=16), "Export", variant="soft", on_click=S.export_csv,
-                          disabled=S.report_rows.length() == 0),
+                          disabled=S.raw_rows.length() == 0),
                 align="center", spacing="3", wrap="wrap", width="100%",
             ),
             rx.callout("This report is still under development. The registration and gateway lookups have not been "
@@ -71,6 +74,30 @@ def device_report() -> rx.Component:
                             disabled=~S.reg_available, on_change=S.set_registration),
                 align="center", spacing="4", wrap="wrap",
             ),
+            rx.hstack(
+                rx.text("Consolidate Device Pools:", size="2", weight="bold"),
+                rx.segmented_control.root(
+                    rx.foreach(S.groupings, lambda g: rx.segmented_control.item(g, value=g)),
+                    value=S.grouping, on_change=S.set_grouping,
+                ),
+                rx.cond(S.grouping == "Prefix", rx.hstack(
+                    rx.text("Delimiter", size="2"),
+                    rx.input(value=S.group_delimiter, on_change=S.set_group_delimiter, width="60px", max_length=3),
+                    rx.text("Parts", size="2"),
+                    rx.input(value=S.group_parts, on_change=S.set_group_parts, width="60px", type="number", min=1),
+                    align="center", spacing="2"), rx.fragment()),
+                rx.cond(S.grouping == "Regex",
+                        rx.input(value=S.group_regex, on_change=S.set_group_regex, width="320px", max_width="100%",
+                                 placeholder="Matched from the start, e.g. ([A-Z]+-[A-Z0-9]+-)"),
+                        rx.fragment()),
+                align="center", spacing="3", wrap="wrap",
+            ),
+            rx.text("Merges device pools that share a key and sums their counts. Prefix keeps the first Parts "
+                    "pieces split on the Delimiter (2 parts on - turns AGY-SITE-Phones into AGY-SITE-). Regex uses "
+                    "its first capture group, or the whole match. Names that do not fit stay on their own. "
+                    "Changing this does not re-query the cluster.", size="2", color="var(--gray-11)"),
+            rx.cond(S.group_error != "", rx.callout(S.group_error, icon="triangle-alert", color_scheme="red", width="100%"),
+                    rx.fragment()),
             rx.text("Only the selected devices are queried. Turning off registration skips RisPort70, which is the "
                     "slowest part (paced at 15 requests per minute, about 4 seconds per 1,000 devices).", size="2", color="var(--gray-11)"),
             rx.cond(S.error != "", rx.callout(S.error, icon="triangle-alert", color_scheme="red", width="100%"),
@@ -87,7 +114,7 @@ def device_report() -> rx.Component:
                     S.report_rows.length() > 0,
                     rx.vstack(
                         table,
-                        rx.text(S.report_rows.length().to_string(), " device pools.", size="2", color="var(--gray-11)"),
+                        rx.text(S.report_rows.length().to_string(), rx.cond(S.grouping != "Off", " groups.", " device pools."), size="2", color="var(--gray-11)"),
                         spacing="2", align="start", width="100%",
                     ),
                     rx.fragment(),

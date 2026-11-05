@@ -4,6 +4,7 @@ Device pools, device counts and gateway counts come from SQL (one query per kind
 selected), the registration state from RisPort70 (SelectCmDevice, port 8443, same credentials) and only when asked for.
 """
 
+import re
 import threading
 import time
 import xml.etree.ElementTree as ET
@@ -172,3 +173,34 @@ def device_report(conn: CucmConnection, pool_filter: str = "", kinds: list[str] 
         rows.append({"devicePool": p, "registered": str(up) if do_reg else "", "unregistered": str(len(names) - up) if do_reg and complete else "",
                      "total": str(len(names)), "gateways": str(gw_count.get(p, 0))})
     return rows, complete
+
+
+def pool_group_key(name: str, mode: str, delimiter: str = "-", parts: int = 2, pattern: str = "") -> str:
+    """Consolidation key for a device pool name; a name that does not fit the scheme is its own group.
+
+    "Prefix": the first `parts` delimiter-separated parts plus a trailing delimiter ("AGY-SITE-Phones" -> "AGY-SITE-").
+    "Regex": the first capture group (or the whole match) of `pattern`, matched from the start, case-insensitive."""
+    if mode == "Prefix" and delimiter and parts > 0:
+        bits = name.split(delimiter)
+        return delimiter.join(bits[:parts]) + delimiter if len(bits) > parts else name
+    if mode == "Regex" and pattern:
+        m = re.match(pattern, name, re.IGNORECASE)
+        if m:
+            return (m.group(1) if m.re.groups else m.group(0)) or name
+    return name
+
+
+def consolidate_rows(rows: list[dict[str, str]], key: Callable[[str], str]) -> list[dict[str, str]]:
+    """Merge device report rows whose pool names share a key; counts are summed (blank stays blank)
+    and `pools` holds how many device pools were merged."""
+    groups: dict[str, list[dict[str, str]]] = {}
+    for x in rows:
+        groups.setdefault(key(x["devicePool"]), []).append(x)
+    out = []
+    for k in sorted(groups, key=str.lower):
+        g = groups[k]
+        row = {"devicePool": k, "pools": str(len(g))}
+        for f in ("registered", "unregistered", "total", "gateways"):
+            row[f] = str(sum(int(x[f]) for x in g)) if g[0][f] != "" else ""
+        out.append(row)
+    return out

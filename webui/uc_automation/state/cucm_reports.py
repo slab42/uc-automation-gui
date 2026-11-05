@@ -3,6 +3,7 @@
 import asyncio
 import csv
 import io
+import re
 from datetime import datetime
 
 import reflex as rx
@@ -13,13 +14,18 @@ from ..backend.cucm_axl import AxlError
 from .cucm import CucmState
 
 MODES = ["All Device Pools", "Search"]
+GROUPINGS = ["Off", "Prefix", "Regex"]
 
 
 class DeviceReportState(CucmState):
     mode: str = MODES[0]
     pool_search: str = ""
     running: bool = False
-    report_rows: list[dict[str, str]] = []
+    raw_rows: list[dict[str, str]] = []
+    grouping: str = GROUPINGS[0]
+    group_delimiter: str = "-"
+    group_parts: str = "2"
+    group_regex: str = ""
     kinds: list[str] = list(r.KINDS)
     registration: bool = True
     error: str = ""
@@ -29,6 +35,28 @@ class DeviceReportState(CucmState):
     @rx.var
     def modes(self) -> list[str]:
         return MODES
+
+    @rx.var
+    def groupings(self) -> list[str]:
+        return GROUPINGS
+
+    @rx.var
+    def group_error(self) -> str:
+        if self.grouping == "Regex" and self.group_regex:
+            try:
+                re.compile(self.group_regex)
+            except re.error as e:
+                return f"Invalid regular expression: {e}"
+        return ""
+
+    @rx.var
+    def report_rows(self) -> list[dict[str, str]]:
+        """The report rows, consolidated by the chosen grouping (no re-query when it changes)."""
+        if self.grouping == "Off" or not self.raw_rows or self.group_error:
+            return [{**x, "pools": "1"} for x in self.raw_rows]
+        parts = int(self.group_parts) if self.group_parts.isdigit() else 0
+        return r.consolidate_rows(self.raw_rows, lambda n: r.pool_group_key(
+            n, self.grouping, self.group_delimiter, parts, self.group_regex))
 
     @rx.var
     def all_kinds(self) -> list[str]:
@@ -61,12 +89,28 @@ class DeviceReportState(CucmState):
         self.mode = value if isinstance(value, str) else value[0]
 
     @rx.event
+    def set_grouping(self, value: str | list[str]):
+        self.grouping = value if isinstance(value, str) else value[0]
+
+    @rx.event
+    def set_group_delimiter(self, value: str):
+        self.group_delimiter = value
+
+    @rx.event
+    def set_group_parts(self, value: str):
+        self.group_parts = value
+
+    @rx.event
+    def set_group_regex(self, value: str):
+        self.group_regex = value
+
+    @rx.event
     def set_pool_search(self, value: str):
         self.pool_search = value
 
     @rx.event
     def clear_report(self):
-        self.report_rows = []
+        self.raw_rows = []
         self.error = ""
         self.warning = ""
 
@@ -115,7 +159,7 @@ class DeviceReportState(CucmState):
                 self.error = f"Unexpected error: {e}"
                 log.error(f"Report failed unexpectedly: {e!r}")
             else:
-                self.report_rows = rows
+                self.raw_rows = rows
                 if not complete:
                     self.warning = ("RisPort70 rate limit reached (15 requests per minute). Registered counts are partial "
                                     "and Unregistered is blank. Try again later, or filter to fewer device pools.")
@@ -137,9 +181,10 @@ class DeviceReportState(CucmState):
             return rx.toast.error("Nothing to export. Run the report first.")
         buf = io.StringIO()
         w = csv.writer(buf, lineterminator="\n")
-        w.writerow(["device_pool", "registered", "unregistered", "total_devices", "gateways"])
+        grouped = self.grouping != "Off" and not self.group_error
+        w.writerow(["device_pool", *(["pools"] if grouped else []), "registered", "unregistered", "total_devices", "gateways"])
         for x in self.report_rows:
-            w.writerow([x["devicePool"], x["registered"], x["unregistered"], x["total"], x["gateways"]])
+            w.writerow([x["devicePool"], *([x["pools"]] if grouped else []), x["registered"], x["unregistered"], x["total"], x["gateways"]])
         server = (self.active_info or {}).get("server", "cucm")
         stamp = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
         return rx.download(data=buf.getvalue(), filename=f"device-report-{server}-{stamp}.csv")
