@@ -30,6 +30,8 @@ backend/cucm_home.py         Home Cluster Locator: UDS clusterUser lookup per cl
 backend/cucm_tools.py        tools: EM bulk login/logout/check, phone count by device pool, set user PIN
 backend/cucm_reports.py      Reports: Device Report (AXL phones and pools, RisPort70 registration, SQL gateway count per device pool)
 state/cucm_reports.py        DeviceReportState; page in pages/cucm_reports.py
+backend/cucm_pool_export.py  Device Pool Export: SQL device list, AXL getPhone per phone, SQL end users, xlsx workbook
+state/cucm_pool_export.py    PoolExportState; page in pages/cucm_pool_export.py
 backend/keys.py              composite row keys (pattern + partition) shared by backend and state
 backend/cucm_devices.py      phones, CTI route points (delete cleans up orphaned DNs), softkey templates, common device configs, button templates, MPP workflows
 backend/organizations.py     customer organizations ([ORG:<name>]), per-organization filtering and grouping helpers
@@ -100,6 +102,10 @@ state/bootable.py            BootableState: streamed ISO upload, make bootable, 
 pages/bootable.py            Make ISO Bootable page (Tools platform)
 state/tts.py                 TtsState: Text To U-Law Audio
 pages/tts.py                 Text To U-Law Audio page (Tools platform)
+pages/regex_tester.py        Regex Tester page (Tools platform)
+state/regex_tester.py        RegexTesterState
+backend/regex_tester.py      Regex run in a child interpreter with a timeout
+components/regex_ref.py      Regex quick reference (click a token to add it)
 state/cucm_home.py           HomeClusterState: user lookup across the organization's CUCM connections
 pages/cucm_home_cluster.py   Home Cluster Locator page
 state/cucm.py                CucmState: connection list, active connection, credentials form, Test button
@@ -418,6 +424,7 @@ number and SQL are unverified, so test on a lab CUCM.
 ### CUCM Reports
 
 - **Reports > Device Report** (`/cucm/device-report`): All Device Pools or Search (name contains). Per pool: Registered, Unregistered, Total Devices, Gateways, plus a totals row and CSV export. **Consolidate Device Pools** (Off, Prefix, Regex) merges pools sharing a key and sums the counts, adds a Pools column, and works on the stored raw rows (`raw_rows`, `report_rows` is computed) so changing it does not re-query. Prefix: first N parts split on a delimiter plus the trailing delimiter (`AGY-SITE-`); Regex: first capture group or whole match (`pool_group_key`, `consolidate_rows` in `backend/cucm_reports.py`). Names that do not fit stay on their own. Device checkboxes (Phones, Analog Phones, CTI Devices, Gateways) and Pull Registration choose what is queried: only selected kinds are read, RisPort70 is skipped when registration is off or only gateways are selected (registered and unregistered columns are then blank). Phones come from one SQL query on `device` joined to `typemodel` (kind by model name), registration from RisPort70 `selectCmDevice` by name in batches of 1000, paced 4.2 s apart per server (RisPort70 allows 15 requests per minute); a rate fault is retried after 60 s up to 3 times, and if it still fails after the first batch the report keeps the partial Registered counts, blanks Unregistered and shows an amber warning; progress (batch n of N) shows on the page and in the log (`https://<server>:8443/realtimeservice2/services/RISService70`, the AXL account needs the Standard RealtimeAndTraceCollection role; anything not reported Registered counts as unregistered), gateways from SQL (`device` joined to `devicepool` and `typeclass` where the class name is `Gateway`, all gateway types). **In development**: `cucm_nav.IN_DEVELOPMENT` (amber menu badge, hidden unless the experimental setting is on, callout on the page; remove the route from that set when finished). Not tested against a real CUCM; the RIS request and the typeclass name are unverified.
+- **Reports > Device Pool Export** (`/cucm/device-pool-export`): Find Device Pools (name contains, blank lists all), tick one or more, optional Pull Registration Status (RisPort70, reuses `cucm_reports.registered_names`), Run Export, Download Excel (`device-pool-export-<server>-<stamp>.xlsx`, bytes kept in backend var `_xlsx`). Phones come from SQL (`device`, `devicepool`, `typemodel`), the rest from `getPhone` per phone (4 threads): protocol, description, template, Owner User ID, lines (index, DN, partition, display, label, e164 mask, ASCII display = Caller ID, associated end users) and BLFs. End users come from SQL (`enduser`, `enduserdevicemap`, primary extension `fknumplan_primary`). Owner order (`resolve_owner`, column Owner Source): Device Owner, Associated Device, Line (line associated end users, then primary extension match). Type is `User` when any user is found, otherwise `Workspace`; extra users go in Notes. Workbook sheets: **Phones** (one row per device, `Line N DN/Partition/Display/Label/External Mask/Caller ID` columns up to the highest line index, so KEM/sidecar lines are included by index), **BLFs**, **Summary**, **Errors**. `build_workbook(result, extra_sheets)` takes more sheets, for the planned Hunt Groups sheet. The same workbook is meant as the input of a later Webex build tool. **In development** (`IN_DEVELOPMENT`). Not tested against a real CUCM: the SQL table and column names (`enduserdevicemap`, `fknumplan_primary`) and the getPhone shapes (checked against the XSD only) are unverified; BLF destination partition is not read.
 
 ### Objects identified by pattern + partition
 
@@ -560,7 +567,7 @@ None of this proves the behavior on a real cluster. Say so when reporting, and t
 - Template CSVs are embedded in code (Download Template buttons); there is no examples folder.
 - Phone delete does not clean up orphaned directory numbers.
 - Phone button template list cannot show the base template (AXL does not return it).
-- Ported: CUCM, CUC (users and call handlers), UCCX (Migrate, Script Report), CUBE (Mem Status, Config Compare), Webex and RedSky. The `Tools` platform (`/tools`, `pages/tools_home.py`) is a card page driven by `components/tools_nav.TOOLS` (Text To U-Law Audio so far; the home search skips a tool already listed under another platform).
+- Ported: CUCM, CUC (users and call handlers), UCCX (Migrate, Script Report), CUBE (Mem Status, Config Compare), Webex and RedSky. The `Tools` platform (`/tools`, `pages/tools_home.py`) is a card page driven by `components/tools_nav.TOOLS` (Text To U-Law Audio, Make ISO Bootable, Regex Tester; the home search skips a tool already listed under another platform).
 
 ## Paste text input
 
@@ -611,6 +618,14 @@ built with `one_multiple_card` (`components/tool_widgets.py`): the single input 
   the token is random and unguessable), and `rx.download(url=...)` starts the browser download. The folder is deleted 60 seconds after that download finishes (so a repeated request, which React dev mode can cause, still works), after 15 minutes if it never
   starts, on any error, and at app startup (`clean_leftovers`). The upload is deleted as soon as the new ISO is written. Log: "Make ISO Bootable" (sizes, never content).
 - Tested: pycdlib on synthetic ISOs (plain, Rock Ridge, Rock Ridge + Joliet), the download route and its delete, and that the page and route load. Not tested with a real Cisco ISO or a multi-GB upload, and not booted in a VM.
+
+### Regex Tester (Tools platform)
+
+- `/tools/regex-tester`, `RegexTesterState`, `backend/regex_tester.py`, `components/regex_ref.py`. Cards: Regex (pattern, Ignore Case, Multiline, Dot Matches Newline, Test Text),
+  Match (highlighted text, alternating colors for neighbouring matches, count badge, table of position, match and groups, named groups by name), Replace (optional, `\1` or `\g<name>`)
+  and the Quick Reference (Python `re` syntax; clicking a token appends it to the pattern).
+- Results update as the user types (250 ms debounce). The match runs in a child `python -I` with a 3 second timeout so a catastrophic pattern cannot hang the app; limits: 500 matches, 200,000 characters of text, 5,000 of pattern.
+- Python `re` flavor only (no PCRE, Java or JavaScript specifics). No operation log by design: it is a local calculation that runs on every keystroke, nothing is saved. No credentials involved.
 
 ### Home Favorites And Recently Used
 

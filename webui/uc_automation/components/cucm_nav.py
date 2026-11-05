@@ -29,9 +29,10 @@ PHONE_COUNT = "/cucm/phone-count-by-dp"
 SET_PIN = "/cucm/set-user-pin"
 HOME_CLUSTER = "/cucm/home-cluster-locator"
 DEVICE_REPORT = "/cucm/device-report"
+POOL_EXPORT = "/cucm/device-pool-export"
 
 # Hidden unless Settings > experimental is on; amber badge in the menu
-IN_DEVELOPMENT = {DEVICE_REPORT}
+IN_DEVELOPMENT = {DEVICE_REPORT, POOL_EXPORT}
 
 # (menu label, [(item label, route, icon, description)])
 GROUPS = [
@@ -71,6 +72,7 @@ GROUPS = [
     ]),
     ("Reports", [
         ("Device Report", DEVICE_REPORT, "clipboard-list", "Registered and unregistered phones and gateway count per device pool."),
+        ("Device Pool Export", POOL_EXPORT, "file-spreadsheet", "Excel export of the phones, users, lines and BLFs in chosen device pools."),
     ]),
 ]
 

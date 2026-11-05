@@ -16,6 +16,7 @@ from .pages import redsky_tools as rs_pages
 from .pages.tools_home import tools_home
 from .pages.tts import text_to_ulaw
 from .pages.bootable import make_bootable
+from .pages.regex_tester import regex_tester
 from .pages.cube_lgw import lgw_config
 from .pages.cucm_home_cluster import home_cluster_locator
 from .pages.cube_tools import config_compare, cube_home, mem_status
@@ -32,7 +33,9 @@ from .pages.home import home
 from .pages.hunt_groups import hunt_groups
 from .pages.logs import logs
 from .pages.partitions import partitions
+from .pages.cucm_pool_export import pool_export
 from .pages.cucm_reports import device_report
+from .state.cucm_pool_export import PoolExportState
 from .state.cucm_reports import DeviceReportState
 from .pages.tools import em_bulk_login, phone_count, set_user_pin
 from .pages.system import codec_lists, device_pools, locations, regions
@@ -51,6 +54,7 @@ from .pages.settings import settings
 from .pages.users import users_page
 from .state.advertised_patterns import AdvertisedPatternsState
 from .state.css import CssState
+from .state.regex_tester import RegexTesterState
 from .state.cucm import CucmState
 from .state.cuc import CucState
 from .state.uccx import UccxState
@@ -122,6 +126,8 @@ for _p in PLATFORMS:
 app.add_page(tools_home, route="/tools", title=f"Tools | {APP_NAME}")
 app.add_page(make_bootable, route="/tools/make-bootable", title=f"Make ISO Bootable | {APP_NAME}")
 app.add_page(text_to_ulaw, route="/tools/text-to-ulaw", title=f"Text To U-Law Audio | {APP_NAME}")
+app.add_page(regex_tester, route="/tools/regex-tester", title=f"Regex Tester | {APP_NAME}",
+             on_load=RegexTesterState.on_page_load)
 app.add_page(cube_home, route="/cube", title=f"CUBE | {APP_NAME}")
 app.add_page(mem_status, route="/cube/mem-status", title=f"CUBE Mem Status | {APP_NAME}",
              on_load=MemStatusState.load_page)
@@ -270,5 +276,7 @@ app.add_page(home_cluster_locator, route="/cucm/home-cluster-locator", title=f"H
              on_load=HomeClusterState.load_connections)
 app.add_page(device_report, route="/cucm/device-report", title=f"Device Report | {APP_NAME}",
              on_load=DeviceReportState.load_connections)
+app.add_page(pool_export, route="/cucm/device-pool-export", title=f"Device Pool Export | {APP_NAME}",
+             on_load=PoolExportState.load_connections)
 app.add_page(phone_count, route="/cucm/phone-count-by-dp", title=f"Phone Count By DP | {APP_NAME}",
              on_load=PhoneCountState.on_page_load)
