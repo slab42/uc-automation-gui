@@ -75,6 +75,7 @@ backend/webex_locations.py   Location schedules (export/update/copy/remove past)
 backend/webex_tools.py       Hardware compatibility check (supported models + validateMacs)
 backend/webex_naming.py      Naming Check: list locations, queues, hunt groups, auto attendants, workspaces, virtual lines; regex check; rename
 backend/webex_auth.py        Webex OAuth login, token storage/refresh ([WEBEX:default]); `ensure_token()` for API code
+backend/webex_personal.py    personal Webex token per app user (`.env/webex_personal.json`, git-ignored): save, status (missing, stale after 6 h, expired, ok)
 backend/applog.py            operation logs: OpLog writer, pruning (`prune_logs`), plus list/read/export helpers for the Logs page
 backend/app_settings.py      `webui/app_settings.json` (git-ignored): log retention days and max size, defaults 90 days / 2048 MB
 backend/ini_store.py         comment-preserving credentials.env editor
@@ -83,7 +84,8 @@ state/auth.py                AuthState (root): session token (browser LocalStora
 state/auth_guard.py          AuthGuard middleware: drops every event from a browser that is not signed in (and from a page the user may not open)
 state/users.py               UsersState (Admin only): users, access tree, password reset; builds the permission catalog from `state/search.INDEX`
 pages/users.py               Users page (`/users`)
-components/login.py          sign-in / first-run setup screens, account menu (top bar), change password dialog
+components/login.py          sign-in / first-run setup screens, account menu (top bar), change password dialog, Webex Token dialog, 403 offer dialog
+state/webex_token.py         WebexTokenState (Webex Token window, switch to personal token, rerun) and TaskRecorder middleware
 components/access.py         `show_if`, `show_if_any`, `allowed`, `platform_visible`: hide menu items, cards and tiles the user may not open
 state/logs.py                LogsState: Logs page (search, read, export; no delete or import)
 state/favorites.py           FavoritesState: favorite and recent function routes (browser LocalStorage `favorite_routes`, `recent_routes`)
@@ -331,6 +333,25 @@ Webex has no username/password token API, so login is the OAuth authorization co
 - Changing the Client ID drops the stored login. The redirect URI assumes the frontend runs on port 3000.
 - Not tested against a real Webex org.
 
+### Webex personal token (403 fallback)
+
+- **Webex Token** in the account menu (top right, next to Change Password) stores the signed-in user's personal bearer token from
+  developer.webex.com (about 12 hours) in `.env/webex_personal.json`, one per app user. It is validated with Webex when saved, never
+  sent to the browser (backend var `_token`) and never logged; the window shows only status and age. Remove deletes it.
+- A 403 from Webex with the org's login is recorded by `WebexClient` (`denied_key`, `webex_api.denied_pending`). Every `webex_page`
+  has a hidden 3 second ticker (`WebexSession.poll_denied`); once the task that got the 403 is no longer busy it opens the
+  "Webex Denied The Request" dialog. **Switch And Rerun** sets `WebexTokenState.use_personal` (menu bar badge **Personal Token**,
+  click it to go back to the org login) and replays the browser event that started the task.
+- The rerun works because `TaskRecorder` (middleware) keeps the latest event of every Webex page state and `WebexSession._connect_org`
+  marks the one that opened the connection. So it replays button and Paste Text events with their original arguments. CSV file
+  uploads do not go through that path: after the switch, upload the file again.
+- Webex features must open their client with `self._connect(log)` or `self._connect_org(org, log)` (never `WebexClient.connect`
+  directly) so the personal token, the 6 hour check and the 403 offer all apply.
+- Right before the personal token is used (`WebexTokenState._personal_token`) it is checked: if it is missing, was saved more than 6 hours
+  ago (`webex_personal.STALE_AFTER`) or Webex rejects it (expired), the Webex Token window opens with the reason, and saving a token
+  reruns the task.
+- Not tested against a real Webex org.
+
 ### Webex features
 
 - Menu: `components/webex_nav.GROUPS` drives the Webex menu bar and the `/webex` home cards. Menu order: Call Routing, Locations, Users, Workspaces, Devices, Tools, Reports. Section **Call Routing**:
@@ -353,7 +374,7 @@ Webex has no username/password token API, so login is the OAuth authorization co
 - Create CSVs are header based (`name,location,firstName,lastName,phoneNumber,extension,policy,destination,agent1,agent2,...`),
   unlike the scripts' fixed column positions. The queue create no longer sends the script's hardcoded org-specific announcement
   file id: all greetings are DEFAULT.
-- **Users** (Delete Users, Reset PIN), **Reports** (Locations Report: `/webex/locations-report`, Run Report, for the ticked Users and/or Workspaces (only those are read; columns, badges and CSV follow), counts Calling users (`GET /people?callingData=true`, a person with a Calling `locationId`) and Calling workspaces (`GET /workspaces?calling=webexCalling`) per location, matched on the decoded location id, with a `(No Location Match)` row, totals and CSV export; not tested against a real org. Voicemail: `/webex/voicemail`, one email or every Calling user of a location via the Add Numbers style location datalist; reads `GET /people/{id}/features/voicemail`, shows internal/external and, for external, the destination email; internal message counts are not available to an admin login), **Workspaces** (Add Workspace, Copy Workspace, Add Device, Migrate), **Locations** (Schedules, E911) are menu groups
+- **Users** (Delete Users, Migrate, Reset PIN), **Reports** (Locations Report: `/webex/locations-report`, Run Report, for the ticked Users and/or Workspaces (only those are read; columns, badges and CSV follow), counts Calling users (`GET /people?callingData=true`, a person with a Calling `locationId`) and Calling workspaces (`GET /workspaces?calling=webexCalling`) per location, matched on the decoded location id, with a `(No Location Match)` row, totals and CSV export; not tested against a real org. Voicemail: `/webex/voicemail`, one email or every Calling user of a location via the Add Numbers style location datalist; reads `GET /people/{id}/features/voicemail`, shows internal/external and, for external, the destination email; internal message counts are not available to an admin login), **Workspaces** (Add Workspace, Copy Workspace, Add Device), **Locations** (Schedules, E911) are menu groups
   in `webex_nav.GROUPS`. Destructive actions (delete users, migrate, copy/update/remove schedule events, RedSky opt-out) go
   through `tool_widgets.confirm_dialog` (`S.confirm_open`). Delete Users and Migrate are two-step: load/review a plan first,
   then confirm.

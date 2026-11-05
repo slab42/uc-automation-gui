@@ -21,7 +21,23 @@ POOL_SIZE = 16   # keep-alive connections, enough for the parallel bulk runs
 
 
 class WebexError(UserError):
-    """A Webex API problem. The message is shown as is."""
+    """A Webex API problem. The message is shown as is. `status` is the HTTP status (0 when there was none)."""
+
+    def __init__(self, message: str = "", status: int = 0):
+        super().__init__(message)
+        self.status = status
+
+
+# Browser sessions (Reflex client tokens) whose Webex run got a 403 with the org's login. The state polls and clears it.
+_denied: set[str] = set()
+
+
+def denied_pending(key: str) -> bool:
+    return key in _denied
+
+
+def clear_denied(key: str) -> None:
+    _denied.discard(key)
 
 
 # Core (non-calling) APIs: they want the base64 org id, the telephony APIs accept the bare UUID.
@@ -42,21 +58,29 @@ class WebexClient:
         self.org_id = org_id
         self.log = None  # optional OpLog: every request and every failure is written to it
         self.cache: dict = {}  # per-run lookups (license ids and the like)
+        self.denied_key = ""  # when set, a 403 is recorded under this key (see take_denied)
         # One session per client: reuses the TLS connection across calls (and across the worker threads of a bulk run).
         self._session = requests.Session()
         adapter = HTTPAdapter(pool_connections=1, pool_maxsize=POOL_SIZE)
         self._session.mount("https://", adapter)
 
     @classmethod
-    def connect(cls, org: str, log=None) -> "WebexClient":
+    def connect(cls, org: str, log=None, personal_token: str = "", denied_key: str = "") -> "WebexClient":
         """Check the login assigned to a saved org (renewing it if needed) and build a client for that org.
+        With `personal_token`, that token is used instead of the org's login (the org id still comes from the org).
         With `log`, writes the login's scopes and the token owner's roles first, then every request.
-        Raises WebexAuthError."""
-        login, org_id = webex_auth.resolve(org)
-        client = cls(webex_auth.ensure_token(login), org_id)
+        With `denied_key`, a 403 is recorded under it (`denied_pending`). Raises WebexAuthError."""
+        if personal_token:
+            client = cls(personal_token, webex_auth.org_id_of(org))
+            lines = webex_auth.describe_token(personal_token, "Webex login: the app user's personal token") if log is not None else []
+        else:
+            login, org_id = webex_auth.resolve(org)
+            client = cls(webex_auth.ensure_token(login), org_id)
+            client.denied_key = denied_key
+            lines = webex_auth.describe_login(login, client._token) if log is not None else []
         if log is not None:
             client.log = log
-            for line in webex_auth.describe_login(login, client._token):
+            for line in lines:
                 log.info(line)
         return client
 
@@ -97,14 +121,16 @@ class WebexClient:
             break
         self._log_response(method, url, params, r)
         if r.status_code == 401:
-            raise WebexError("Webex rejected the token (401). Log in again on the Credentials page.")
+            raise WebexError("Webex rejected the token (401). Log in again on the Credentials page.", 401)
         if r.status_code >= 300:
             text = _error_text(r)
             if r.status_code in (400, 403):
                 text += f" ({method} {url.removeprefix(BASE).split('?')[0]})"
             if r.status_code == 403 and r.headers.get("TrackingID"):
                 text += f" [TrackingID {r.headers['TrackingID']}]"
-            raise WebexError(text)
+            if r.status_code == 403 and self.denied_key:
+                _denied.add(self.denied_key)
+            raise WebexError(text, r.status_code)
         return r
 
 

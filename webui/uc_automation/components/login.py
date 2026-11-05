@@ -4,6 +4,7 @@ import reflex as rx
 
 from ..config import APP_NAME
 from ..state.auth import AuthState as A
+from ..state.webex_token import WebexTokenState as W
 
 
 def _password_input(placeholder: str, on_change, **kw) -> rx.Component:
@@ -109,6 +110,58 @@ def change_password_dialog() -> rx.Component:
     )
 
 
+def webex_token_dialog() -> rx.Component:
+    """Paste or remove the signed-in user's personal Webex token. Also opens by itself when a task needs a new one."""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("Webex Token"),
+            rx.form(
+                rx.vstack(
+                    rx.text("Your personal token from developer.webex.com (Getting Started, Your Personal Access Token). "
+                            "It lasts about 12 hours and is used when a Webex tool is denied (403) with the org login.",
+                            size="2", color="var(--gray-11)"),
+                    rx.cond(W.wx_notice != "", rx.callout(W.wx_notice, icon="clock", color_scheme="amber", size="1"),
+                            rx.cond(W.wx_text != "", rx.text(W.wx_text, size="2", color="var(--gray-11)"))),
+                    rx.input(type="password", placeholder="Paste the token", on_change=W.set_token,
+                             key=W.form_key.to_string(), width="100%", auto_complete="off"),
+                    rx.cond(W.wx_error != "", rx.callout(W.wx_error, icon="triangle-alert", color_scheme="red", size="1")),
+                    rx.hstack(
+                        rx.cond(W.wx_status != "missing",
+                                rx.button("Remove", type="button", variant="soft", color_scheme="red", on_click=W.remove_token)),
+                        rx.spacer(),
+                        rx.button("Cancel", type="button", variant="soft", color_scheme="gray", on_click=W.close_token),
+                        rx.button("Save Token", type="submit"),
+                        spacing="3", width="100%",
+                    ),
+                    spacing="3", width="100%",
+                ),
+                on_submit=W.save_token,
+            ),
+            max_width="460px",
+        ),
+        open=W.wx_open,
+        on_open_change=W.set_wx_open,
+    )
+
+
+def webex_denied_dialog() -> rx.Component:
+    """Offered after a Webex task got a 403: switch to the personal token and rerun it."""
+    return rx.alert_dialog.root(
+        rx.alert_dialog.content(
+            rx.alert_dialog.title("Webex Denied The Request"),
+            rx.alert_dialog.description(
+                "Webex returned 403 (access denied) with the org's login. Switch to your Personal Token and rerun the task?"),
+            rx.hstack(
+                rx.button("Not Now", variant="soft", color_scheme="gray", on_click=W.dismiss_prompt),
+                rx.button("Switch And Rerun", on_click=W.switch_and_rerun),
+                spacing="3", justify="end", margin_top="1rem",
+            ),
+            max_width="440px",
+        ),
+        open=W.prompt_open,
+    )
+
+
 def account_menu() -> rx.Component:
     return rx.fragment(
         rx.menu.root(
@@ -118,9 +171,12 @@ def account_menu() -> rx.Component:
             ),
             rx.menu.content(
                 rx.menu.item("Change Password", on_click=A.open_change_password),
+                rx.menu.item("Webex Token", on_click=W.open_token),
                 rx.menu.separator(),
                 rx.menu.item("Sign Out", on_click=A.sign_out),
             ),
         ),
         change_password_dialog(),
+        webex_token_dialog(),
+        webex_denied_dialog(),
     )

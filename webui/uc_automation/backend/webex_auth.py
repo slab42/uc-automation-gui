@@ -162,6 +162,16 @@ def resolve(org: str) -> tuple[str, str]:
     return login, kv.get("org_id", "")
 
 
+def org_id_of(org: str) -> str:
+    """Org id of a saved org, without needing a login (for a personal token). Raises WebexAuthError."""
+    if not org:
+        raise WebexAuthError("No Webex org selected. Add one on Credentials > Webex.")
+    kv = ini_store.read_section(CREDENTIALS_PATH, _org_section(org))
+    if not kv:
+        raise WebexAuthError(f"Webex org {org} is not saved.")
+    return kv.get("org_id", "")
+
+
 def _int(value: str) -> int:
     try:
         return int(float(value))
@@ -307,10 +317,16 @@ def describe_login(name: str, token: str) -> list[str]:
     cfg = _config(name)
     scopes = (cfg.get("scopes") or DEFAULT_SCOPES).split()
     if cfg.get("auth_mode") == "token":
-        lines = [f"Webex login {name}: pasted token, its scopes are not known (it carries the scopes of the account it came from)"]
+        first = f"Webex login {name}: pasted token, its scopes are not known (it carries the scopes of the account it came from)"
     else:
-        lines = [f"Webex login {name}: OAuth, client_id {cfg.get('client_id') or '-'}, "
-                 f"{len(scopes)} scope(s): {' '.join(scopes)}"]
+        first = (f"Webex login {name}: OAuth, client_id {cfg.get('client_id') or '-'}, "
+                 f"{len(scopes)} scope(s): {' '.join(scopes)}")
+    return describe_token(token, first)
+
+
+def describe_token(token: str, first_line: str) -> list[str]:
+    """`first_line`, then who the token belongs to (admin roles and org). Never contains the token. Never raises."""
+    lines = [first_line]
     try:
         r = requests.get(ME_URL, headers={"Authorization": f"Bearer {token}"}, timeout=TIMEOUT)
         j = r.json() if r.status_code == 200 else {}

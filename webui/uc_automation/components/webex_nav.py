@@ -4,6 +4,7 @@ import reflex as rx
 
 from ..state.settings import SettingsState
 from ..state.webex_routing import WebexSession
+from ..state.webex_token import WebexTokenState
 from .access import group_visible, show_if
 from .layout import page
 from .org_picker import instance_select, org_select
@@ -59,6 +60,7 @@ GROUPS = [
     ]),
     ("Users", [
         ("Delete Users", DELETE_USERS, "user-x", "Delete users listed in a Control Hub CSV export."),
+        ("Migrate", MIGRATE, "arrow-right-left", "Move users to another location by phone number."),
         ("Reset PIN", RESET_PIN, "key-round", "Reset the voicemail PIN of one user or of users in a CSV."),
     ]),
     ("Workspaces", [
@@ -71,7 +73,6 @@ GROUPS = [
         ("Upgrade Calling License", UPGRADE_LICENSE, "badge-check",
          "Upgrade workspaces from the Common Area Workspace to the Professional Workspace license."),
         ("Add Device", ADD_WORKSPACE, "monitor-smartphone", "Add devices to workspaces by MAC address."),
-        ("Migrate", MIGRATE, "arrow-right-left", "Move users to another location by phone number."),
     ]),
     ("Devices", [
         ("Bulk ATA/VG", BULK_ATA, "cable",
@@ -100,6 +101,13 @@ GROUPS = [
 
 def _status(show_org: bool = True) -> rx.Component:
     return rx.hstack(
+        rx.cond(
+            WebexTokenState.use_personal,
+            rx.tooltip(
+                rx.badge("Personal Token", color_scheme="amber", cursor="pointer", on_click=WebexTokenState.switch_back),
+                content="Webex tasks use your personal token. Click to use the org login again.",
+            ),
+        ),
         *([
             org_select(WebexSession),
             rx.cond(
@@ -163,4 +171,6 @@ def menubar(show_org: bool = True) -> rx.Component:
 
 def webex_page(title: str, *children: rx.Component, show_org: bool = True) -> rx.Component:
     heading = title if title == "Webex" else f"Webex - {title}"
-    return page(heading, *children, subnav=menubar(show_org))
+    # Hidden ticker: after a task got a 403, offers the personal token (WebexSession.poll_denied)
+    ticker = rx.box(rx.moment(interval=3000, on_change=WebexSession.poll_denied), display="none")
+    return page(heading, ticker, *children, subnav=menubar(show_org))

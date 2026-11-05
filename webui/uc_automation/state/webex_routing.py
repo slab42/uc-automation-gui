@@ -6,7 +6,7 @@ from typing import Any
 
 import reflex as rx
 
-from ..backend import organizations as orgs, webex_auth, webex_routing as r
+from ..backend import organizations as orgs, webex_api, webex_auth, webex_routing as r
 from ..backend.applog import OpLog
 from ..backend.errors import UserError
 from ..backend.paste import PastedFile, no_at_or_digit
@@ -14,6 +14,7 @@ from ..backend.webex_locations import list_locations
 from ..backend.webex_api import WebexClient
 from .org import OrgState
 from .run_mixin import PanesMixin, RunMixin
+from .webex_token import WebexTokenState, mark_task, task_event
 
 WEBEX_WORKERS = 4  # bulk rows sent to Webex at once (429 responses are retried by WebexClient)
 
@@ -108,13 +109,48 @@ class WebexSession(OrgState):
         return log
 
     async def _connect(self, log: OpLog):
-        """A checked WebexClient, or None after showing why not (the caller then returns)."""
+        """A checked WebexClient for the active org, or None after showing why not (the caller then returns)."""
+        return await self._connect_org(self.webex_active, log)
+
+    async def _connect_org(self, org: str, log: OpLog | None = None):
+        """A checked WebexClient for a saved org, or None after showing why not (the caller then returns).
+
+        Uses the org's login, or the user's personal token once they switched to it after a 403 (the Webex Token
+        window opens first when that token is missing, over 6 hours old or expired). Marks the browser event that
+        started the task, so a 403 can rerun it."""
+        key = self.router.session.client_token
+        mark_task(key)
+        tokens = await self.get_state(WebexTokenState)
+        personal = ""
+        if tokens.use_personal:
+            personal = await tokens._personal_token()
+            if not personal:
+                if log is not None:
+                    log.error("The personal Webex token must be updated first.")
+                return None
         try:
-            return await asyncio.to_thread(WebexClient.connect, self.webex_active, log)
+            return await asyncio.to_thread(WebexClient.connect, org, log, personal, key)
         except UserError as e:
-            log.error(str(e))
+            if log is not None:
+                log.error(str(e))
             self.webex_ok, self.webex_message = False, str(e)
             return None
+
+    @rx.event
+    async def poll_denied(self, _tick: str = ""):
+        """Offer the personal token after a 403, once the task that got it has finished."""
+        key = self.router.session.client_token
+        tokens = await self.get_state(WebexTokenState)
+        if tokens.use_personal:
+            webex_api.clear_denied(key)
+            return
+        if tokens.prompt_open or not webex_api.denied_pending(key):
+            return
+        task = task_event(key)
+        if task is not None and getattr(await self.get_state(task.state_cls), "busy", False):
+            return  # still running: ask when it is done
+        webex_api.clear_denied(key)
+        tokens.prompt_open = True
 
 
 class PasteMixin(rx.State, mixin=True):

@@ -7,7 +7,6 @@ import reflex as rx
 from ..backend import cucm_connections, webex_auth, webex_cucm_gateway as gw, webex_cucm_migrate as cm, webex_devices as d, webex_workspaces as w
 from ..backend.applog import OpLog
 from ..backend.errors import UserError
-from ..backend.webex_api import WebexClient
 from ..backend.webex_locations import list_locations
 from ..backend.webex_tools import get_supported_devices, model_import_rows
 from .run_mixin import PanesMixin, RunMixin
@@ -428,9 +427,13 @@ class DeviceMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
             log.info(f"Source org: {src_name}, destination org: {dst_name}")
             if self._csv_name and not side:
                 log.info(f"CSV file: {self._csv_name}")
+            src = await self._connect_org(src_name, log)
+            dst = await self._connect_org(dst_name, log) if src is not None else None
+            if dst is None:
+                if not self.webex_ok:
+                    yield rx.toast.error(self.webex_message)
+                return
             try:
-                src = await asyncio.to_thread(WebexClient.connect, src_name)
-                dst = await asyncio.to_thread(WebexClient.connect, dst_name)
                 supported = await asyncio.to_thread(get_supported_devices, dst)
             except UserError as e:
                 log.error(str(e))
@@ -586,7 +589,11 @@ class CucmMigrateState(WebexSession, PanesMixin, RunMixin, PasteMixin):
                 conn = await asyncio.to_thread(cucm_connections.load, conn_name)
                 if conn is None:
                     raise UserError(f"CUCM connection {conn_name} is not saved. Add it on the Credentials page.")
-                client = await asyncio.to_thread(WebexClient.connect, org_name)
+                client = await self._connect_org(org_name, log)
+                if client is None:
+                    if not self.webex_ok:
+                        yield rx.toast.error(self.webex_message)
+                    return
                 supported = await asyncio.to_thread(get_supported_devices, client) if to_webex else {}
             except UserError as e:
                 log.error(str(e))

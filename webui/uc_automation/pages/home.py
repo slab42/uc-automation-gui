@@ -3,7 +3,7 @@ import reflex as rx
 from ..components.access import allowed, platform_visible
 from ..components.layout import page
 from ..components.search_input import search_input
-from ..config import APP_NAME, BUILD, PLATFORMS
+from ..config import APP_NAME, PLATFORMS
 from ..state.favorites import FavoritesState
 from ..state.search import SearchState
 from ..state.settings import SettingsState
@@ -176,7 +176,6 @@ def home() -> rx.Component:
                     width="100%",
                 ),
             ),
-            rx.text(f"Build {BUILD}", size="1", color="var(--gray-9)"),
             spacing="6",
             align="start",
             width="100%",

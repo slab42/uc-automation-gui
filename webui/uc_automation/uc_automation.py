@@ -76,6 +76,7 @@ from .state.devices import (
     SoftkeyTemplatesState,
 )
 from .state.auth_guard import AuthGuard
+from .state.webex_token import TaskRecorder
 from .state.logs import LogsState
 from .state.settings import SettingsState
 from .state.users import UsersState
@@ -118,6 +119,7 @@ app = rx.App(
 )
 
 app.add_middleware(AuthGuard())  # drops every event from a browser that is not signed in
+app.add_middleware(TaskRecorder())  # remembers the Webex task event so a 403 can offer a rerun
 
 app.add_page(home, route="/", title=APP_NAME)
 app.add_page(users_page, route="/users", title=f"Users | {APP_NAME}", on_load=UsersState.on_page_load)
