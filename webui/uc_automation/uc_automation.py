@@ -212,9 +212,13 @@ for _route, _title, _page, _state in [
     app.add_page(_page, route=_route, title=f"RedSky {_title} | {APP_NAME}",
                  on_load=[RedskyState.load_connections, _state.load_lookups])
 for _route, _title, _page in [
-    ("/redsky/entire-site", "Check Entire Site", rs_pages.entire_site),
+    ("/redsky/primary-location", "Check Primary Location Exists", rs_pages.primary_location),
     ("/redsky/alerts-check", "Check All Buildings", rs_pages.alerts_check),
     ("/redsky/import-precheck", "Import Precheck", rs_pages.import_precheck),
+    ("/redsky/duplicate-buildings", "Find Duplicate Buildings", rs_pages.duplicate_buildings),
+    ("/redsky/duplicates-remediate", "Remediate Duplicate Buildings", rs_pages.duplicates_remediate),
+    ("/redsky/no-locations", "Find Buildings Without Locations", rs_pages.no_locations),
+    ("/redsky/no-tracking", "Find Locations Without Device Tracking", rs_pages.no_tracking),
 ]:
     app.add_page(_page, route=_route, title=f"RedSky {_title} | {APP_NAME}", on_load=RedskyState.load_connections)
 app.add_page(cucm_home, route="/cucm", title=f"CUCM | {APP_NAME}", on_load=CucmState.load_connections)

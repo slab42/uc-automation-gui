@@ -6,11 +6,12 @@ new tool is a spec plus a few lines here and a page builder call.
 """
 
 import asyncio
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import reflex as rx
 
-from ..backend import redsky_alerts as alerts, redsky_geography as geo, redsky_networking as net, redsky_precheck as pre
+from ..backend import (redsky_alerts as alerts, redsky_audit as audit, redsky_geography as geo, redsky_networking as net,
+                       redsky_precheck as pre)
 from ..backend.applog import OpLog
 from ..backend.errors import UserError
 from ..backend.redsky_api import RedskyClient
@@ -140,6 +141,11 @@ class RedskyCheck(rx.State, mixin=True):
     total: int = 0
     problems: list[dict[str, str]] = []
     error: str = ""
+    input_value: str = ""
+
+    @rx.event
+    def set_input_value(self, value: str):
+        self.input_value = value
 
     @rx.event
     async def run_check(self):
@@ -148,6 +154,10 @@ class RedskyCheck(rx.State, mixin=True):
         if conn is None:
             yield rx.toast.error(_NO_CONNECTION)
             return
+        args = (self.input_value,) if spec.input_label else ()
+        if spec.input_label and not self.input_value.strip():
+            yield rx.toast.error(f"Enter the {spec.input_label.lower()} first.")
+            return
         self.checking = True
         self.checked = False
         self.error = ""
@@ -155,9 +165,11 @@ class RedskyCheck(rx.State, mixin=True):
         yield
         log = self._tool_log(f"RedSky {spec.title}", f"redsky-{spec.slug}", conn)
         try:
+            if args:
+                log.info(f"{spec.input_label}: {self.input_value}")
             try:
                 client = await asyncio.to_thread(RedskyClient, conn.username, conn.password, conn.org_id)
-                total, problems = await asyncio.to_thread(spec.run, client)
+                total, problems = await asyncio.to_thread(spec.run, client, *args)
             except UserError as e:
                 self.error = str(e)
                 log.error(str(e))
@@ -193,8 +205,16 @@ class AddLocationsState(RedskyState, RedskyBulk):
     row: dict[str, str] = _blank(geo.LOCATIONS_ADD)
 
 
-class EntireSiteState(RedskyState, RedskyCheck):
-    CHECK = geo.ENTIRE_SITE
+class PrimaryLocationState(RedskyState, RedskyCheck):
+    CHECK = audit.PRIMARY_LOCATION
+
+
+class NoLocationsState(RedskyState, RedskyCheck):
+    CHECK = audit.NO_LOCATIONS
+
+
+class NoTrackingState(RedskyState, RedskyCheck):
+    CHECK = audit.NO_TRACKING
 
 
 class AddAlertsState(RedskyState, RedskyBulk):
@@ -317,3 +337,181 @@ class PrecheckState(RedskyState, PasteMixin):
         keys = [k for k, _h in pre.columns(self.result_kind)]
         data = csv_bytes(keys, [[r[k] for k in keys] for r in self.found])
         return rx.download(data=data, filename=f"redsky_import_precheck_{self.result_kind.lower().replace(' ', '_')}.csv")
+
+
+class DuplicatesState(RedskyState):
+    """Find Duplicate Buildings: Buildings that share an address, optionally with their tracking."""
+
+    checking: bool = False
+    checked: bool = False
+    error: str = ""
+    total: int = 0
+    rows: list[dict[str, str]] = []
+
+    @rx.var
+    def group_count(self) -> int:
+        return len({r["group"] for r in self.rows})
+
+    @rx.event
+    async def run_find(self):
+        conn = self._conn()
+        if conn is None:
+            yield rx.toast.error(_NO_CONNECTION)
+            return
+        self.checking, self.checked, self.error, self.rows = True, False, "", []
+        yield
+        log = self._tool_log("RedSky Find Duplicate Buildings", "redsky-duplicate-buildings", conn)
+        try:
+            try:
+                client = await asyncio.to_thread(RedskyClient, conn.username, conn.password, conn.org_id)
+                total, rows, _groups = await asyncio.to_thread(audit.find_duplicates, client)
+            except UserError as e:
+                self.error = str(e)
+                log.error(str(e))
+                return
+            except Exception as e:
+                self.error = f"Unexpected error: {e}"
+                log.error(f"Failed unexpectedly: {e!r}")
+                return
+            finally:
+                self.checking = False
+            self.total, self.rows, self.checked = total, rows, True
+            log.info(f"{len({r['group'] for r in rows})} duplicate group(s) in {total} building(s)")
+            for r in rows:
+                log.info(f"Group {r['group']}: {r['building']} ({r['address']}), {r['locations']} location(s)")
+        finally:
+            log.close()
+
+    @rx.event
+    def export_excel(self):
+        data = audit.duplicate_workbook(self.rows)
+        return rx.download(data=data, filename="redsky_duplicate_buildings.xlsx")
+
+
+class RemediateState(RedskyState, RunMixin):
+    """Remediate Duplicate Buildings: pick the Building to keep per address, preview, then move and delete."""
+
+    scanning: bool = False
+    scanned: bool = False
+    error: str = ""
+    groups: list[dict[str, Any]] = []
+    planning: bool = False
+    previewed: bool = False
+    preview: list[dict[str, str]] = []
+    confirm_open: bool = False
+
+    @rx.event
+    def set_confirm_open(self, value: bool):
+        self.confirm_open = value
+
+    @rx.var
+    def dup_count(self) -> int:
+        return sum(len(g["options"]) - 1 for g in self.groups)
+
+    def _choices(self) -> list[tuple[str, list[str]]]:
+        out = []
+        for g in self.groups:
+            keep_id = g["ids"][g["options"].index(g["keep"])]
+            out.append((keep_id, [i for i in g["ids"] if i != keep_id]))
+        return out
+
+    @rx.event
+    def set_keep(self, group_id: str, label: str):
+        self.groups = [{**g, "keep": label} if g["id"] == group_id else g for g in self.groups]
+        self.previewed, self.preview = False, []
+
+    @rx.event
+    async def scan(self):
+        conn = self._conn()
+        if conn is None:
+            yield rx.toast.error(_NO_CONNECTION)
+            return
+        self.scanning, self.scanned, self.error = True, False, ""
+        self.groups, self.preview, self.previewed = [], [], False
+        yield
+        log = self._tool_log("RedSky Remediate Duplicate Buildings: scan", "redsky-duplicates-scan", conn)
+        try:
+            try:
+                client = await asyncio.to_thread(RedskyClient, conn.username, conn.password, conn.org_id)
+                buildings, locs = await asyncio.to_thread(audit.locations_of, client)
+                audit.require_addresses(buildings)
+                groups = audit.duplicate_groups(buildings)
+            except UserError as e:
+                self.error = str(e)
+                log.error(str(e))
+                return
+            except Exception as e:
+                self.error = f"Unexpected error: {e}"
+                log.error(f"Failed unexpectedly: {e!r}")
+                return
+            finally:
+                self.scanning = False
+            self.groups = audit.group_options(groups, locs)
+            self.scanned = True
+            log.info(f"{len(groups)} duplicate group(s) in {len(buildings)} building(s)")
+        finally:
+            log.close()
+
+    @rx.event
+    async def make_preview(self):
+        conn = self._conn()
+        if conn is None:
+            yield rx.toast.error(_NO_CONNECTION)
+            return
+        choices = self._choices()
+        self.planning, self.error, self.previewed = True, "", False
+        yield
+        log = self._tool_log("RedSky Remediate Duplicate Buildings: preview", "redsky-duplicates-preview", conn)
+        try:
+            try:
+                client = await asyncio.to_thread(RedskyClient, conn.username, conn.password, conn.org_id)
+                plans, locs, tracking = await asyncio.to_thread(audit.build_plans, client, choices)
+                rows = audit.preview_rows(plans, locs, tracking)
+            except UserError as e:
+                self.error = str(e)
+                log.error(str(e))
+                return
+            except Exception as e:
+                self.error = f"Unexpected error: {e}"
+                log.error(f"Failed unexpectedly: {e!r}")
+                return
+            finally:
+                self.planning = False
+            self.preview, self.previewed = rows, True
+            for r in rows:
+                log.info(f"Keep {r['keep']}, delete {r['duplicate']}: {r['locations']} location(s), "
+                         f"{r['macs']} MAC, {r['lldp']} LLDP, {r['bssids']} BSSID, {r['ips']} Private IP")
+        finally:
+            log.close()
+
+    @rx.event
+    async def remediate(self):
+        self.confirm_open = False
+        conn = self._conn()
+        if conn is None:
+            yield rx.toast.error(_NO_CONNECTION)
+            return
+        if self.busy or not self.previewed:
+            return
+        choices = self._choices()
+        log = self._tool_log("RedSky Remediate Duplicate Buildings", "redsky-duplicates-remediate", conn)
+        try:
+            try:
+                client = await asyncio.to_thread(RedskyClient, conn.username, conn.password, conn.org_id)
+                plans, locs, tracking = await asyncio.to_thread(audit.build_plans, client, choices)
+                items = audit.remediation_items(client, plans, locs, tracking)
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            except Exception as e:
+                log.error(f"Failed unexpectedly: {e!r}")
+                yield rx.toast.error(f"Unexpected error: {e}")
+                return
+            yield self._start_run(items, "Remediating", log, then="_after_remediate")
+        finally:
+            log.close()
+
+    def _after_remediate(self, log: OpLog):
+        self.groups, self.preview, self.previewed, self.scanned = [], [], False, False
+        log.info("Scan again to see what is left")

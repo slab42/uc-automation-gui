@@ -55,8 +55,11 @@ class CheckSpec:
     noun: str  # "building"
     blurb: str
     columns: tuple[tuple[str, str], ...]  # (row key, header), also the CSV columns
-    run: Callable[[RedskyClient], tuple[int, list[dict[str, str]]]]  # -> (items checked, problem rows)
+    run: Callable[..., tuple[int, list[dict[str, str]]]]  # (client[, input]) -> (items checked, problem rows)
     ok_message: str = ""
+    input_label: str = ""  # when set the page asks for a value and run gets it as its second argument
+    input_hint: str = ""
+    input_placeholder: str = ""
 
 
 def read_rows(data: bytes, width: int) -> list[list[str]]:

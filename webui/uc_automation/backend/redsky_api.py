@@ -131,8 +131,9 @@ class RedskyClient:
         building = data.get("orgUnitTO") or {}
         return f"Created building {building.get('name', name)} (id {building.get('id', '?')})"
 
-    def add_location(self, name: str, parent_id: str, **optional: str) -> str:
-        """optional: fullAddress, info, alternateId, callbackNumber, htmlLinkUrl, htmlLinkName, orgNameOverride."""
+    def create_location(self, name: str, parent_id: str, **optional: str) -> tuple[str, str]:
+        """Create a location. optional: fullAddress, info, alternateId, callbackNumber, htmlLinkUrl, htmlLinkName,
+        orgNameOverride. Returns (id, name)."""
         payload = {"name": name, "organizationUnitId": parent_id}
         payload.update({k: v for k, v in optional.items() if v})
         data = self._ok(self._request("POST", "/geography-service/locations", json=payload)).json()
@@ -140,7 +141,19 @@ class RedskyClient:
         erl = data.get("erlTO")
         if not erl:
             raise RedskyError("Response missing erlTO")
-        return f"Created location {erl.get('name', name)} (id {erl.get('id', '?')})"
+        return erl.get("id", ""), erl.get("name", name)
+
+    def add_location(self, name: str, parent_id: str, **optional: str) -> str:
+        new_id, new_name = self.create_location(name, parent_id, **optional)
+        return f"Created location {new_name} (id {new_id or '?'})"
+
+    def delete_location(self, location_id: str) -> None:
+        """Unverified path (not in the reference JSON): DELETE /geography-service/locations/{id}."""
+        self._ok(self._request("DELETE", f"/geography-service/locations/{location_id}"))
+
+    def delete_building(self, building_id: str) -> None:
+        """Unverified path (not in the reference JSON): DELETE /geography-service/buildings/{id}."""
+        self._ok(self._request("DELETE", f"/geography-service/buildings/{building_id}"))
 
     # --- networking ---
 
@@ -167,6 +180,82 @@ class RedskyClient:
         if masking is not None:
             payload["bssidMasking"] = masking
         return self._create("/networking-service/bssid", payload, f"BSSID {bssid}")
+
+    def _list_first(self, what: str, attempts: list[tuple[str, dict]]) -> tuple[list[dict], str]:
+        """List from the first endpoint that answers. Returns (items, path used). The list endpoints are not in the
+        reference JSON, so a few likely shapes are tried in turn."""
+        errors = []
+        for path, params in attempts:
+            try:
+                return self._list_paged(path, params), path
+            except RedskyError as e:
+                errors.append(f"{path}: {e}")
+        raise RedskyError(f"Could not list the {what}. Tried: " + " | ".join(errors))
+
+    def list_bssids(self) -> list[dict]:
+        org = self.org_id
+        found, _ = self._list_first("BSSIDs", [
+            (f"/networking-service/bssid/company/{org}", {"sortBy": "bssid"}),
+            (f"/networking-service/bssid/company/{org}", {}),
+            ("/networking-service/bssid", {"orgId": org}),
+        ])
+        return found
+
+    def list_static_macs(self) -> list[dict]:
+        org = self.org_id
+        found, _ = self._list_first("static MAC addresses", [
+            (f"/networking-service/macAddress/company/{org}", {"sortBy": "macAddress"}),
+            (f"/networking-service/macAddress/company/{org}", {}),
+            (f"/networking-service/mac/company/{org}", {}),
+            (f"/networking-service/staticMac/company/{org}", {}),
+        ])
+        return found
+
+    def list_network_switch_ports(self) -> list[dict]:
+        """Switch ports. The list path is not in the reference JSON. Tries ports embedded in the switch records, a
+        company-wide list, then per-switch lists (the first path that answers for the first switch is used for all)."""
+        switches = self.list_network_switches()
+        embedded = [(sw, key) for sw in switches for key in ("ports", "networkSwitchPorts", "switchPorts")
+                    if isinstance(sw.get(key), list)]
+        if embedded:
+            return [{**port, "networkSwitchId": sw["id"], "chassisId": sw.get("chassisId", "")}
+                    for sw, key in embedded for port in sw[key]]
+        org = self.org_id
+        errors = []
+        try:
+            return self._list_paged(f"/networking-service/networkSwitchPort/company/{org}", {})
+        except RedskyError as e:
+            errors.append(f"company list: {e}")
+        if not switches:
+            return []
+        patterns = [("/networking-service/networkSwitchPort/networkSwitch/{id}", {}),
+                    ("/networking-service/networkSwitchPort/switch/{id}", {}),
+                    ("/networking-service/networkSwitchPort/parent/{id}", {}),
+                    ("/networking-service/networkSwitch/{id}/ports", {}),
+                    ("/networking-service/networkSwitchPort", {"networkSwitchId": "{id}"}),
+                    ("/networking-service/networkSwitchPort", {"switchId": "{id}"})]
+        chosen = None
+        for path, params in patterns:
+            try:
+                self._list_paged(path.format(id=switches[0]["id"]),
+                                 {k: v.format(id=switches[0]["id"]) for k, v in params.items()})
+                chosen = (path, params)
+                break
+            except RedskyError as e:
+                errors.append(f"{path} {params}: {str(e)[:80]}")
+        if chosen is None:
+            raise RedskyError("Could not list the LLDP switch ports. Tried: " + " | ".join(errors))
+        found = []
+        for sw in switches:
+            ports = self._list_paged(chosen[0].format(id=sw["id"]),
+                                     {k: v.format(id=sw["id"]) for k, v in chosen[1].items()})
+            found.extend({**port, "networkSwitchId": sw["id"], "chassisId": sw.get("chassisId", "")} for port in ports)
+        return found
+
+    def update_tracking(self, base_path: str, item: dict) -> None:
+        """PUT the whole record back to its collection path (RedSky updates with PUT on the base path, as the
+        reference JSON shows for other services). Unverified for networking."""
+        self._ok(self._request("PUT", base_path, json=item, params={"companyId": self.org_id}))
 
     def list_ip_ranges(self) -> list[dict]:
         """Private IP ranges of the organization. The list endpoint is not documented in the reference JSON, so a few

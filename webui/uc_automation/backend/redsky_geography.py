@@ -1,9 +1,7 @@
-"""RedSky Buildings and Locations: Add Buildings, Add Locations, Check Entire Site."""
+"""RedSky Buildings and Locations: Add Buildings, Add Locations."""
 
 from .redsky_api import RedskyClient, RedskyError
-from .redsky_common import AddSpec, CheckSpec, Field, normalize
-
-SUFFIX = " - Entire Site"
+from .redsky_common import AddSpec, Field
 
 
 def _add_building(client: RedskyClient, _ctx, row: dict[str, str]) -> str:
@@ -66,27 +64,4 @@ LOCATIONS_ADD = AddSpec(
              "contains commas, or separate the columns with a tab or | instead.",
     example="name,building,fullAddress,info,alternateId,callbackNumber,htmlLinkUrl,htmlLinkName,orgNameOverride\n"
             "Room 101,HQ Building,,Floor 1 East,,+12175550100,,,\n",
-)
-
-
-def _check_entire_site(client: RedskyClient) -> tuple[int, list[dict[str, str]]]:
-    """Buildings without a '<Building Name> - Entire Site' location."""
-    buildings = client.list_buildings()
-    missing = []
-    for building in buildings:
-        name = building.get("name", "").strip()
-        expected = f"{name}{SUFFIX}"
-        if not any(normalize(loc.get("name", "")) == normalize(expected)
-                   for loc in client.list_locations(building["id"])):
-            missing.append({"building": name, "buildingId": building["id"], "expectedLocation": expected})
-    return len(buildings), missing
-
-
-ENTIRE_SITE = CheckSpec(
-    slug="entire-site", title="Check Entire Site", noun="building",
-    blurb='Check that every Building has a location named "<Building Name> - Entire Site". '
-          "The name is matched case-insensitively, ignoring extra spaces.",
-    columns=(("building", "Building"), ("buildingId", "Building ID"), ("expectedLocation", "Expected location")),
-    run=_check_entire_site,
-    ok_message='Every building has a "<Building Name> - Entire Site" location.',
 )

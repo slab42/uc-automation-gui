@@ -10,7 +10,7 @@ _SOURCES = [("CUCM", cucm_nav.GROUPS), ("CUC", cuc_nav.GROUPS), ("UCCX", uccx_na
 
 INDEX: list[dict[str, str]] = [
     {"platform": platform, "section": section, "label": label, "description": desc, "route": route, "icon": icon,
-     "dev": "1" if route in webex_nav.IN_DEVELOPMENT | cucm_nav.IN_DEVELOPMENT else ""}
+     "dev": "1" if route in webex_nav.IN_DEVELOPMENT | cucm_nav.IN_DEVELOPMENT | redsky_nav.IN_DEVELOPMENT else ""}
     for platform, groups in _SOURCES
     for section, items in groups
     for label, route, icon, desc in items

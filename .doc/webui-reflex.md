@@ -52,7 +52,7 @@ backend/cube_credentials.py  named router credential sets ([CUBE:<name>]: userna
 backend/redsky_connections.py  saved RedSky connections ([REDSKY:<name>]: username, password, org_id)
 backend/redsky_api.py        RedskyError, RedskyClient (login, 15 min token renewal, geography/networking/alert calls; raises RedskyError), `check_login`
 backend/redsky_common.py     Field / AddSpec / CheckSpec (one spec drives form, CSV template, parser and run loop), CSV rows, location lookup
-backend/redsky_geography.py  Add Buildings, Add Locations, Check Entire Site specs
+backend/redsky_geography.py  Add Buildings, Add Locations specs
 backend/redsky_precheck.py   Import Precheck: parse pasted/CSV names or IP ranges, check Buildings, Locations or Private IP ranges against RedSky
 backend/redsky_alerts.py     Add Alerts, Check All Buildings specs
 backend/redsky_networking.py BSSID, LLDP, Private IP, Public IP specs
@@ -249,8 +249,7 @@ uc_automation.py             app + every add_page()
 
 ### RedSky features
 
-- Menu (`components/redsky_nav.GROUPS`, also the `/redsky` home cards): **Buildings And Locations** = Add Buildings, Add Locations,
-  Check Entire Site; **Tools** = Import Precheck; **Alerts** = Add Alerts, Check All Buildings; **Tracking** = BSSID, LLDP, Private IP, Public IP.
+- Menu (`components/redsky_nav.GROUPS`, also the `/redsky` home cards): **Buildings And Locations** = Add Buildings, Add Locations; **Tools** = Import Precheck, Remediate Duplicate Buildings (in development, `redsky_nav.IN_DEVELOPMENT`: hidden unless the Experimental setting is on); **Alerts** = Add Alerts, Check All Buildings; **Tracking** = BSSID, LLDP, Private IP, Public IP; **Reports** (last) = Check Primary Location Exists, Find Duplicate Buildings, Find Buildings Without Locations, Find Locations Without Device Tracking.
   One active connection (picker in the menu bar, shared with the Credentials tab). Port of `redsky/*.py` (reference only).
 - **Add tools** share one page (`add_page`) built from an `AddSpec`: a single entry form (one field per CSV column, suggestions
   for buildings, locations, alert types and templates), then Paste Text (first) and CSV tabs that go through the same handler,
@@ -271,6 +270,30 @@ uc_automation.py             app + every add_page()
   browser download. Private IPs results have their own columns: Name, Status, Building and Address (of the Location the existing range is tied to), Location, Range (the existing range it matches or overlaps). Logged as one operation. The Private IP list call (`RedskyClient.list_ip_ranges`, `GET
   /networking-service/ipRange/company/{org}`) is a guess by analogy with the switch list: the reference JSON has no networking
   endpoints, so verify the path and the location field on a real tenant.
+- **Audit** (`backend/redsky_audit.py`, menus **Reports** and **Tools**). Device tracking = static MACs, LLDP (switches and ports), BSSIDs and
+  Private IP ranges, each tied to a Location; a Building's tracking is that of its Locations (`collect_tracking`).
+  - **Find Duplicate Buildings** (`/redsky/duplicate-buildings`, `DuplicatesState`): Buildings grouped by address (`same_address`),
+    one row per Building on screen. The export is an Excel file
+    (`duplicate_workbook`, openpyxl): Group, Building, Correct Building Name (TRUE/FALSE dropdown, FALSE by default, red when a group
+    has more than one TRUE: a list dropdown cannot also enforce that), Address, Locations (count), then one `Location N` column per Location name. A Building name is yellow (also on screen) when a
+    Location name from its group, at least 3 characters and not equal to the Building name, is contained in it
+    (`suspect_building_name`): a Building name with a Location glued on.
+  - **Remediate Duplicate Buildings** (`/redsky/duplicates-remediate`, `RemediateState`): Find Duplicates, pick the Building to keep per
+    address (default: most Locations), Preview (counts only, nothing changed), then Remediate behind a confirm dialog. Per Location of
+    a duplicate: find the same-name Location in the kept Building (`<dup> - Entire Site` maps to `<kept> - Entire Site`) or create it,
+    PUT each tracking record onto it, delete the old Location; then delete the duplicate Building, only if every step before it worked.
+    Each step is a row of the run result table. The plan is read from RedSky again when Remediate starts.
+  - **Check Primary Location Exists** (`/redsky/primary-location`, `PrimaryLocationState`): a `CheckSpec` with an input (`input_label`; the page asks
+    for a value passed to `run`). The user types the primary Location name, `{building}` standing for the Building's name; Buildings with no
+    Location of that name (case-insensitive) are listed with their address and the name expected. Nothing is hard-coded to "Entire Site".
+  - **Find Buildings Without Locations** (`/redsky/no-locations`) and **Find Locations Without Device Tracking** (`/redsky/no-tracking`)
+    are `CheckSpec` pages. The tracking check stops with an error if any of the four lists cannot be read, so a Location is never
+    reported untracked because a list was missing.
+  - Unverified against a real tenant: the reference JSON has no networking or geography endpoints. Guessed: list paths for static
+    MACs (`/networking-service/macAddress/company/{org}` and variants), BSSIDs and switch ports (`RedskyClient._list_first` tries
+    several), PUT on the collection path to move a tracking record, DELETE `/geography-service/locations/{id}` and `/buildings/{id}`,
+    and the location field on a record (`locationId`, `erlId` or a nested `location`/`erl`). Check these on a real tenant before
+    running Remediate. Run against a fake client only (duplicates, both checks, preview and remediation steps).
 - Add a tool: a spec in `backend/redsky_*.py`, `class XState(RedskyState, RedskyBulk)` (or `RedskyCheck`) with `SPEC`/`CHECK`
   and `row`, one page function calling `add_page`/`check_page` with the spec object (not `State.SPEC`, which is a Var),
   an entry in `GROUPS` and an `add_page` in `uc_automation.py`.
