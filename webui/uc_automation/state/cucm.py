@@ -27,6 +27,7 @@ class CucmState(OrgState):
     form_username: str = ""
     form_org: str = ""
     form_subs: list[dict[str, str]] = []
+    form_sme: bool = False
     sub_host: str = ""
     sub_em: bool = False
     _password: str = ""
@@ -115,6 +116,7 @@ class CucmState(OrgState):
         self.form_username = c["username"]
         self.form_org = c.get("org", "")
         self.form_subs = cucm_connections.parse_subscribers(c.get("subscribers", ""))
+        self.form_sme = c.get("sme", "no") == "yes"
         self.sub_host = ""
         self.sub_em = False
         self.form_has_password = c["has_password"] == "yes"
@@ -128,6 +130,7 @@ class CucmState(OrgState):
         self.form_name = self.form_server = self.form_username = ""
         self.form_org = self._default_org()
         self.form_subs = []
+        self.form_sme = False
         self.sub_host = ""
         self.sub_em = False
         self.form_has_password = False
@@ -141,6 +144,10 @@ class CucmState(OrgState):
         setattr(self, f"form_{field}", value.strip())
         self.test_ok = False
         self.test_message = ""
+
+    @rx.event
+    def set_sme(self, checked: bool):
+        self.form_sme = checked
 
     @rx.event
     def set_sub_host(self, value: str):
@@ -199,9 +206,10 @@ class CucmState(OrgState):
         log = OpLog("Save connection", "credentials-save")
         try:
             log.info(f"Saving connection {self.form_name} ({self.form_server}) as {self.form_username} in organization {self.form_org}")
+            log.info(f"SME cluster: {'yes' if self.form_sme else 'no'}")
             log.info(f"Subscribers: {cucm_connections.format_subscribers(self.form_subs) or 'none'}")
             cucm_connections.save(self.form_name, self.form_server, self.form_username, self._password,
-                                  org=self.form_org, subscribers=self.form_subs)
+                                  org=self.form_org, subscribers=self.form_subs, sme=self.form_sme)
             cucm_axl.forget(self.form_server)
         finally:
             log.close()
@@ -253,7 +261,7 @@ class CucmState(OrgState):
                 return
             cucm_connections.save(self.form_name, self.form_server, self.form_username,
                                   self._password, version=major, schema_version=schema, org=self.form_org,
-                                  subscribers=self.form_subs)
+                                  subscribers=self.form_subs, sme=self.form_sme)
             cucm_axl.forget(self.form_server)
             self._after_save()
             self.testing = False

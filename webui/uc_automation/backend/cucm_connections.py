@@ -2,7 +2,7 @@
 
 Keys: server, username, password, version (detected CUCM major release),
 schema_version (AXL schema folder used for that release), subscribers (comma separated
-`host` or `host|em`, `|em` marks a subscriber running Extension Mobility).
+`host` or `host|em`, `|em` marks a subscriber running Extension Mobility), sme (`yes` when the cluster is a SME cluster).
 """
 
 from dataclasses import dataclass, field
@@ -20,6 +20,7 @@ class CucmConnection:
     version: str = ""
     schema_version: str = ""
     subscribers: list[dict[str, str]] = field(default_factory=list)
+    sme: bool = False
 
 
 def parse_subscribers(raw: str) -> list[dict[str, str]]:
@@ -55,6 +56,7 @@ def list_public() -> list[dict[str, str]]:
             "schema_version": f.get("schema_version", ""),
             "org": f.get("org", ""),
             "subscribers": f.get("subscribers", ""),
+            "sme": "yes" if f.get("sme", "").lower() == "yes" else "no",
             "has_password": "yes" if s["secrets"].get("password") else "no",
         })
     return out
@@ -72,19 +74,23 @@ def load(name: str) -> CucmConnection | None:
         version=kv.get("version", ""),
         schema_version=kv.get("schema_version", ""),
         subscribers=parse_subscribers(kv.get("subscribers", "")),
+        sme=kv.get("sme", "").lower() == "yes",
     )
 
 
 def save(name: str, server: str, username: str, password: str | None,
          version: str | None = None, schema_version: str | None = None,
-         org: str | None = None, subscribers: list[dict[str, str]] | None = None) -> None:
-    """password None/'' keeps the stored one. subscribers None keeps the stored list. Changing server/username clears stale version info."""
+         org: str | None = None, subscribers: list[dict[str, str]] | None = None,
+         sme: bool | None = None) -> None:
+    """password None/'' keeps the stored one. subscribers/sme None keep the stored value. Changing server/username clears stale version info."""
     old = load(name)
     values: dict[str, str | None] = {"server": server, "username": username}
     if org is not None:
         values["org"] = org
     if subscribers is not None:
         values["subscribers"] = format_subscribers(subscribers)
+    if sme is not None:
+        values["sme"] = "yes" if sme else "no"
     if password:
         values["password"] = password
     elif old is None:

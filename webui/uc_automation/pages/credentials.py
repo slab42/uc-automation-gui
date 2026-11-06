@@ -100,7 +100,7 @@ def _subscribers(S) -> rx.Component:
 
 
 def _form(S, placeholder: str, server_hint: str, subscribers: bool = False, title: str = "Connection",
-          subscriber: bool = False) -> rx.Component:
+          subscriber: bool = False, sme: bool = False) -> rx.Component:
     return rx.card(
         rx.vstack(
             rx.heading(title, size="4"),
@@ -122,6 +122,7 @@ def _form(S, placeholder: str, server_hint: str, subscribers: bool = False, titl
                 server_hint,
             ),
             _subscribers(S) if subscribers else rx.fragment(),
+            rx.checkbox("SME cluster", checked=S.form_sme, on_change=S.set_sme) if sme else rx.fragment(),
             _field(
                 "Subscriber",
                 rx.input(
@@ -182,9 +183,9 @@ def _form(S, placeholder: str, server_hint: str, subscribers: bool = False, titl
 
 def _conn_tab(S, placeholder: str, server_hint: str, tested: bool = True, subscribers: bool = False,
               title: str = "Connection", saved_title: str = "Saved Connections",
-              subscriber: bool = False) -> rx.Component:
+              subscriber: bool = False, sme: bool = False) -> rx.Component:
     return rx.grid(
-        _form(S, placeholder, server_hint, subscribers, title, subscriber),
+        _form(S, placeholder, server_hint, subscribers, title, subscriber, sme),
         rx.vstack(
             rx.heading(saved_title, size="4"),
             rx.cond(
@@ -207,7 +208,7 @@ def _conn_tab(S, placeholder: str, server_hint: str, tested: bool = True, subscr
 
 def _cucm_tab() -> rx.Component:
     return _conn_tab(CucmState, "e.g. lab-cucm", "The publisher. AXL is reached on port 8443.", subscribers=True, title="Clusters",
-                     saved_title="Saved Clusters")
+                     saved_title="Saved Clusters", sme=True)
 
 
 def _cuc_tab() -> rx.Component:

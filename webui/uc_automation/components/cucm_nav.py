@@ -32,7 +32,7 @@ DEVICE_REPORT = "/cucm/device-report"
 POOL_EXPORT = "/cucm/device-export-webex"
 
 # Hidden unless Settings > experimental is on; amber badge in the menu
-IN_DEVELOPMENT = {DEVICE_REPORT, POOL_EXPORT}
+IN_DEVELOPMENT = {POOL_EXPORT}
 
 # (menu label, [(item label, route, icon, description)])
 GROUPS = [

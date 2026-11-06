@@ -63,8 +63,6 @@ def device_report() -> rx.Component:
                           disabled=S.raw_rows.length() == 0),
                 align="center", spacing="3", wrap="wrap", width="100%",
             ),
-            rx.callout("This report is still under development. The registration and gateway lookups have not been "
-                       "tested against a real CUCM.", icon="construction", color_scheme="amber", width="100%"),
             rx.hstack(
                 rx.text("Devices:", size="2", weight="bold"),
                 rx.foreach(S.all_kinds, lambda k: rx.checkbox(
