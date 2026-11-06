@@ -3,6 +3,8 @@
 import asyncio
 from datetime import datetime
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import cuc_api, cuc_users as u
@@ -25,6 +27,8 @@ def _stamp() -> str:
 
 class _Lookup(CucRun, PasteMixin, mixin=True):
     """Look up the mailbox of each extension in a pasted list or CSV and keep one row per found user."""
+
+    output_fields: ClassVar[tuple[str, ...]] = ("rows",)
 
     paste_ext: str = ""
     rows: list[dict[str, str]] = []
@@ -83,6 +87,8 @@ class AllRows(CucRun, mixin=True):
     """The "All" tab of a CUC page: every row read once, then searched, ticked and exported or acted on.
 
     Rows need an objectId. Users are the default; override _read_all, _load_label and _search_fields for other lists."""
+
+    output_fields: ClassVar[tuple[str, ...]] = ("all_rows", "all_error", "all_failed", "all_for")
 
     all_rows: list[dict[str, str]] = []
     all_loading: bool = False
@@ -264,6 +270,8 @@ class UsageCheckState(CucState, _Lookup, AllRows):
 
 class RemoveEmptyState(CucState, PasteMixin, AllRows):
     """Two steps: scan the extensions (read only), then delete the user accounts whose mailbox is empty."""
+
+    output_fields: ClassVar[tuple[str, ...]] = ("empty", "keep", "scanned", "_uris")
 
     paste_ext: str = ""
     empty: list[dict[str, str]] = []      # extension, alias, mailboxSize

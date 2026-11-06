@@ -2,6 +2,8 @@
 
 import asyncio
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import webex_users as u, webex_voicemail as vm, webex_workspaces as w
@@ -660,6 +662,8 @@ class UpgradeLicenseState(WebexSession, PanesMixin, RunMixin, PasteMixin):
 
 
 class GetWorkspaceState(WebexSession, RunMixin):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("summary", "settings", "unread", "raw", "shown")
     form_workspace: str = ""
     form_location: str = ""
     workspace_names: list[str] = []
@@ -865,6 +869,8 @@ class AddWorkspaceState(WebexSession, PanesMixin, RunMixin, PasteMixin):
 
 
 class MigrateState(WebexSession, RunMixin, PickerMixin):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("plan_rows",)
     numbers_text: str = ""
     plan_rows: list[dict[str, str]] = []
     plan_location: str = ""
@@ -969,6 +975,8 @@ class MigrateState(WebexSession, RunMixin, PickerMixin):
 
 
 class VoicemailState(WebexSession, PanesMixin, RunMixin):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("rows", "report_title")
     form_email: str = ""
     form_location: str = ""
     location_names: list[str] = []

@@ -11,6 +11,9 @@ def pool_export() -> rx.Component:
     picker = rx.card(
         rx.scroll_area(
             rx.vstack(
+                rx.checkbox("Select All", checked=S.selected.length() == S.pools.length(),
+                            on_change=S.toggle_all, weight="bold"),
+                rx.divider(),
                 rx.foreach(S.pools, lambda p: rx.checkbox(
                     p, checked=S.selected.contains(p), on_change=lambda v: S.toggle_pool(p, v))),
                 spacing="2", align="start",
@@ -45,7 +48,10 @@ def pool_export() -> rx.Component:
     )
     return cucm_page(
         "Device Export for Webex",
-        _need_connection(S, rx.vstack(
+        rx.vstack(
+            rx.callout("This tool is still under development. It has not been tested against a real CUCM.",
+                       icon="construction", color_scheme="amber", width="100%"),
+            _need_connection(S, rx.vstack(
             rx.hstack(
                 search_input(S.pool_search, S.set_pool_search, "Device pool name contains (blank lists all)",
                              width="360px", max_width="100%"),
@@ -53,14 +59,10 @@ def pool_export() -> rx.Component:
                           on_click=S.search_pools, disabled=S.searching | S.running),
                 align="center", spacing="3", wrap="wrap", width="100%",
             ),
-            rx.callout("This tool is still under development. It has not been tested against a real CUCM.",
-                       icon="construction", color_scheme="amber", width="100%"),
             rx.cond(S.pools.length() > 0, rx.vstack(
                 rx.hstack(
                     rx.text(S.selected.length().to_string(), " of ", S.pools.length().to_string(),
                             " device pools selected", size="2", weight="bold"),
-                    rx.button("Select All", variant="soft", size="1", on_click=S.select_all),
-                    rx.button("Select None", variant="soft", size="1", on_click=S.select_none),
                     align="center", spacing="3",
                 ),
                 picker,
@@ -97,7 +99,9 @@ def pool_export() -> rx.Component:
                 ), rx.fragment()),
             ),
             spacing="4", align="start", width="100%",
-        )),
+            )),
+            spacing="4", align="start", width="100%",
+        ),
         on_connection_change=S.switch_connection,
         on_org_change=S.switch_org,
     )

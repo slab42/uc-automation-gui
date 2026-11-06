@@ -85,17 +85,19 @@ class WebexSession(OrgState):
         await self._refresh_session()
 
     @rx.event
-    def select_org(self, org: str):
+    async def select_org(self, org: str):
         """Switch organization. The page reloads so it lists the data of the Webex org that follows."""
         self.active_org = org
         self._load_webex()
+        await self._clear_outputs(whole_org=True)
         return rx.call_script("setTimeout(() => window.location.reload(), 200)")
 
     @rx.event
-    def select_webex_org(self, name: str):
+    async def select_webex_org(self, name: str):
         """Switch org. The page reloads so it lists the new org's data."""
         self.webex_active = name
         self._remember(name)
+        await self._clear_outputs(whole_org=False)
         return rx.call_script("setTimeout(() => window.location.reload(), 200)")
 
     def _default_workers(self) -> int:

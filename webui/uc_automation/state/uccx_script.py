@@ -5,6 +5,8 @@ import io
 import re
 import zipfile
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import uccx_aef, uccx_store as store
@@ -25,6 +27,8 @@ def _report_name(script: str) -> str:
 
 
 class UccxScriptState(UccxState, RunMixin):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("reports", "_html", "preview_name", "preview_html")
     stored_scripts: list[str] = []
     search: str = ""
     picked: list[str] = []

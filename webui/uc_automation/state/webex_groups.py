@@ -5,6 +5,8 @@ import json
 import re
 from datetime import datetime
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import webex_groups as g, webex_virtual_lines as vl
@@ -197,6 +199,8 @@ class _GroupsBase(PasteMixin, mixin=True):
 
 
 class CallQueuesState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("plan_lines", "plan_notes", "plan_for")
     mode: str = "create"
     plan_lines: list[str] = []
     plan_notes: list[str] = []
@@ -354,6 +358,8 @@ class CallQueuesState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
 
 
 class HuntGroupsState(WebexSession, RunMixin, PickerMixin, _GroupsBase):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("plan_lines", "plan_notes", "plan_for", "last_backup")
     mode: str = "create"
     plan_lines: list[str] = []
     plan_notes: list[str] = []

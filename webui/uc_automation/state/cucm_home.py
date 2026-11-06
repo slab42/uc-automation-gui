@@ -6,6 +6,8 @@ import csv
 import io
 from datetime import datetime
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import cucm_home as home
@@ -32,6 +34,8 @@ def _home_items(saved: dict, username: str, password: str, user: str, names: lis
 
 
 class HomeClusterState(CucmState, RunMixin):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("rows", "searched_user", "selected")
     username: str = ""
     searched_user: str = ""
     rows: list[dict[str, str]] = []  # name, server, status (Found / Not Found / Unreachable), home, detail, marked

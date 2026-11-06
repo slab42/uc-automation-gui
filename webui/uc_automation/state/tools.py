@@ -5,6 +5,8 @@ import csv
 import io
 from datetime import datetime
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import cucm_tools as t
@@ -106,6 +108,8 @@ class EmBulkState(CucmState, _RunMixin):
 
 
 class PhoneCountState(CucmState):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("pool_rows", "total_phones", "excluded_count", "error", "counted_for")
     include_analog: bool = False
     counting: bool = False
     counted_for: str = ""
@@ -195,9 +199,7 @@ class PhoneCountState(CucmState):
     async def switch_connection(self, name: str):
         self.active = name
         self._remember(name)
-        self.pool_rows = []
-        self.total_phones = 0
-        self.error = ""
+        await self._clear_outputs(whole_org=False)
         async for ev in self._count():
             yield ev
 
@@ -205,9 +207,7 @@ class PhoneCountState(CucmState):
     async def switch_org(self, org: str):
         self.active_org = org
         self._reconcile()
-        self.pool_rows = []
-        self.total_phones = 0
-        self.error = ""
+        await self._clear_outputs(whole_org=True)
         if self.active:
             async for ev in self._count():
                 yield ev

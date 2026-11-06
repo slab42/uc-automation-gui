@@ -27,6 +27,26 @@ class OrgState(rx.State):
     plat_dialog: str = ""  # platform form open on top of the organization window ("" = none)
 
     memory_field: ClassVar[str] = ""  # name of the LocalStorage var (JSON text) where a platform state keeps its instance per org
+    output_fields: ClassVar[tuple[str, ...]] = ()  # vars holding this page's results or output (a mixin adds its own)
+
+    def _clear_output(self):
+        """Reset this page's results and output to their defaults. Skipped while a run is in progress."""
+        if getattr(self, "busy", False):
+            return
+        fields = self.get_fields()
+        for cls in type(self).__mro__:
+            for name in cls.__dict__.get("output_fields", ()):
+                setattr(self, name, fields[name].default_value())
+
+    async def _clear_outputs(self, whole_org: bool):
+        """Clear the output of every page state after the organization (all platforms share it) or the instance
+        (this platform's pages) changed, so no page shows results that belong to the previous one."""
+        root = OrgState if whole_org else next(c for c in type(self).__mro__ if OrgState in c.__bases__)
+        todo = [root]
+        while todo:
+            cls = todo.pop()
+            (await self.get_state(cls))._clear_output()
+            todo.extend(cls.get_substates())
 
     def _recall(self, org: str) -> str:
         """The instance last chosen in `org` on this platform ('' when none)."""

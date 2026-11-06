@@ -100,14 +100,16 @@ class UccxState(OrgState):
         self._reconcile()
 
     @rx.event
-    def select_active(self, name: str):
+    async def select_active(self, name: str):
         self.active = name
         self._remember(name)
+        await self._clear_outputs(whole_org=False)
 
     @rx.event
-    def select_org(self, org: str):
+    async def select_org(self, org: str):
         self.active_org = org
         self._reconcile()
+        await self._clear_outputs(whole_org=True)
 
     @rx.event
     def edit_connection(self, name: str):

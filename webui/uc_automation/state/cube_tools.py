@@ -6,6 +6,8 @@ import io
 import zipfile
 from datetime import datetime
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import cube_config as cfg, cube_credentials, cube_mem as mem, cube_ssh, organizations as orgs
@@ -37,6 +39,8 @@ class Cred:
 class CubeRun(RunMixin, PasteMixin, mixin=True):
     """Router list input, credential set picker and the run loop shared by the CUBE tools."""
 
+    output_fields: ClassVar[tuple[str, ...]] = ("rows",)
+
     paste_routers: str = ""
     cred_names: list[str] = []
     cred_name: str = ""
@@ -67,13 +71,15 @@ class CubeRun(RunMixin, PasteMixin, mixin=True):
         self._filter_creds()
 
     @rx.event
-    def select_org(self, org: str):
+    async def select_org(self, org: str):
         self.active_org = org
         self._filter_creds()
+        await self._clear_outputs(whole_org=True)
 
     @rx.event
-    def set_cred_name(self, value: str):
+    async def set_cred_name(self, value: str):
         self.cred_name = value
+        await self._clear_outputs(whole_org=False)
 
     @rx.event
     def set_manual_username(self, value: str):
@@ -188,6 +194,8 @@ class MemStatusState(CubeRun, OrgState):
 
 
 class ConfigCompareState(CubeRun, OrgState):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("_reports",)
     template_text: str = ""
     _reports: dict[str, str] = {}
 

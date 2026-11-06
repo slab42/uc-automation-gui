@@ -3,6 +3,8 @@
 import asyncio
 from datetime import datetime
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import cucm_pool_export as x
@@ -12,6 +14,8 @@ from .cucm import CucmState
 
 
 class PoolExportState(CucmState):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("pools", "selected", "preview", "counts", "error", "warning", "progress", "_xlsx")
     pool_search: str = ""
     pools: list[str] = []
     selected: list[str] = []
@@ -42,12 +46,8 @@ class PoolExportState(CucmState):
         self.selected = [p for p in self.pools if (p in self.selected and p != name) or (p == name and checked)]
 
     @rx.event
-    def select_all(self):
-        self.selected = list(self.pools)
-
-    @rx.event
-    def select_none(self):
-        self.selected = []
+    def toggle_all(self, checked: bool):
+        self.selected = list(self.pools) if checked else []
 
     @rx.event
     def clear_result(self):
@@ -154,17 +154,13 @@ class PoolExportState(CucmState):
         return rx.download(data=self._xlsx, filename=f"device-export-webex-{server}-{stamp}.xlsx")
 
     @rx.event
-    def switch_connection(self, name: str):
+    async def switch_connection(self, name: str):
         self.active = name
         self._remember(name)
-        self.pools = []
-        self.selected = []
-        self.clear_result()
+        await self._clear_outputs(whole_org=False)
 
     @rx.event
-    def switch_org(self, org: str):
+    async def switch_org(self, org: str):
         self.active_org = org
         self._reconcile()
-        self.pools = []
-        self.selected = []
-        self.clear_result()
+        await self._clear_outputs(whole_org=True)

@@ -132,6 +132,8 @@ class RedskyBulk(RunMixin, PasteMixin, mixin=True):
 class RedskyCheck(rx.State, mixin=True):
     """One check tool: run it, list the problems, export them."""
 
+    output_fields: ClassVar[tuple[str, ...]] = ("checked", "total", "problems", "error")
+
     CHECK: ClassVar[CheckSpec]
     checking: bool = False
     checked: bool = False
@@ -226,6 +228,8 @@ class PublicIpState(RedskyState, RedskyBulk):
 
 class PrecheckState(RedskyState, PasteMixin):
     """Import Precheck: do the pasted or uploaded Buildings, Locations or Private IP ranges already exist in RedSky?"""
+
+    output_fields: ClassVar[tuple[str, ...]] = ("found", "checked", "error")
 
     kind: str = "Buildings"
     paste_names: str = ""

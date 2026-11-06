@@ -3,6 +3,8 @@
 import asyncio
 from datetime import datetime
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import webex_reports as R
@@ -11,6 +13,8 @@ from .webex_routing import WebexSession
 
 
 class LocationsReportState(WebexSession):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("rows", "result_users", "result_workspaces", "_result_org")
     rows: list[dict[str, str]] = []
     search: str = ""
     want_users: bool = True

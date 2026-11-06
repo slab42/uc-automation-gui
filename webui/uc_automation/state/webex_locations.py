@@ -4,6 +4,8 @@ import asyncio
 import re
 from datetime import datetime
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import webex_locations as L
@@ -21,6 +23,8 @@ def _safe(text: str) -> str:
 
 
 class SchedulesState(WebexSession, RunMixin, PickerMixin, PasteMixin):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("plan_rows", "plan_notes", "past_rows", "searched")
     mode: str = "export"          # export | update | copy | remove
     schedules: list[dict[str, str]] = []
     schedule_label: str = ""

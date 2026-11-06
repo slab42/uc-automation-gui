@@ -3,7 +3,11 @@
 Device names come from SQL, the rest of each phone from AXL getPhone (a few threads), end users from SQL.
 The owner of a device is found in this order: the device Owner User ID, the end user's associated devices,
 then the line (associated end users of a line, or an end user whose primary extension is that line).
+When none is found, the phone description, then the line 1 description, then the line 1 display name are
+matched against user IDs and first/last name combinations. A guess is marked in Owner Source and highlighted.
 """
+
+import re
 
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -48,7 +52,7 @@ def parse_phone(data: dict) -> dict:
         lines.append({
             "index": int(_text(ln.get("index")) or 0), "DN": _text(dirn.get("pattern")),
             "Partition": _text(dirn.get("routePartitionName")),
-            "Display": _text(ln.get("display")),
+            "Display": _text(ln.get("display")), "Description": "",
             "Label": _text(ln.get("label")), "External Mask": _text(ln.get("e164Mask")),
             "Caller ID": _text(ln.get("displayAscii")), "users": [u for u in users if u],
         })
@@ -83,10 +87,47 @@ def resolve_owner(phone: dict, device_users: dict[str, list[str]], primary_ext: 
     return (found, "Line") if found else ([], "")
 
 
+def _words(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", text.lower())
+
+
+def _has_seq(words: list[str], seq: list[str]) -> bool:
+    n = len(seq)
+    return n > 0 and any(words[i:i + n] == seq for i in range(len(words) - n + 1))
+
+
+def guess_user(texts: list[tuple[str, str]], users: dict[str, dict]) -> tuple[str, str]:
+    """(user id, source label) from the first text that matches exactly one end user, else ("", "").
+
+    `texts` is [(label, text)] in priority order. A user matches when a word equals the user ID or the text
+    holds "first last" or "last first" as consecutive words."""
+    for label, text in texts:
+        words = _words(text)
+        if not words:
+            continue
+        hits: list[str] = []
+        for key, u in users.items():
+            first, last = _words(u.get("firstname", "")), _words(u.get("lastname", ""))
+            uid = u.get("userid", key)
+            if (len(uid) >= 3 and uid.lower() in words) or (
+                    first and last and (_has_seq(words, first + last) or _has_seq(words, last + first))):
+                hits.append(uid)
+        if len(hits) == 1:
+            return hits[0], f"Guess: {label}"
+    return "", ""
+
+
+def _load_dn_descriptions(conn: CucmConnection) -> dict[tuple[str, str], str]:
+    """(DN, partition) -> directory number description. getPhone does not return it."""
+    return {(r["dn"], r["part"]): r["descr"] for r in sql_rows(
+        conn, "select n.dnorpattern as dn, rp.name as part, n.description as descr from numplan n "
+              "left join routepartition rp on rp.pkid = n.fkroutepartition where n.tkpatternusage = 2", 3)}
+
+
 def _load_users(conn: CucmConnection):
     """(users by lower-case id, device name -> user ids, (DN, partition) -> user ids by primary extension)."""
     users = {r["userid"].lower(): r for r in sql_rows(
-        conn, "select userid, firstname, lastname, mailid from enduser", 4)}
+        conn, "select userid, firstname, lastname, mailid, directoryuri from enduser", 5)}
     dev: dict[str, list[str]] = {}
     for r in sql_rows(conn, "select d.name as device, e.userid as userid from enduserdevicemap m "
                             "join device d on d.pkid = m.fkdevice join enduser e on e.pkid = m.fkenduser", 2):
@@ -119,6 +160,12 @@ def pool_export(conn: CucmConnection, pools: list[str], registration: bool = Fal
     except AxlError as e:
         users, dev_users, primary_ext = {}, {}, {}
         errors.append({"Device Name": "", "Error": f"End user lookup failed: {e}"})
+
+    try:
+        dn_desc = _load_dn_descriptions(conn)
+    except AxlError as e:
+        dn_desc = {}
+        errors.append({"Device Name": "", "Error": f"Line description lookup failed: {e}"})
 
     done = {"n": 0}
 
@@ -153,6 +200,15 @@ def pool_export(conn: CucmConnection, pools: list[str], registration: bool = Fal
             errors.append({"Device Name": name, "Error": err})
             p = {"description": "", "protocol": "", "template": "", "owner": "", "lines": [], "blfs": []}
         ids, source = resolve_owner(p, dev_users, primary_ext, name)
+        guessed = False
+        if not ids and users:
+            for ln in p["lines"]:
+                ln["Description"] = dn_desc.get((ln["DN"], ln["Partition"]), "")
+            line1 = next((ln for ln in p["lines"] if ln["index"] == 1), p["lines"][0] if p["lines"] else {})
+            uid, source = guess_user([("Phone Description", p["description"]),
+                                      ("Line 1 Description", line1.get("Description", "")),
+                                      ("Line 1 Display", line1.get("Display", ""))], users)
+            ids, guessed = ([uid], True) if uid else ([], False)
         u = users.get(ids[0].lower(), {}) if ids else {}
         phones.append({
             "Type": "User" if ids else "Workspace", "Device Name": name,
@@ -161,7 +217,7 @@ def pool_export(conn: CucmConnection, pools: list[str], registration: bool = Fal
             "Phone Template": p["template"],
             "Registration Status": reg_status(name),
             "User ID": ids[0] if ids else "", "First Name": u.get("firstname", ""), "Last Name": u.get("lastname", ""),
-            "Email": u.get("mailid", ""), "Owner Source": source,
+            "Email": u.get("mailid") or u.get("directoryuri", ""), "Owner Source": source, "guessed": guessed,
             "Notes": f"Other users: {', '.join(ids[1:])}" if len(ids) > 1 else "",
             "lines": p["lines"],
         })
@@ -226,6 +282,12 @@ def build_workbook(result: dict, extra_sheets: list[tuple[str, list[str], list[d
                for k, v in sorted(pools.items(), key=lambda kv: kv[0].lower())]
     headers = phone_headers(max_lines)
     sheet("Phones", "Phones", headers, [phone_row(p, max_lines) for p in phones])
+    yellow = PatternFill("solid", fgColor="FFFF00")
+    cols = [headers.index(c) + 1 for c in ("User ID", "First Name", "Last Name", "Email")]
+    for i, p in enumerate(phones, 2):
+        if p.get("guessed"):
+            for c in cols:
+                wb["Phones"].cell(row=i, column=c).fill = yellow
     sheet("BLFs", "BLFs", BLF_COLUMNS, result["blfs"])
     sheet("Summary", "Summary", ["Device Pool", "Phones", "Users", "Workspaces"], summary)
     sheet("Errors", "Errors", ["Device Name", "Error"], result["errors"])

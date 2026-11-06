@@ -2,6 +2,8 @@
 
 import asyncio
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import webex_dialplan as D
@@ -16,6 +18,8 @@ _PASTE = dict(columns=("pattern",), flatten=True, item_split=r"[\s,;|]+", marker
 
 
 class GatewayDialPlanState(WebexSession, RunMixin, PickerMixin, PasteMixin):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("patterns", "chosen")
     routes: list[dict[str, str]] = []
     route_label: str = ""
     new_name: str = ""

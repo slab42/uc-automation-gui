@@ -2,6 +2,8 @@
 
 import asyncio
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import cucm_connections, webex_auth, webex_cucm_gateway as gw, webex_cucm_migrate as cm, webex_devices as d, webex_workspaces as w
@@ -14,6 +16,8 @@ from .webex_routing import PasteMixin, WebexSession
 
 
 class BulkAtaState(WebexSession, RunMixin, PasteMixin):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("find_results",)
     form_location: str = ""
     form_model: str = ""
     form_mac: str = ""

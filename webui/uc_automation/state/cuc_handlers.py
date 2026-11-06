@@ -3,6 +3,8 @@
 import asyncio
 from datetime import datetime
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import cuc_api, cuc_handlers as h
@@ -19,6 +21,8 @@ def _stamp() -> str:
 
 class ListHandlersState(CucState, AllRows):
     """Every call handler (system and subscriber handlers left out), searchable, with Export Selected."""
+
+    output_fields: ClassVar[tuple[str, ...]] = ("menu_errors",)
 
     menu_busy: bool = False
     menu_errors: list[dict[str, str]] = []
@@ -111,6 +115,8 @@ class ListHandlersState(CucState, AllRows):
 
 class MapState(CucState):
     """Build the call tree workbook from the active connection or from the two CSV files List produces."""
+
+    output_fields: ClassVar[tuple[str, ...]] = ("error", "summary", "built_from", "_xlsx", "_handlers", "_menu")
 
     source: str = "connection"      # connection | csv
     search: str = ""

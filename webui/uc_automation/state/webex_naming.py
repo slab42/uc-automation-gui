@@ -3,6 +3,8 @@
 import asyncio
 from datetime import datetime
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import webex_naming as n
@@ -12,6 +14,8 @@ from .webex_routing import WebexSession, _one
 
 
 class NamingCheckState(WebexSession, RunMixin):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("checks", "regex_out", "regex_desc", "regex_notes")
     patterns: dict[str, str] = {k: "" for k in n.TYPES}
     find: str = ""
     replace: str = ""

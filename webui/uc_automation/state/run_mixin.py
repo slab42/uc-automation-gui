@@ -3,6 +3,8 @@
 import asyncio
 from dataclasses import dataclass
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend.applog import OpLog
@@ -47,6 +49,8 @@ class RunMixin(rx.State, mixin=True):
 
     A handler builds its items and yields `self._start_run(...)`. The items then run in a background task, so the
     page stays usable and Cancel works while they run."""
+
+    output_fields: ClassVar[tuple[str, ...]] = ("results", "progress")
 
     busy: bool = False
     progress: str = ""

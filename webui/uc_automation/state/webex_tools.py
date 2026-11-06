@@ -3,6 +3,8 @@
 import asyncio
 from datetime import datetime
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import webex_tools as t
@@ -12,6 +14,8 @@ from .webex_routing import PasteMixin, WebexSession
 
 
 class HardwareCompatState(WebexSession, PanesMixin, PasteMixin):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("checks",)
     form_model: str = ""
     form_mac: str = ""
     model_names: list[str] = []

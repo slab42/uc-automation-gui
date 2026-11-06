@@ -12,6 +12,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend.applog import OpLog
@@ -82,6 +84,8 @@ def parse_csv(data: bytes, spec: ResourceSpec) -> list[dict[str, str]]:
 
 
 class CrudMixin(RunMixin, mixin=True):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("items", "selected", "error", "add_error")
     items: list[dict[str, str]] = []
     search: str = ""
     selected: list[str] = []
@@ -219,8 +223,7 @@ class CrudMixin(RunMixin, mixin=True):
     async def switch_connection(self, name: str):
         self.active = name
         self._remember(name)
-        self.items = []
-        self.selected = []
+        await self._clear_outputs(whole_org=False)
         async for ev in self._fetch():
             yield ev
 
@@ -228,8 +231,7 @@ class CrudMixin(RunMixin, mixin=True):
     async def switch_org(self, org: str):
         self.active_org = org
         self._reconcile()
-        self.items = []
-        self.selected = []
+        await self._clear_outputs(whole_org=True)
         if self.active:
             async for ev in self._fetch():
                 yield ev
@@ -472,6 +474,8 @@ class CrudMixin(RunMixin, mixin=True):
 class DepCheckMixin(rx.State, mixin=True):
     """Check Dependencies / Keep only unused selected. Use with CrudMixin; subclasses supply `_dep_fn()`,
     a callable (conn, names) -> ({name: [references]}, warnings)."""
+
+    output_fields: ClassVar[tuple[str, ...]] = ("dep_results", "dep_warnings", "dep_unused")
 
     dep_results: list[dict[str, str]] = []
     dep_warnings: list[str] = []

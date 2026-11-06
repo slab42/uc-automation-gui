@@ -6,6 +6,8 @@ import io
 import re
 from datetime import datetime
 
+from typing import ClassVar
+
 import reflex as rx
 
 from ..backend import cucm_reports as r
@@ -18,6 +20,8 @@ GROUPINGS = ["Off", "Prefix", "Regex"]
 
 
 class DeviceReportState(CucmState):
+
+    output_fields: ClassVar[tuple[str, ...]] = ("raw_rows", "error", "warning", "progress")
     mode: str = MODES[0]
     pool_search: str = ""
     running: bool = False
@@ -190,13 +194,13 @@ class DeviceReportState(CucmState):
         return rx.download(data=buf.getvalue(), filename=f"device-report-{server}-{stamp}.csv")
 
     @rx.event
-    def switch_connection(self, name: str):
+    async def switch_connection(self, name: str):
         self.active = name
         self._remember(name)
-        self.clear_report()
+        await self._clear_outputs(whole_org=False)
 
     @rx.event
-    def switch_org(self, org: str):
+    async def switch_org(self, org: str):
         self.active_org = org
         self._reconcile()
-        self.clear_report()
+        await self._clear_outputs(whole_org=True)
