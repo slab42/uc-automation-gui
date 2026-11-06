@@ -68,7 +68,7 @@ def _cluster_section() -> rx.Component:
 def _variables_section() -> rx.Component:
     return _section(
         "Variables",
-        rx.text("Var1 to Var9 (up to 9). Each is entered on the main screen as Var1 - Name. Use {Var1}, {Var2}... "
+        rx.text("Var1 to Var9 (up to 9). Each is entered on the main screen under its Name. Use {Var1}, {Var2}... "
                 "in the descriptions below. Click a variable button to insert it at the cursor in a description box.", size="2", color="var(--gray-11)"),
         rx.foreach(S.var_rows, lambda v: rx.hstack(
             rx.button(v["key"], size="1", variant="soft", type="button", title="Insert into the description",
@@ -193,7 +193,7 @@ def sme_patterns() -> rx.Component:
                         field("Pattern", rx.input(value=S.form_pattern, on_change=S.set_form_pattern, width="100%",
                                                   placeholder="5558594400")),
                         rx.foreach(S.var_rows, lambda v: field(
-                            v["label"], rx.input(value=v["value"], on_change=lambda val: S.set_form_value(v["key"], val),
+                            v["display"], rx.input(value=v["value"], on_change=lambda val: S.set_form_value(v["key"], val),
                                                  width="100%"))),
                         columns="2", spacing="3", width="100%",
                     ),

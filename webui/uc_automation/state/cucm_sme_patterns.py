@@ -62,7 +62,7 @@ class SmePatternsState(CucmState, RunMixin, PasteMixin):
     def var_rows(self) -> list[dict[str, str]]:
         """One row per variable: key (Var1), index, label (Var1 - Department), name and the value typed on the page."""
         names = self.var_names
-        return [{"key": sme.var_key(i), "index": str(i), "label": sme.var_label(i, names), "name": n,
+        return [{"key": sme.var_key(i), "index": str(i), "label": sme.var_label(i, names), "display": sme.var_display(i, names), "name": n,
                  "value": self.form_values.get(sme.var_key(i), "")} for i, n in enumerate(names)]
 
     @rx.var
@@ -201,7 +201,7 @@ class SmePatternsState(CucmState, RunMixin, PasteMixin):
             values = [(r["vars"][i] if i < len(r["vars"]) else "") or defaults[i] for i in range(len(names))]
             for i in sorted(needed):
                 if not values[i]:
-                    return rx.toast.error(f"No value for {sme.var_label(i, names)} on {r['pattern']}. "
+                    return rx.toast.error(f"No value for {sme.var_display(i, names)} on {r['pattern']}. "
                                           "Enter it on the page or add it to the row.")
             items.append((sme.format_advertised_pattern(r["pattern"]),
                           lambda p=r["pattern"], v=values: sme.add_pattern_pair(conn, settings, names, p, v)))
