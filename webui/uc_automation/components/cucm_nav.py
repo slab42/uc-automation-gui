@@ -16,6 +16,7 @@ PICKUP_GROUPS = "/cucm/call-pickup-groups"
 HUNT_GROUPS = "/cucm/hunt-groups"
 ROUTE_PATTERNS = "/cucm/route-patterns"
 TRANSLATION_PATTERNS = "/cucm/translation-patterns"
+SME_PATTERNS = "/cucm/sme-adv-route-patterns"
 CTI_ROUTE_POINTS = "/cucm/cti-route-points"
 CODEC_LISTS = "/cucm/audio-codec-preference-lists"
 DEVICE_POOLS = "/cucm/device-pools"
@@ -47,6 +48,7 @@ GROUPS = [
         ("Partitions", PARTITIONS, "layers", "Route partitions: search, add, import, export, remove."),
         ("Calling Search Spaces", CSS, "list-ordered", "CSSs and their ordered partitions."),
         ("Route Patterns", ROUTE_PATTERNS, "signpost", "Route patterns: search, add, import, export, find duplicates, remove."),
+        ("SME Adv & Route Patterns", SME_PATTERNS, "route", "Add an Advertised Pattern and its Route Pattern for each number (SME cluster only)."),
         ("Translation Patterns", TRANSLATION_PATTERNS, "replace", "Translation patterns: search, add, import, export, remove."),
         ("Hunt Groups", HUNT_GROUPS, "users-round", "Hunt pilots with their hunt lists and line groups: check dependencies, remove."),
         ("Call Pickup Groups", PICKUP_GROUPS, "users", "Call pickup groups: search, add, import, export, check dependencies, remove."),

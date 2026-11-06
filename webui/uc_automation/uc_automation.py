@@ -35,7 +35,9 @@ from .pages.logs import logs
 from .pages.partitions import partitions
 from .pages.cucm_pool_export import pool_export
 from .pages.cucm_reports import device_report
+from .pages.cucm_sme_patterns import sme_patterns
 from .state.cucm_pool_export import PoolExportState
+from .state.cucm_sme_patterns import SmePatternsState
 from .state.cucm_reports import DeviceReportState
 from .pages.tools import em_bulk_login, phone_count, set_user_pin
 from .pages.system import codec_lists, device_pools, locations, regions
@@ -285,6 +287,8 @@ for _route, _title, _page, _state in [
 ]:
     app.add_page(_page, route=_route, title=f"{_title} | {APP_NAME}", on_load=_state.load_connections)
 
+app.add_page(sme_patterns, route="/cucm/sme-adv-route-patterns", title=f"SME Adv & Route Patterns | {APP_NAME}",
+             on_load=SmePatternsState.load_connections)
 app.add_page(home_cluster_locator, route="/cucm/home-cluster-locator", title=f"Home Cluster Locator | {APP_NAME}",
              on_load=HomeClusterState.load_connections)
 app.add_page(device_report, route="/cucm/device-report", title=f"Device Report | {APP_NAME}",

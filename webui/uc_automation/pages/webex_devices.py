@@ -97,20 +97,37 @@ def _find_tab(S) -> list:
                 "configured on. The ports are the same as on the Update ATA Or VG tab.",
                 size="2", color="var(--gray-11)"),
         field("Port search", rx.hstack(
-            rx.input(value=S.find_text, width="100%", placeholder="Workspace name, phone number or extension",
+            rx.input(rx.input.slot(
+                         rx.cond(S.find_text != "",
+                                 rx.icon("x", size=16, cursor="pointer", aria_label="Clear port search",
+                                         on_click=S.clear_find),
+                                 rx.fragment()),
+                         side="right"),
+                     value=S.find_text, width="100%", placeholder="Workspace name, phone number or extension",
                      on_change=S.set_find_text, on_key_down=lambda k: rx.cond(k == "Enter", S.search_find, rx.noop())),
             rx.button(rx.cond(S.find_searching, rx.spinner(size="2"), rx.icon("search", size=16)), "Search",
                       on_click=S.search_find, disabled=S.find_searching),
             width="100%", spacing="2")),
         rx.cond(
             S.find_results.length() > 0,
+            rx.button(rx.cond(S.find_collapsed, rx.icon("chevron-right", size=16), rx.icon("chevron-down", size=16)),
+                      rx.cond(S.find_collapsed, "Show Search Results", "Hide Search Results"),
+                      variant="soft", size="1", on_click=S.toggle_find_results),
+            rx.fragment(),
+        ),
+        rx.cond(
+            (S.find_results.length() > 0) & ~S.find_collapsed,
             rx.table.root(
                 rx.table.header(rx.table.row(
-                    rx.table.column_header_cell("Workspace"), rx.table.column_header_cell("Number / Extension"),
-                    rx.table.column_header_cell("Location"), rx.table.column_header_cell(""))),
+                    rx.table.column_header_cell("Workspace"),
+                    rx.cond(S.find_has_line, rx.table.column_header_cell("Number / Extension")),
+                    rx.cond(S.find_has_location, rx.table.column_header_cell("Location")),
+                    rx.table.column_header_cell(""))),
                 rx.table.body(rx.foreach(S.find_results, lambda r: rx.table.row(
-                    rx.table.row_header_cell(r["name"]), rx.table.cell(r["line"]), rx.table.cell(r["location"]),
-                    rx.table.cell(rx.button("Open Gateway", size="1", variant="soft",
+                    rx.table.row_header_cell(r["name"]),
+                    rx.cond(S.find_has_line, rx.table.cell(r["line"])),
+                    rx.cond(S.find_has_location, rx.table.cell(r["location"])),
+                    rx.table.cell(rx.button("Show Gateway", size="1", variant="soft",
                                             on_click=S.pick_find(r["id"]), disabled=S.find_searching))))),
                 width="100%",
             ),

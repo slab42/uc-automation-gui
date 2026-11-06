@@ -17,7 +17,7 @@ from .webex_routing import PasteMixin, WebexSession
 
 class BulkAtaState(WebexSession, RunMixin, PasteMixin):
 
-    output_fields: ClassVar[tuple[str, ...]] = ("find_results",)
+    output_fields: ClassVar[tuple[str, ...]] = ("find_results", "find_target", "upd_ports", "upd_device", "_upd_loaded", "find_collapsed")
     form_location: str = ""
     form_model: str = ""
     form_mac: str = ""
@@ -34,6 +34,7 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
     find_results: list[dict[str, str]] = []
     find_target: str = ""  # workspace id of the port found, highlighted in the table
     find_searching: bool = False
+    find_collapsed: bool = False  # results table minimized after Show Gateway
     _upd_locations: dict[str, str] = {}
     _upd_devices: dict[str, dict[str, str]] = {}
     _upd_loaded: str = ""  # device id the ports were read for
@@ -41,6 +42,14 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
     @rx.event
     def set_form(self, field: str, value: str):
         setattr(self, f"form_{field}", value)
+
+    @rx.var
+    def find_has_line(self) -> bool:
+        return any(r["line"] for r in self.find_results)
+
+    @rx.var
+    def find_has_location(self) -> bool:
+        return any(r["location"] for r in self.find_results)
 
     @rx.var
     def upd_open_count(self) -> int:
@@ -59,11 +68,24 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
         self.find_text = value
 
     @rx.event
+    def clear_find(self):
+        """The x in the port search box: empty it and drop the results and the port table."""
+        self.find_text = ""
+        self.find_results, self.upd_ports, self.upd_device = [], [], ""
+        self.find_target, self._upd_loaded, self.find_collapsed = "", "", False
+
+    @rx.event
+    def toggle_find_results(self):
+        self.find_collapsed = not self.find_collapsed
+
+    @rx.event
     async def search_find(self):
         text = self.find_text.strip()
         if not text:
             yield rx.toast.error("Enter a workspace name, phone number or extension.")
             return
+        self.find_results, self.upd_ports, self.upd_device = [], [], ""
+        self.find_target, self._upd_loaded, self.find_collapsed = "", "", False
         self.find_searching = True
         yield
         log = self._webex_log("Find ATA/VG Port", "webex-find-ata-port")
@@ -116,6 +138,7 @@ class BulkAtaState(WebexSession, RunMixin, PasteMixin):
             log.info(f"Device: {device['label']}")
             self.find_target = workspace_id
             self.upd_device = device["label"]
+            self.find_collapsed = True
         finally:
             log.close()
         self._upd_loaded = ""
@@ -777,7 +800,7 @@ class CucmGatewayState(WebexSession, RunMixin):
                 yield rx.toast.error(self.webex_message)
                 return
             cache: dict[str, str] = {}
-            yield self._start_run([(gateway["name"], lambda: gw.migrate_gateway(client, gateway, cache))],
+            yield self._start_run([(gateway["name"], lambda: gw.migrate_gateway(client, gateway, cache, log.info))],
                                   "Migrating", log)
         finally:
             log.close()

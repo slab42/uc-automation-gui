@@ -113,13 +113,15 @@ def _members(ids: dict[int, str]) -> dict:
                         for n, wid in sorted(ids.items())]}
 
 
-def migrate_gateway(c: WebexClient, gateway: dict, cache: dict[str, str]) -> str:
+def migrate_gateway(c: WebexClient, gateway: dict, cache: dict[str, str], log=None) -> str:
     """gateway: name, location, add_device (bool), model, mac, use_existing (bool), rows (port, workspace, line, include).
 
     With use_existing, a workspace that already has the name is not created: it is assigned to the port as it is
     (its calling settings are not changed).
 
-    Everything is checked before the first Webex call. A failure part way leaves what was already created."""
+    Everything is checked before the first Webex call. A failure part way leaves what was already created.
+    `log` is an optional callable taking one line: each change is logged on its own."""
+    say = log or (lambda _msg: None)
     location = gateway.get("location", "").strip()
     if not location:
         raise WebexError("The Webex location is required.")
@@ -163,19 +165,36 @@ def migrate_gateway(c: WebexClient, gateway: dict, cache: dict[str, str]) -> str
             continue
         bodies[n] = build_workspace_body({"workspace": name, **_line(r["line"])}, location_id)
     added: list[str] = []
-    ids = {**existing, **{n: create_workspace_adding_number(c, b, location_id, added) for n, b in bodies.items()}}
+    ids: dict[int, str] = {}
+    for n in sorted(ports):
+        name, line = ports[n]["workspace"].strip(), ports[n]["line"].strip()
+        what = f"Port {n} workspace {name} ({line}) in {location}"
+        if n in existing:
+            ids[n] = existing[n]
+            say(f"{what}: assigned existing workspace, nothing changed on it")
+            continue
+        try:
+            ids[n] = create_workspace_adding_number(c, bodies[n], location_id, added, say)
+        except WebexError as e:
+            say(f"{what}: create failed - {e}")
+            raise
+        say(f"Port {n} configured with new workspace {name} ({line}) in {location}")
     note = f" Added number(s) to {location}: {', '.join(added)}." if added else ""
     summary = ", ".join(f"port {n} {ports[n]['workspace'].strip()}" + (" (existing)" if n in existing else "")
                         for n in sorted(ports))
     if not add_device:
+        say("Device not added (Add Device Later)")
         return (f"Created {len(bodies)} workspace(s), {len(existing)} existing: {summary}.{note} The device was not added. Add it later to the port 1 "
                 f"workspace {ports[1]['workspace'].strip()} with Add Device"
                 + (", then assign the other ports in Control Hub." if len(ids) > 1 else "."))
     made = c.call("POST", "/devices", body={"mac": mac, "model": model, "workspaceId": ids[1]})
+    say(f"Device {model} {mac} added to port 1 workspace {ports[1]['workspace'].strip()}")
     device_id = made.get("id")
     if not device_id:
         raise WebexError(f"The device {mac} was added but Webex did not return its id, so the other ports were "
                          "not assigned.")
     if len(ids) > 1:
         c.call("PUT", f"/telephony/config/devices/{device_id}/members", body=_members(ids))
+        for n in sorted(ids):
+            say(f"Port {n} of {mac} assigned to workspace {ports[n]['workspace'].strip()}")
     return f"Added {model} {mac} with {len(ids)} port(s): {summary}.{note}"

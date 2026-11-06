@@ -149,9 +149,10 @@ def create_workspace(c: WebexClient, row: dict[str, str], cache: dict[str, str])
     return f"{message} with {model} {mac}"
 
 
-def create_workspace_adding_number(c: WebexClient, body: dict, location_id: str, added: list[str]) -> str:
+def create_workspace_adding_number(c: WebexClient, body: dict, location_id: str, added: list[str], log=None) -> str:
     """POST the workspace. When that fails and it has a phone number, add the number to the location and try once
-    more (the number is probably not in the location yet); `added` collects the numbers that were added."""
+    more (the number is probably not in the location yet); `added` collects the numbers that were added.
+    `log` is an optional callable taking one line."""
     try:
         return c.call("POST", "/workspaces", body=body)["id"]
     except WebexError as first:
@@ -163,6 +164,8 @@ def create_workspace_adding_number(c: WebexClient, body: dict, location_id: str,
         except WebexError as e:
             raise WebexError(f"{first} Adding {number} to the location also failed: {e}") from e
         added.append(number)
+        if log:
+            log(f"Number {number} added to the location (the workspace create failed without it)")
         return c.call("POST", "/workspaces", body=body)["id"]
 
 
@@ -650,10 +653,24 @@ def search_ports(c: WebexClient, text: str, location_names: dict[str, str] | Non
                 line = " ".join(x for x in (r.get("phoneNumber"), f"x{r['extension']}" if r.get("extension") else "") if x)
                 add(owner.get("id", ""), owner_name(owner), line, (r.get("location") or {}).get("id", ""))
     for i in c.call("GET", "/workspaces", {"displayName": text, "max": 100}).get("items") or []:
-        calling = (i.get("calling") or {}).get("webexCalling") or {}
-        line = " ".join(x for x in (calling.get("phoneNumber"), f"x{calling['extension']}" if calling.get("extension") else "") if x)
-        add(i.get("id", ""), i.get("displayName", ""), line, i.get("locationId") or calling.get("locationId", ""))
+        add(i.get("id", ""), i.get("displayName", ""), _workspace_line(i), i.get("locationId") or _calling(i).get("locationId", ""))
+    for r in found.values():  # the list often leaves the numbers out: read the workspace itself
+        if not r["line"]:
+            try:
+                r["line"] = _workspace_line(c.call("GET", f"/workspaces/{r['id']}"))
+            except WebexError:
+                pass
     return sorted(found.values(), key=lambda r: r["name"].lower())
+
+
+def _calling(workspace: dict) -> dict:
+    return (workspace.get("calling") or {}).get("webexCalling") or {}
+
+
+def _workspace_line(workspace: dict) -> str:
+    """'+15551234567 x1001' from a workspace record's calling section, '' when it has neither."""
+    calling = _calling(workspace)
+    return " ".join(x for x in (calling.get("phoneNumber"), f"x{calling['extension']}" if calling.get("extension") else "") if x)
 
 
 def find_ata_for_workspace(c: WebexClient, workspace_id: str, devices: list[dict[str, str]]) -> dict[str, str] | None:
