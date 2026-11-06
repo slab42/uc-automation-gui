@@ -40,6 +40,7 @@ from .state.cucm_reports import DeviceReportState
 from .pages.tools import em_bulk_login, phone_count, set_user_pin
 from .pages.system import codec_lists, device_pools, locations, regions
 from .pages.webex_routing import add_numbers, call_forward, call_queues, hunt_groups as webex_hunt_groups, virtual_lines, webex_home
+from .pages.webex_dialplan import gateway_dial_plan
 from .pages.webex_locations import copy_location, e911, migrate_pstn, schedules
 from .pages.webex_reports import locations_report
 from .pages.webex_tools import hardware_compatibility
@@ -83,6 +84,7 @@ from .state.users import UsersState
 from .state.webex import WebexState
 from .state.webex_devices import BulkAtaState, CucmGatewayState, CucmMigrateState, DeviceMigrateState
 from .state.webex_groups import CallQueuesState, HuntGroupsState as WebexHuntGroupsState, VirtualLinesState
+from .state.webex_dialplan import GatewayDialPlanState
 from .state.webex_locations import CopyLocationState, E911State, MigratePstnState, SchedulesState
 from .state.webex_reports import LocationsReportState
 from .state.webex_tools import HardwareCompatState
@@ -147,6 +149,7 @@ for _route, _title, _page, _state in [
     ("/webex/call-queues", "Call Queues", call_queues, CallQueuesState),
     ("/webex/hunt-groups", "Webex Hunt Groups", webex_hunt_groups, WebexHuntGroupsState),
     ("/webex/virtual-lines", "Virtual Lines", virtual_lines, VirtualLinesState),
+    ("/webex/gateway-dial-plan", "Gateway Dial Plan", gateway_dial_plan, GatewayDialPlanState),
     ("/webex/migrate", "Migrate", migrate, MigrateState),
     ("/webex/schedules", "Schedules", schedules, SchedulesState),
     ("/webex/e911", "E911", e911, E911State),

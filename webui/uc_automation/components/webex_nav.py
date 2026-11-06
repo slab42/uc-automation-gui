@@ -31,6 +31,7 @@ MIGRATE = "/webex/migrate"
 SCHEDULES = "/webex/schedules"
 E911 = "/webex/e911"
 MIGRATE_PSTN = "/webex/migrate-pstn"
+GATEWAY_DIAL_PLAN = "/webex/gateway-dial-plan"
 COPY_LOCATION = "/webex/copy-location"
 HARDWARE = "/webex/hardware-compatibility"
 NAMING = "/webex/naming-check"
@@ -49,6 +50,8 @@ GROUPS = [
         ("Hunt Groups", HUNT_GROUPS, "users-round",
          "Create hunt groups from a CSV, replace agents, or migrate a hunt group to a call queue."),
         ("Virtual Lines", VIRTUAL_LINES, "voicemail", "Upload a busy and unanswered voicemail greeting."),
+        ("Gateway Dial Plan", GATEWAY_DIAL_PLAN, "route",
+         "Create a dial plan for a trunk or route group, or add dial patterns to an existing one."),
     ]),
     ("Locations", [
         ("Schedules", SCHEDULES, "calendar-days",
