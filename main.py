@@ -5,6 +5,8 @@ Usage:
     python3 main.py             start the app (UI on http://localhost:3000, backend on :8000)
     python3 main.py --setup     create or refresh webui/.venv from webui/requirements.txt, then start the app
     python3 main.py --update    install new requirements and upgrade existing ones in webui/.venv, then start the app
+    python3 main.py --dev       DEVELOPER ONLY: restart the app when Python files change and keep browser sign-ins
+                                across restarts (never use on a shared or production host)
 
 The first run creates webui/.venv and installs the requirements. Credentials live in
 .env/credentials.env (see webui/credentials.env.EXAMPLE); the Credentials page edits that file.
@@ -15,6 +17,7 @@ from __future__ import annotations
 import glob
 import os
 import shutil
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -67,12 +70,62 @@ def setup(upgrade: bool = False) -> int:
     return 0
 
 
+def run_dev(extra: list[str]) -> int:
+    """Developer mode: run reflex as a child, restart it when the app's Python files change or it exits.
+
+    Sets UC_DEV=1 so backend/users.py keeps sessions in webui/.dev_sessions.json (hashed tokens), which makes the
+    token already in the browser valid after a restart. Only the child this script started is ever stopped.
+    """
+    from watchfiles import watch  # a dependency of reflex, installed in the venv
+
+    host = os.environ.get("REFLEX_BACKEND_HOST", "")
+    if host and host not in ("localhost", "127.0.0.1", "::1"):
+        print(f"--dev refuses to run with REFLEX_BACKEND_HOST={host}: developer mode is for localhost only.")
+        return 1
+    env = {**os.environ, "UC_DEV": "1"}
+    print("DEV MODE: auto-restart on code changes, browser sign-ins survive restarts. Never use in production.", flush=True)
+    app_dir = WEBUI / "uc_automation"
+
+    def start() -> subprocess.Popen:
+        return subprocess.Popen([str(REFLEX), "run", *extra], cwd=WEBUI, env=env)
+
+    def stop(proc: subprocess.Popen) -> None:
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+    def py_changes(_change, path: str) -> bool:
+        return path.endswith(".py") and "__pycache__" not in path
+
+    signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
+    proc = start()
+    try:
+        # rxconfig.py is in WEBUI, the app in WEBUI/uc_automation; poll so a crashed child is restarted too.
+        for changes in watch(app_dir, WEBUI / "rxconfig.py", watch_filter=py_changes, debounce=1500,
+                             rust_timeout=2000, yield_on_timeout=True, raise_interrupt=False):
+            if changes or proc.poll() is not None:
+                what = "changed" if changes else "exited"
+                print(f"DEV MODE: {what}, restarting ...", flush=True)
+                stop(proc)
+                proc = start()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        stop(proc)
+    return 0
+
+
 def main() -> int:
     args = sys.argv[1:]
     if "--setup" in args or "--update" in args or not REFLEX.exists():
         code = setup(upgrade="--update" in args)
         if code:
             return code
+    if "--dev" in args:
+        return run_dev([a for a in args if a != "--dev"])
     os.chdir(WEBUI)
     if os.name == "nt":
         try:

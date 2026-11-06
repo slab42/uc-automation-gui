@@ -27,3 +27,7 @@ logs/
 
 # Customer scripts and other working files at the repo root
 /*.aef
+
+# Developer mode sessions (main.py --dev)
+webui/.dev_sessions.json
+.dev_sessions.*

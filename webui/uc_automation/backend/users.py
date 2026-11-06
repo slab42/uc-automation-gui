@@ -34,6 +34,54 @@ _sessions: dict[str, dict] = {}  # token -> {"user": key, "seen": float}
 _failures: dict[str, list[float]] = {}  # user key -> times of recent wrong passwords
 _cache: dict = {"mtime": None, "data": {"users": {}}}
 
+# Developer mode only (`python3 main.py --dev` sets UC_DEV=1): sessions are also kept in a git-ignored file
+# (SHA-256 of each token, never the token) so the token already in the browser survives a restart.
+DEV_SESSIONS_PATH = WEBUI_ROOT / ".dev_sessions.json"
+_dev_saved: list[float] = [0.0]  # last time the dev file was written (throttle for "seen" updates)
+
+
+def dev_mode() -> bool:
+    return os.environ.get("UC_DEV") == "1"
+
+
+def _thash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _dev_save(force: bool = True) -> None:
+    if not dev_mode():
+        return
+    now = time.time()
+    if not force and now - _dev_saved[0] < 60:
+        return
+    _dev_saved[0] = now
+    _write_dev({_thash(t): s for t, s in _sessions.items()})
+
+
+def _write_dev(data: dict) -> None:
+    try:
+        fd, tmp = tempfile.mkstemp(dir=str(DEV_SESSIONS_PATH.parent), prefix=".dev_sessions.")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, DEV_SESSIONS_PATH)
+    except OSError:
+        pass
+
+
+def _dev_lookup(token: str) -> dict | None:
+    """Dev mode: a session for this token saved before the last restart."""
+    if not dev_mode():
+        return None
+    try:
+        entry = json.loads(DEV_SESSIONS_PATH.read_text(encoding="utf-8")).get(_thash(token))
+    except (OSError, ValueError, AttributeError):
+        return None
+    if isinstance(entry, dict) and "user" in entry and "seen" in entry:
+        _sessions[token] = entry
+        return entry
+    return None
+
 
 class AuthError(UserError):
     """A sign-in or account problem with a message that is safe to show."""
@@ -232,6 +280,7 @@ def sign_in(username: str, password: str) -> tuple[str, dict]:
         _failures.pop(key, None)
         token = secrets.token_urlsafe(32)
         _sessions[token] = {"user": key, "seen": now}
+        _dev_save()
         return token, _public(key, rec)
 
 
@@ -241,20 +290,23 @@ def session_user(token: str) -> dict | None:
         return None
     now = time.time()
     with _lock:
-        sess = _sessions.get(token)
+        sess = _sessions.get(token) or _dev_lookup(token)
         if sess is None:
             return None
         rec = _read()["users"].get(sess["user"])
         if rec is None or not rec.get("enabled", True) or now - sess["seen"] > SESSION_IDLE_SECONDS:
             _sessions.pop(token, None)
+            _dev_save()
             return None
         sess["seen"] = now
+        _dev_save(force=False)
         return _public(sess["user"], rec)
 
 
 def sign_out(token: str) -> None:
     with _lock:
         _sessions.pop(token, None)
+        _dev_save()
 
 
 def drop_sessions(username: str) -> None:
@@ -262,6 +314,14 @@ def drop_sessions(username: str) -> None:
     with _lock:
         for token in [t for t, s in _sessions.items() if s["user"] == key]:
             del _sessions[token]
+        if dev_mode():  # also the saved sessions that were not looked up since the restart
+            try:
+                saved = json.loads(DEV_SESSIONS_PATH.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                saved = {}
+            keep = {h for h, e in saved.items() if isinstance(e, dict) and e.get("user") != key}
+            mem = {_thash(t) for t in _sessions}
+            _write_dev({h: e for h, e in saved.items() if h in keep and h not in mem} | {_thash(t): x for t, x in _sessions.items()})
 
 
 # ----- page access -----
