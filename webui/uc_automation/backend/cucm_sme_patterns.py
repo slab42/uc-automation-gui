@@ -77,6 +77,28 @@ def _lookup_keys(names: list[str]) -> dict[str, int]:
     return {var_key(i).lower(): i for i in range(len(names))}
 
 
+def check_regexes(regexes: list[str], names: list[str]) -> str:
+    """Error text for the first variable regex that does not compile, or ''."""
+    for i, rx_text in enumerate(regexes[:len(names)]):
+        if rx_text.strip():
+            try:
+                re.compile(rx_text)
+            except re.error as e:
+                return f"{var_display(i, names)} regex: {e}"
+    return ""
+
+
+def check_values(values: list[str], names: list[str], regexes: list[str], where: str = "") -> str:
+    """Error text for the first non-empty variable value that does not match its regex (re.search, so anchor
+    with ^ and $ to match the whole value), or ''. A variable with no regex accepts anything."""
+    for i, value in enumerate(values[:len(names)]):
+        pattern = regexes[i].strip() if i < len(regexes) else ""
+        if pattern and value.strip() and not re.search(pattern, value.strip()):
+            on = f" on {where}" if where else ""
+            return f"{var_display(i, names)} '{value.strip()}' does not match the regex {pattern}{on}."
+    return ""
+
+
 def require_sme(conn: CucmConnection | None) -> CucmConnection:
     """The connection, or AxlError when there is none or it is not marked as an SME cluster."""
     if conn is None:

@@ -11,6 +11,7 @@ from reflex.middleware import Middleware
 from reflex.state import FrontendEventExceptionState, OnLoadInternalState, State, StateUpdate, UpdateVarsInternalState
 
 from ..backend import users
+from ..backend.applog import set_user
 from .auth import AuthState
 
 # Reflex's own page-load plumbing: the root State (hydrate, set_is_hydrated), the page-load chain, client storage sync
@@ -29,6 +30,7 @@ class AuthGuard(Middleware):
         user = users.session_user(auth.token)
         if user is None:
             return StateUpdate()
+        set_user(user["username"])
         path = state.router_data.get("pathname")
         if path and not users.can_open(user, path):
             return StateUpdate()

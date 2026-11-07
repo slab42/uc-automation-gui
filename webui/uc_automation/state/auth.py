@@ -14,9 +14,9 @@ from ..backend.applog import OpLog
 _RELOAD = "setTimeout(() => window.location.reload(), 250)"
 
 
-def log_event(title: str, slug: str, *lines: str) -> None:
+def log_event(title: str, slug: str, *lines: str, user: str = "") -> None:
     """One short operation log (names only, never passwords)."""
-    log = OpLog(title, slug)
+    log = OpLog(title, slug, user)
     try:
         for line in lines:
             log.info(line)
@@ -123,13 +123,13 @@ class AuthState(rx.State):
             self.error = str(e)
             self._password = ""
             self.form_key += 1
-            log_event("Sign In", "sign-in", f"User: {name or '(blank)'}", f"Failed: {e}")
+            log_event("Sign In", "sign-in", f"User: {name or '(blank)'}", f"Failed: {e}", user=name or "(blank)")
             return
         self._password = ""
         self.error = ""
         self.form_key += 1
         self._apply(user)
-        log_event("Sign In", "sign-in", f"User: {user['username']}", "Signed in")
+        log_event("Sign In", "sign-in", f"User: {user['username']}", "Signed in", user=user["username"])
         return rx.call_script(_RELOAD)
 
     @rx.event
@@ -149,7 +149,7 @@ class AuthState(rx.State):
         self.form_key += 1
         self.needs_setup = False
         self._apply(user)
-        log_event("Set Up Admin Account", "admin-setup", "The Admin account was created")
+        log_event("Set Up Admin Account", "admin-setup", "The Admin account was created", user=users.ADMIN)
         return rx.call_script(_RELOAD)
 
     @rx.event
@@ -159,7 +159,7 @@ class AuthState(rx.State):
         self.token = ""
         self._apply(None)
         if name:
-            log_event("Sign Out", "sign-out", f"User: {name}")
+            log_event("Sign Out", "sign-out", f"User: {name}", user=name)
         return rx.call_script(_RELOAD)
 
     # ----- change my password -----
@@ -196,9 +196,9 @@ class AuthState(rx.State):
             self.pw_error = str(e)
             self._pw_current = self._pw_new = self._pw_new2 = ""
             self.form_key += 1
-            log_event("Change Own Password", "change-password", f"User: {user['username']}", f"Failed: {e}")
+            log_event("Change Own Password", "change-password", f"User: {user['username']}", f"Failed: {e}", user=user["username"])
             return
         self._pw_current = self._pw_new = self._pw_new2 = ""
         self.pw_open = False
-        log_event("Change Own Password", "change-password", f"User: {user['username']}", "Password changed")
+        log_event("Change Own Password", "change-password", f"User: {user['username']}", "Password changed", user=user["username"])
         return rx.toast.success("Password changed.")

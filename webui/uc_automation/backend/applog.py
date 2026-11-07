@@ -2,9 +2,10 @@
 
 Same line format as the CLI (`setup/logger.py`) and the same file name pattern
 (`<YYYY-MM-DD_HH-MM-SS>-<slug>.log`). Each log starts with "<Title> - Started" and ends with
-"<Title> - Completed". Never log passwords.
+"<Title> - Completed". Every line carries the signed-in user's name. Never log passwords.
 """
 
+import contextvars
 import logging
 import re
 import threading
@@ -17,13 +18,19 @@ from pathlib import Path
 from . import app_settings
 from .paths import LOG_DIR
 
-_FORMAT = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", "%Y-%m-%d %H:%M:%S")
+_FORMAT = logging.Formatter("%(asctime)s - %(levelname)s - %(user)s - %(message)s", "%Y-%m-%d %H:%M:%S")
+_user: contextvars.ContextVar[str] = contextvars.ContextVar("oplog_user", default="")
 _NAME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(?:-\d+)?-[A-Za-z0-9._-]+\.log$")
 _lock = threading.Lock()
 LINE_LIMIT = 1000  # lines read from the end of a log for the viewer and for searches; export gives the whole file
 PRUNE_EVERY = 600  # seconds between automatic prunes (the first log of a run, then at most this often)
 _open_paths: set[Path] = set()  # logs being written right now (never pruned)
 _last_prune = 0.0
+
+
+def set_user(name: str) -> None:
+    """Name the signed-in user for the logs opened by the event being handled (set by `state/auth_guard.py`)."""
+    _user.set(name)
 
 
 def _slug(text: str) -> str:
@@ -33,8 +40,9 @@ def _slug(text: str) -> str:
 class OpLog:
     """One operation's log. Call `close()` when the operation ends (use try/finally)."""
 
-    def __init__(self, title: str, slug: str):
+    def __init__(self, title: str, slug: str, user: str = ""):
         self.title = title
+        self.user = user or _user.get() or "system"
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         with _lock:  # two operations in the same second must not share a file
@@ -48,12 +56,12 @@ class OpLog:
                     break
                 n += 1
         prune_if_due()
-        self._logger = logging.getLogger(f"webui.{self.path.name}")
-        self._logger.setLevel(logging.DEBUG)
-        self._logger.propagate = False
+        self._logger = logging.LoggerAdapter(logging.getLogger(f"webui.{self.path.name}"), {"user": self.user})
+        self._logger.logger.setLevel(logging.DEBUG)
+        self._logger.logger.propagate = False
         self._handler = logging.FileHandler(self.path, encoding="utf-8")
         self._handler.setFormatter(_FORMAT)
-        self._logger.addHandler(self._handler)
+        self._logger.logger.addHandler(self._handler)
         self._closed = False
         self._held = False
         self.info(f"{title} - Started")
@@ -83,7 +91,7 @@ class OpLog:
             return
         self._closed = True
         self.info(f"{self.title} - Completed")
-        self._logger.removeHandler(self._handler)
+        self._logger.logger.removeHandler(self._handler)
         self._handler.close()
         _open_paths.discard(self.path)
 
@@ -210,7 +218,7 @@ def list_logs(query: str = "") -> list[dict[str, str]]:
 
 
 def parse_logs(query: str = "", limit: int = 200) -> list[str]:
-    """The last `limit` log lines (oldest first) across all logs, only those containing the query."""
+    """The last `limit` log lines (newest first) across all logs, only those containing the query."""
     if not LOG_DIR.is_dir():
         return []
     q = query.strip().lower()
@@ -226,8 +234,8 @@ def parse_logs(query: str = "", limit: int = 200) -> list[str]:
             if line.strip() and (not q or q in line.lower()):
                 found.append(line)
                 if len(found) >= limit:
-                    return found[::-1]
-    return found[::-1]
+                    return found
+    return found
 
 
 def read_log(name: str) -> tuple[str, bool]:

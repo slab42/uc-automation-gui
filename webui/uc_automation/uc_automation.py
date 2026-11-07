@@ -36,8 +36,12 @@ from .pages.partitions import partitions
 from .pages.cucm_pool_export import pool_export
 from .pages.cucm_reports import device_report
 from .pages.cucm_sme_patterns import sme_patterns
+from .pages.cucm_cutover import webex_cutover
+from .pages.cucm_cleanup import cutover_cleanup
 from .state.cucm_pool_export import PoolExportState
 from .state.cucm_sme_patterns import SmePatternsState
+from .state.cucm_cutover import CutoverState
+from .state.cucm_cleanup import CleanupState
 from .state.cucm_reports import DeviceReportState
 from .pages.tools import em_bulk_login, phone_count, set_user_pin
 from .pages.system import codec_lists, device_pools, locations, regions
@@ -289,6 +293,10 @@ for _route, _title, _page, _state in [
 
 app.add_page(sme_patterns, route="/cucm/sme-adv-route-patterns", title=f"SME Adv & Route Patterns | {APP_NAME}",
              on_load=SmePatternsState.load_connections)
+app.add_page(webex_cutover, route="/cucm/webex-cutover", title=f"Webex Cutover | {APP_NAME}",
+             on_load=CutoverState.load_connections)
+app.add_page(cutover_cleanup, route="/cucm/cutover-cleanup", title=f"Cutover Cleanup | {APP_NAME}",
+             on_load=CleanupState.load_connections)
 app.add_page(home_cluster_locator, route="/cucm/home-cluster-locator", title=f"Home Cluster Locator | {APP_NAME}",
              on_load=HomeClusterState.load_connections)
 app.add_page(device_report, route="/cucm/device-report", title=f"Device Report | {APP_NAME}",

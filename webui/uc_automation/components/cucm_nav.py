@@ -31,9 +31,11 @@ SET_PIN = "/cucm/set-user-pin"
 HOME_CLUSTER = "/cucm/home-cluster-locator"
 DEVICE_REPORT = "/cucm/device-report"
 POOL_EXPORT = "/cucm/device-export-webex"
+CUTOVER = "/cucm/webex-cutover"
+CLEANUP = "/cucm/cutover-cleanup"
 
 # Hidden unless Settings > experimental is on; amber badge in the menu
-IN_DEVELOPMENT = {POOL_EXPORT}
+IN_DEVELOPMENT = {POOL_EXPORT, CLEANUP}
 
 # (menu label, [(item label, route, icon, description)])
 GROUPS = [
@@ -72,6 +74,10 @@ GROUPS = [
         ("Phone Count By DP", PHONE_COUNT, "chart-column", "Count phones per device pool and export the result."),
         ("Set User PIN", SET_PIN, "key-round", "Set Extension Mobility PINs for one user or from a CSV."),
         ("Home Cluster Locator", HOME_CLUSTER, "locate", "Find which cluster of the organization a user is marked as home on."),
+    ]),
+    ("Migration", [
+        ("Webex Cutover", CUTOVER, "split", "Remove alternate numbers, move partition and add SME patterns for a DN list."),
+        ("Cutover Cleanup", CLEANUP, "eraser", "Delete old devices and orphan DNs, then remove the hunt group members and unused objects left behind."),
     ]),
     ("Reports", [
         ("Device Report", DEVICE_REPORT, "clipboard-list", "Registered and unregistered phones and gateway count per device pool."),

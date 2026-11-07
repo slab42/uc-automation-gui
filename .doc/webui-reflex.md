@@ -34,6 +34,11 @@ backend/cucm_pool_export.py  Device Export for Webex: SQL device list, AXL getPh
 state/cucm_pool_export.py    PoolExportState; page in pages/cucm_pool_export.py
 backend/cucm_sme_patterns.py SME Adv & Route Patterns: settings defaults and checks, description templates, number formatting, CSV parsing, add pair
 state/cucm_sme_patterns.py   SmePatternsState; page in pages/cucm_sme_patterns.py
+backend/cucm_cutover.py      Webex Cutover: DN list parsing, wrappers over cucm_dn and cucm_sme_patterns
+state/cucm_cutover.py        CutoverState; page in pages/cucm_cutover.py
+backend/cucm_cleanup.py      Cutover Cleanup: delete devices and orphan DNs, line groups with DNs, unused object scans
+state/cucm_cleanup.py        CleanupState; page in pages/cucm_cleanup.py
+state/sme_settings.py        SmeSettingsMixin: the SME pattern settings, variables and variable regexes (shared by SME Adv & Route Patterns and Webex Cutover); sections in components/sme_settings.py
 backend/keys.py              composite row keys (pattern + partition) shared by backend and state
 backend/cucm_devices.py      phones, CTI route points (delete cleans up orphaned DNs), softkey templates, common device configs, button templates, MPP workflows
 backend/organizations.py     customer organizations ([ORG:<name>]), per-organization filtering and grouping helpers
@@ -152,6 +157,7 @@ uc_automation.py             app + every add_page()
 
 - Every operation writes its own text file to `webui/logs/` (git-ignored): `<YYYY-MM-DD_HH-MM-SS>-<slug>.log`,
   first line `<Title> - Started`, last line `<Title> - Completed`.
+- Every log line carries the signed-in user's name (`%(user)s`, after the level). `AuthGuard` calls `applog.set_user` for each event and `OpLog` reads it (`system` when none); sign-in events pass `user=` to `log_event`.
 - Use `OpLog(title, slug)` from `backend/applog.py` and close it in `try/finally`. On CRUD pages call
   `self._open_log("Action")` (builds title and slug from the spec). Pass the log into `_start_each(..., log)`;
   the run owns it from there (`OpLog.hold`/`release`). The reload after a run is the `fetch` event, with its own "List" log.
@@ -161,7 +167,7 @@ uc_automation.py             app + every add_page()
   click a row to read it, select one or more and Export (one `.log`, or a `.zip` for several). It has no delete
   or import on purpose. The viewer and the content search read only the last 1000 lines of each log (`applog.LINE_LIMIT`); Export gives the whole file.
   Old logs are pruned by `applog.prune_logs`: older than `log_retention_days` (default 90), then oldest first while the total is over `log_max_mb` (default 2048); 0 turns a limit off. It runs at app start, before a log opens (at most every 10 minutes) and when Settings > Log Retention is saved. Logs being written are never pruned.
-  The Parser mode switch replaces the file list with the last 200 log lines (oldest first)
+  The Parser mode switch replaces the file list with the last 200 log lines (newest first)
   across all logs, filtered by the search text when there is one (`applog.parse_logs`). File names from the browser are validated against a strict pattern before any read.
 - Not logged: template downloads, selection/search clicks, dialog open/close, and CSV rejections on the MPP page.
 
@@ -490,6 +496,22 @@ number and SQL are unverified, so test on a lab CUCM.
 - Inputs: One Pattern (pattern plus one input per variable, labelled with the variable's name (`Var1` when the name is blank)) and Multiple Patterns (Paste Text first, CSV second; columns `pattern` then one per variable (the tab shows the variable names, `var_display`; a header may use the name or Var1 to Var9, any case, variable columns optional); the One Pattern inputs are the defaults for missing values).
 - **Settings window** (gear button, top right of the page body; kept in browser LocalStorage `sme_*`): the Cluster section only shows the active connection and an SME badge (no typing); **Variables** (above the Advertise section; `var_names_json`, LocalStorage `sme_var_names`): Var1 with a Name (default Department) and a plus (Add Variable, up to 9, Var2, Var3...) each with its own Name and a remove button (later ones move up, and the `{VarN}` in both descriptions are renumbered the same way: the deleted variable's placeholder is dropped, `renumber_template`). Advertise Pattern Settings (description template, Enterprise Number or +E164 Number pattern, PSTN setting: No PSTN / Use pattern / Specify with PSTN Failover Strip and Prepend Digits); Route Pattern Settings (description template, route partition, Route List or Gateway name). Description templates take `{Var1}` to `{Var9}` (any case, never the variable's name) and `{Pattern}` (last 10 digits); other `{names}` are rejected, and a variable used in a template needs a value for every row. The default templates use `{Var1}`. Defaults are the script's constants. Reset To Defaults restores them.
 - Logged as "SME add Advertised and Route Pattern(s)" with the connection, the settings and per-row results. Not tested against a real CUCM; request shapes were checked with zeep `create_message` on 12.5 and 15.0 and the description, number and CSV helpers were run on sample data.
+
+### CUCM Migration > Webex Cutover
+
+- `/cucm/webex-cutover`, `CutoverState`, `backend/cucm_cutover.py`, menu **Migration**. Input: a list of DNs (Paste Text first, CSV second; the CSV fills the Paste Text box so every button reads the same list). One DN per line, optional partition second, header optional; a blank partition takes the **Default Partition** from the Settings window (gear, LocalStorage `cut_*`). Device names are not supported yet.
+- Three separate buttons, each runs only its own step on every DN: **1. Remove Alt Numbers** (`cucm_dn.remove_alt_numbers`, confirm dialog), **2. Move Partition** (`cucm_dn.move_dn` to the Destination Partition from Settings, confirm dialog), **3. SME Add AdvP-RP** (`cucm_sme_patterns.add_pattern_pair`).
+- Steps 1 and 2 run on the active connection. Step 3 runs on the organization's SME cluster (the first SME connection, shown in Settings, nothing to pick). The Settings window holds the same SME settings as SME Adv & Route Patterns (`SmeSettingsMixin`, same browser keys `sme_*`, so editing on either page changes both): variables, Advertise Pattern and Route Pattern settings. A value is asked for each variable the descriptions use, applied to every DN.
+- **Variable regex**: each variable has an optional regex in Settings (`sme_var_regex`, one per variable, kept in step when variables are removed). The value typed for it must match (`re.search`: anchor with `^` and `$` for the whole value); a failing value shows a red message under its field and the run (cutover step 3, and SME Adv & Route Patterns for the page and per-row values) stops with an error before anything is added. An invalid regex is a settings error.
+- Each step is its own log ("Cutover ..."). Not tested against a real CUCM; the list parser was run on sample text and the app compiles.
+
+### CUCM Migration > Cutover Cleanup
+
+- `/cucm/cutover-cleanup`, `CleanupState`, `backend/cucm_cleanup.py`, menu **Migration**. Two inputs, each Paste Text first and CSV second (the CSV fills the box): **Directory Numbers** (same format as Webex Cutover; a DN without a partition matches that number in any partition) and **Device Names** (one per line, commas or spaces also separate, a 12 digit MAC becomes `SEP<MAC>`, header optional).
+- **1. Delete Devices And Orphan DNs** (confirm): per device `getPhone` lines, `removePhone`, then each of its DNs that no device, profile or remote destination profile uses (`removeLine`). Devices run first, one at a time, then the listed DNs (orphans only; a DN already removed with its device reports "Not found"). Only phones are removed.
+- **2. Remediate Hunt Groups**: lists line groups (`listLineGroup` + `getLineGroup`, 4 threads) with any listed DN as a member, with matched DNs, member count and hunt lists. Tick groups, then **Remove DNs From Line Groups** (`updateLineGroup removeMembers`; refused when every member is in the list) or **Delete Line Groups** (refused while a hunt list uses the group). Use Hunt Groups to remove pilots and hunt lists.
+- **3 to 9** (Call Pickup Group, Common Device Configuration, Phone Button Template, Softkey Template, Partitions, Calling Search Space, Device Pool): one shared search box (name contains, blank = all, Device Pool requires text) and one list panel. Each row is Unused, In use or Unconfirmed (Call Pickup Group and Phone Button Template hide In use rows, `HIDE_IN_USE`); only Unused rows can be ticked; **Delete Selected** (confirm) uses the AXL remove call, which CUCM still refuses for anything in use. Pickup groups and phone button templates reuse `find_*_usage`. Common device configs, device pools, softkey templates, partitions and CSSs (`_fk_usage`) read every table with a column starting `fkcommondeviceconfig`, `fkdevicepool`, `fksoftkeytemplate`, `fkroutepartition` or `fkcallingsearchspace` from `systables`/`syscolumns` and count references per pkid (the object's own tables, `softkeyset` and the CDR tables `cdr_*`, `cmr_*` are skipped).
+- **In development** (`IN_DEVELOPMENT`: hidden unless Settings > experimental is on, amber callout first on the page). Every scan and delete is its own log ("Cleanup ..."). Results and lists are in `output_fields`. Not tested against a real CUCM: the SQL (`systables`, `syscolumns`, `numplan`, `devicenumplanmap`, table names `callingsearchspace`, `softkeytemplate`) and the `getPhone`/`getLineGroup`/`updateLineGroup` shapes (the last checked against the XSD only) are unverified. The parsers and the foreign key scan were run on sample data and the app compiles.
 
 ### Objects identified by pattern + partition
 
