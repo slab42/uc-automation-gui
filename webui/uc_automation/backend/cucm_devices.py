@@ -13,7 +13,8 @@ SOFTKEY_FIELDS = ["name", "description", "baseSoftkeyTemplateName"]
 CDC_FIELDS = ["name", "softkeyTemplateName", "userLocale"]
 BUTTON_TEMPLATE_FIELDS = ["name", "basePhoneTemplateName"]
 CTIRP_FIELDS = ["name", "description", "devicePoolName", "callingSearchSpaceName", "locationName"]
-MPP_FIELDS = ["name", "description", "model", "devicePoolName", "loadInformation"]
+MPP_AXL_FIELDS = ["name", "description", "model", "devicePoolName", "loadInformation"]
+MPP_FIELDS = MPP_AXL_FIELDS + ["activeLoad"]   # activeLoad (Active Load ID) comes from RisPort70, not AXL
 
 MPP_LOAD_SERVER = "cloudupgrader.webex.com"
 
@@ -255,6 +256,8 @@ def format_phone_identifier(identifier: str) -> str:
     """Device name for a device name or MAC address (a 12-digit MAC gets the SEP prefix)."""
     identifier = identifier.strip()
     stripped = re.sub(r"[:.\-]", "", identifier)
+    if stripped[:3].upper() == "SEP":
+        stripped = stripped[3:]
     if re.fullmatch(r"[0-9A-Fa-f]{12}", stripped):
         return "SEP" + stripped.upper()
     return identifier
@@ -288,10 +291,26 @@ def mpp_load_for_model(model: str, action: str = "migrate") -> str | None:
     return None
 
 
-def list_mpp_phones(conn: CucmConnection) -> list[dict[str, str]]:
-    """Physical 78xx/88xx phones (the models with an MPP load mapping)."""
-    rows = list_paged(conn, "listPhone", "phone", {"name": "SEP%"}, MPP_FIELDS)
-    return sorted([r for r in rows if mpp_load_for_model(r["model"])], key=lambda r: r["name"])
+def list_mpp_phones(conn: CucmConnection, term: str = "") -> list[dict[str, str]]:
+    """Physical 78xx/88xx phones (the models with an MPP load mapping) whose name or description contains
+    `term` (a leading SEP is optional)."""
+    term = term.strip().replace("%", "")
+    if not term:
+        return []
+    by_name: dict[str, dict[str, str]] = {}
+    for field, value in (("name", term), ("description", term)):
+        for r in list_paged(conn, "listPhone", "phone", {field: f"%{value}%"}, MPP_AXL_FIELDS):
+            if r["name"].upper().startswith("SEP") and mpp_load_for_model(r["model"]):
+                by_name[r["name"]] = r
+    rows = sorted(by_name.values(), key=lambda r: r["name"])
+    from .cucm_reports import active_loads
+    try:
+        loads = active_loads(conn, [r["name"] for r in rows])
+    except AxlError:
+        loads = {}   # the list still works without RisPort70 access; Active Load ID stays blank
+    for r in rows:
+        r["activeLoad"] = loads.get(r["name"].upper(), "")
+    return rows
 
 
 def run_mpp_action(conn: CucmConnection, identifier: str, action: str) -> str:

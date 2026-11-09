@@ -3,6 +3,7 @@ import reflex as rx
 from ..components.crud_page import (
     Column, CrudPageConfig, build_crud_page, dependency_dialogs, dependency_toolbar, form_field, text_input,
 )
+from ..components.tool_widgets import csv_dropzone, paste_csv_tabs
 from ..state.devices import (
     CommonDeviceConfigsState,
     CtiRoutePointsState,
@@ -163,8 +164,16 @@ def _mpp_toolbar(S) -> list[rx.Component]:
                   disabled=S.selected_count == 0, on_click=S.ask_mpp("migrate")),
         rx.button(rx.icon("cloud-upload", size=16), "Prep for Webex Calling", variant="soft",
                   disabled=S.selected_count == 0, on_click=S.ask_mpp("prep")),
-        rx.button(rx.icon("file-up", size=16), "From CSV", variant="soft", on_click=S.set_dialog("mppcsv", True)),
     ]
+
+
+def _mpp_buttons(run) -> rx.Component:
+    return rx.hstack(
+        rx.button(rx.icon("cpu", size=16), "Migrate to MPP load", on_click=run("migrate"), disabled=MppPhonesState.busy),
+        rx.button(rx.icon("cloud-upload", size=16), "Prep for Webex Calling", variant="soft",
+                  on_click=run("prep"), disabled=MppPhonesState.busy),
+        spacing="3",
+    )
 
 
 def _mpp_dialogs(S, h) -> list[rx.Component]:
@@ -191,39 +200,47 @@ def _mpp_dialogs(S, h) -> list[rx.Component]:
             rx.vstack(h.results(), rx.hstack(h.close_button(), justify="end", width="100%"),
                       spacing="3", align="start", width="100%"),
         ),
-        h.dialog(
-            "mppcsv", "Run on phones from a CSV",
-            rx.vstack(
-                rx.text("The CSV needs a header row with a phone column (mac, device or name also work). "
-                        "A MAC address in any format becomes SEP<MAC>.", size="2", color="var(--gray-11)"),
-                h.code_block(S.template_text),
-                h.dropzone("mpp_upload"),
-                rx.text("Migrate sets the MPP 12.0(7) load. Prep sets the 14.4(1) load and the Webex cloud "
-                        "load server and disables peer firmware sharing. Both reset the phones.",
-                        size="1", color="var(--gray-10)"),
-                h.progress(),
-                h.results(),
-                rx.hstack(
-                    h.close_button(),
-                    rx.spacer(),
-                    rx.button(rx.icon("cpu", size=16), "Migrate to MPP load",
-                              on_click=S.csv_migrate(rx.upload_files(upload_id="mpp_upload")), disabled=S.busy),
-                    rx.button(rx.icon("cloud-upload", size=16), "Prep for Webex Calling", variant="soft",
-                              on_click=S.csv_prep(rx.upload_files(upload_id="mpp_upload")), disabled=S.busy),
-                    spacing="3", width="100%",
-                ),
-                spacing="3", align="start", width="100%",
-            ),
-            width="720px",
-        ),
     ]
+
+
+def _mpp_tabs(S, h, search_body: rx.Component) -> rx.Component:
+    bulk = rx.vstack(
+        paste_csv_tabs(
+            S.paste_phones, S.set_paste_phones,
+            "One phone per line (commas, tabs and spaces also separate). Device names work with or without "
+            "SEP, and a MAC address in any format becomes SEP plus the MAC. A header row is optional.",
+            "SEP0123456789AB\n0123456789AC\n0123.4567.89ad",
+            _mpp_buttons(lambda a: S.list_run(a)),
+            [
+                rx.text("One column: phone (mac, device or name also work). The file fills the Paste Text box.",
+                        size="2", color="var(--gray-11)"),
+                h.code_block(S.template_text),
+                csv_dropzone("mpp_upload"),
+                rx.button(rx.icon("upload", size=16), "Load CSV",
+                          on_click=S.load_phone_csv(rx.upload_files(upload_id="mpp_upload"))),
+            ],
+            paste_top=rx.text(S.phone_count.to_string(), " phone(s) in the list", size="2", color="var(--gray-11)"),
+        ),
+        rx.text("Migrate sets the MPP 12.0(7) load. Prep sets the 14.4(1) load and the Webex cloud "
+                "load server and disables peer firmware sharing. Both reset the phones.",
+                size="1", color="var(--gray-10)"),
+        h.progress(),
+        h.results(),
+        spacing="3", align="start", width="100%",
+    )
+    return rx.tabs.root(
+        rx.tabs.list(rx.tabs.trigger("Search", value="search"), rx.tabs.trigger("Bulk", value="bulk")),
+        rx.tabs.content(rx.box(search_body, padding_top="1rem"), value="search"),
+        rx.tabs.content(rx.box(bulk, padding_top="1rem"), value="bulk"),
+        default_value="search", width="100%",
+    )
 
 
 mpp_phones = build_crud_page(MppPhonesState, CrudPageConfig(
     title="Physical Phones (MPP)", noun="phone", key="name",
     columns=[Column("Name", "name", code=True), Column("Description", "description"),
              Column("Model", "model"), Column("Device pool", "devicePoolName"),
-             Column("Current load", "loadInformation")],
-    can_add=False, can_import=False, can_modify=False, can_delete=False,
+             Column("Active Load ID", "activeLoad"), Column("Load Override", "loadInformation")],
+    can_add=False, can_import=False, can_modify=False, can_delete=False, search_first=True, wrap_body=_mpp_tabs,
     extra_toolbar=_mpp_toolbar, extra_dialogs=_mpp_dialogs,
 ))

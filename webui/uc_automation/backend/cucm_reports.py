@@ -123,6 +123,32 @@ def registered_names(conn: CucmConnection, names: list[str], device_class: str =
     return found, True
 
 
+def active_loads(conn: CucmConnection, names: list[str], device_class: str = "Phone") -> dict[str, str]:
+    """{device name (upper case): Active Load ID} from RisPort70 for the devices it knows (registered ones)."""
+    out: dict[str, str] = {}
+    for i in range(0, len(names), RIS_BATCH):
+        items = "".join(f"<soap:item><soap:Item>{_xml_escape(n)}</soap:Item></soap:item>"
+                        for n in names[i:i + RIS_BATCH])
+        body = (
+            '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" '
+            'xmlns:soap="http://schemas.cisco.com/ast/soap"><soapenv:Header/><soapenv:Body>'
+            "<soap:selectCmDevice><soap:StateInfo></soap:StateInfo><soap:CmSelectionCriteria>"
+            f"<soap:MaxReturnedDevices>{RIS_BATCH}</soap:MaxReturnedDevices><soap:DeviceClass>{device_class}</soap:DeviceClass>"
+            "<soap:Model>255</soap:Model><soap:Status>Any</soap:Status><soap:NodeName></soap:NodeName>"
+            f"<soap:SelectBy>Name</soap:SelectBy><soap:SelectItems>{items}</soap:SelectItems>"
+            "<soap:Protocol>Any</soap:Protocol><soap:DownloadStatus>Any</soap:DownloadStatus>"
+            "</soap:CmSelectionCriteria></soap:selectCmDevice></soapenv:Body></soapenv:Envelope>"
+        )
+        root = _ris_call(conn, body)
+        for el in root.iter():
+            if el.tag.split("}")[-1] != "item":
+                continue
+            kids = {c.tag.split("}")[-1]: (c.text or "").strip() for c in el}
+            if kids.get("Name") and kids.get("ActiveLoadID"):
+                out[kids["Name"].upper()] = kids["ActiveLoadID"]
+    return out
+
+
 def _kind(model: str) -> str:
     m = model.lower()
     return "Analog Phones" if "analog" in m else "CTI Devices" if "cti" in m else "Phones"

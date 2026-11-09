@@ -555,7 +555,11 @@ Use `extra_toolbar` (returns buttons) and `extra_dialogs` (returns dialogs, rece
 - **Dependency check** on Phone Button Templates: `PhoneButtonTemplatesState.check_dependencies`
   and `_pbt_toolbar` / `_pbt_dialogs` in `pages/devices.py`.
 - **Firmware workflow** (not CRUD) on Physical Phones (MPP): `MppPhonesState` with `can_*` all off.
-  It reuses list, search, select and the per-row results runner.
+  It reuses select and the per-row results runner. It lists nothing until Search is pressed
+  (`CrudPageConfig.search_first`, `run_search`: name or description contains the text, queried from CUCM).
+  The page has two tabs (`CrudPageConfig.wrap_body`): Search, and Bulk, which takes Paste Text (default) or CSV (fills the paste box) with inline results; `cucm_cleanup.parse_devices` accepts
+  device names with or without SEP and MAC addresses in any format.
+  The Active Load ID column comes from RisPort70 (`cucm_reports.active_loads`, registered phones only, blank on failure); Load Override is AXL `loadInformation`.
 
 Dialogs are driven by one string var, `dialog` (`""`, `"add"`, `"import"`, `"bulk"`, `"confirm"`,
 `"result"`, `"exportchoice"`, or your own name). Open with `S.set_dialog("name", True)`.

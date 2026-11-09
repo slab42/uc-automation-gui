@@ -34,6 +34,8 @@ class CrudPageConfig:
     modify_label: str = "Modify"     # label of the import dialog's second button (it runs update_fn)
     can_copy: bool = False           # Copy button: Add dialog pre-filled from the one selected row
     can_delete: bool = True          # delete selected + bulk delete
+    wrap_body: Callable[[type, SimpleNamespace, rx.Component], rx.Component] | None = None  # e.g. page tabs
+    search_first: bool = False       # list nothing until Search is pressed (state needs `searched` and `run_search`)
     delete_note: str = ""
     extra_toolbar: Callable[[type], list[rx.Component]] | None = None
     extra_dialogs: Callable[[type, SimpleNamespace], list[rx.Component]] | None = None
@@ -351,12 +353,20 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
 
     def toolbar() -> rx.Component:
         return rx.hstack(
-            search_input(S.search, S.set_search, width="320px", max_width="100%"),
-            rx.text(
-                rx.cond(S.search != "",
-                        S.filtered.length().to_string() + " of " + S.items.length().to_string(),
-                        S.items.length().to_string() + " total"),
-                size="2", color="var(--gray-11)",
+            search_input(S.search, S.set_search, width="320px", max_width="100%",
+                         **({"on_key_down": lambda k: rx.cond(k == "Enter", S.run_search, rx.noop())}
+                            if cfg.search_first else {})),
+            *([rx.button(rx.icon("search", size=16), "Search", on_click=S.run_search, loading=S.loading,
+                         disabled=S.search.strip() == "")] if cfg.search_first else []),
+            rx.cond(
+                S.searched if cfg.search_first else True,
+                rx.text(
+                    rx.cond(S.search != "",
+                            S.filtered.length().to_string() + " of " + S.items.length().to_string(),
+                            S.items.length().to_string() + " total"),
+                    size="2", color="var(--gray-11)",
+                ),
+                rx.fragment(),
             ),
             rx.spacer(),
             rx.icon_button(rx.icon("refresh-cw", size=16), variant="soft", on_click=S.fetch, loading=S.loading,
@@ -377,12 +387,17 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
             align="center", spacing="3", wrap="wrap", width="100%",
         )
 
+    def helpers() -> SimpleNamespace:
+        return SimpleNamespace(dialog=dialog, close_button=close_button, results=results, progress=progress,
+                               dropzone=dropzone, code_block=code_block)
+
     def render() -> rx.Component:
+        wrap = cfg.wrap_body or (lambda _S, _h, body: body)
         return cucm_page(
             cfg.title,
             rx.cond(
                 S.has_active,
-                rx.vstack(
+                wrap(S, helpers(), rx.vstack(
                     toolbar(),
                     rx.cond(S.error != "",
                             rx.callout(S.error, icon="triangle-alert", color_scheme="red", width="100%"),
@@ -390,7 +405,12 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
                     rx.cond(
                         S.loading & (S.items.length() == 0),
                         rx.center(rx.spinner(size="3"), padding="3rem", width="100%"),
-                        table(),
+                        rx.cond(
+                            S.searched if cfg.search_first else True,
+                            table(),
+                            rx.text("Search to list " + cfg.noun + "s. Nothing is loaded from CUCM until you do.",
+                                    size="2", color="var(--gray-11)"),
+                        ),
                     ),
                     rx.cond(
                         S.hidden_count > 0,
@@ -400,7 +420,7 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
                         rx.fragment(),
                     ),
                     spacing="4", align="start", width="100%",
-                ),
+                )),
                 rx.callout(
                     rx.hstack(
                         rx.text("No CUCM connection is set up yet."),
@@ -414,9 +434,7 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
             *([add_dialog()] if cfg.can_add else []),
             *([import_dialog()] if cfg.can_import else []),
             *([bulk_dialog(), confirm_dialog(), result_dialog()] if cfg.can_delete else []),
-            *(cfg.extra_dialogs(S, SimpleNamespace(
-                dialog=dialog, close_button=close_button, results=results, progress=progress,
-                dropzone=dropzone, code_block=code_block)) if cfg.extra_dialogs else []),
+            *(cfg.extra_dialogs(S, helpers()) if cfg.extra_dialogs else []),
             on_connection_change=S.switch_connection,
             on_org_change=S.switch_org,
         )
