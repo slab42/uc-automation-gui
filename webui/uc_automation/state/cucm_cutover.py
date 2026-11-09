@@ -20,6 +20,7 @@ class CutoverState(CucmState, RunMixin, PasteMixin, SmeSettingsMixin):
     paste_text: str = ""
     confirm_alt: bool = False
     confirm_move: bool = False
+    adv_anyway: bool = False
     _error: str = ""
 
     @rx.var
@@ -63,6 +64,10 @@ class CutoverState(CucmState, RunMixin, PasteMixin, SmeSettingsMixin):
     @rx.event
     def set_confirm_alt(self, value: bool):
         self.confirm_alt = value
+
+    @rx.event
+    def set_adv_anyway(self, value: bool):
+        self.adv_anyway = value
 
     @rx.event
     def set_confirm_move(self, value: bool):
@@ -155,7 +160,9 @@ class CutoverState(CucmState, RunMixin, PasteMixin, SmeSettingsMixin):
             yield rx.toast.error(err)
             return
         log = [f"Setting {k}: {v}" for k, v in settings.items()]
+        anyway = self.adv_anyway
+        log.append(f"Add Advertised Pattern when the Route Pattern exists: {anyway}")
         ev = self._start("Cutover SME add Advertised and Route Patterns", "cutover-sme-patterns", "Adding", conn,
-                         lambda r: lambda: cut.add_sme_patterns(conn, settings, names, r, values), log)
+                         lambda r: lambda: cut.add_sme_patterns(conn, settings, names, r, values, anyway), log)
         if ev is not None:
             yield ev

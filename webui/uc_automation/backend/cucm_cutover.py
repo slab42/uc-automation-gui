@@ -8,6 +8,7 @@ Advertised Pattern and Route Pattern on the SME cluster (the SME Adv & Route Pat
 import csv
 import io
 
+from .cucm_axl import AxlError
 from .cucm_connections import CucmConnection
 from .cucm_dn import move_dn, remove_alt_numbers
 from .cucm_sme_patterns import add_pattern_pair
@@ -43,7 +44,16 @@ def label(row: dict[str, str]) -> str:
 
 
 def remove_alt(conn: CucmConnection, row: dict[str, str]) -> str:
-    return remove_alt_numbers(conn, f"{row['dn']}{KEY_SEP}{row['partition']}")
+    """A DN that starts with + is tried again as \\+... when CUCM does not find it."""
+    dn = row["dn"]
+    try:
+        return remove_alt_numbers(conn, f"{dn}{KEY_SEP}{row['partition']}")
+    except AxlError as e:
+        if not dn.startswith("+") or "not found" not in str(e).lower():
+            raise
+    alt = "\\" + dn
+    done = remove_alt_numbers(conn, alt + KEY_SEP + row["partition"])
+    return f"{done} (found as {alt})"
 
 
 def move_partition(conn: CucmConnection, row: dict[str, str], new_partition: str) -> str:
@@ -52,6 +62,6 @@ def move_partition(conn: CucmConnection, row: dict[str, str], new_partition: str
 
 
 def add_sme_patterns(sme_conn: CucmConnection, settings: dict[str, str], names: list[str], row: dict[str, str],
-                     values: list[str]) -> str:
-    return add_pattern_pair(sme_conn, settings, names, row["dn"], values)
+                     values: list[str], adv_anyway: bool = False) -> str:
+    return add_pattern_pair(sme_conn, settings, names, row["dn"], values, adv_anyway)
 

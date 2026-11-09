@@ -35,6 +35,7 @@ class CrudPageConfig:
     can_copy: bool = False           # Copy button: Add dialog pre-filled from the one selected row
     can_delete: bool = True          # delete selected + bulk delete
     wrap_body: Callable[[type, SimpleNamespace, rx.Component], rx.Component] | None = None  # e.g. page tabs
+    search_options: Callable[[type], rx.Component] | None = None  # control shown beside the search box
     search_first: bool = False       # list nothing until Search is pressed (state needs `searched` and `run_search`)
     delete_note: str = ""
     extra_toolbar: Callable[[type], list[rx.Component]] | None = None
@@ -356,6 +357,7 @@ def build_crud_page(S, cfg: CrudPageConfig) -> Callable[[], rx.Component]:
             search_input(S.search, S.set_search, width="320px", max_width="100%",
                          **({"on_key_down": lambda k: rx.cond(k == "Enter", S.run_search, rx.noop())}
                             if cfg.search_first else {})),
+            *([cfg.search_options(S)] if cfg.search_options else []),
             *([rx.button(rx.icon("search", size=16), "Search", on_click=S.run_search, loading=S.loading,
                          disabled=S.search.strip() == "")] if cfg.search_first else []),
             rx.cond(

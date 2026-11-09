@@ -228,6 +228,14 @@ def list_route_patterns(conn: CucmConnection) -> list[dict[str, str]]:
     return sorted(rows, key=lambda r: (r["pattern"], r["routePartitionName"]))
 
 
+def find_route_pattern(conn: CucmConnection, pattern: str, partition: str) -> dict[str, str] | None:
+    """The route pattern (pattern, partition, description) when it exists in that partition, else None."""
+    rows = list_paged(conn, "listRoutePattern", "routePattern",
+                      {"pattern": pattern, "routePartitionName": partition},
+                      ["pattern", "routePartitionName", "description"])
+    return next((r for r in rows if r["pattern"] == pattern and r["routePartitionName"] == partition), None)
+
+
 def _clean_route_pattern(row: dict[str, str]) -> dict[str, str]:
     r = {f: (row.get(f) or "").strip() for f in ROUTE_PATTERN_FIELDS}
     if not r["pattern"]:

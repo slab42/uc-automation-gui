@@ -503,6 +503,8 @@ number and SQL are unverified, so test on a lab CUCM.
 - Three separate buttons, each runs only its own step on every DN: **1. Remove Alt Numbers** (`cucm_dn.remove_alt_numbers`, confirm dialog), **2. Move Partition** (`cucm_dn.move_dn` to the Destination Partition from Settings, confirm dialog), **3. SME Add AdvP-RP** (`cucm_sme_patterns.add_pattern_pair`).
 - Steps 1 and 2 run on the active connection. Step 3 runs on the organization's SME cluster (the first SME connection, shown in Settings, nothing to pick). The Settings window holds the same SME settings as SME Adv & Route Patterns (`SmeSettingsMixin`, same browser keys `sme_*`, so editing on either page changes both): variables, Advertise Pattern and Route Pattern settings. A value is asked for each variable the descriptions use, applied to every DN.
 - **Variable regex**: each variable has an optional regex in Settings (`sme_var_regex`, one per variable, kept in step when variables are removed). The value typed for it must match (`re.search`: anchor with `^` and `$` for the whole value); a failing value shows a red message under its field and the run (cutover step 3, and SME Adv & Route Patterns for the page and per-row values) stops with an error before anything is added. An invalid regex is a settings error.
+- **Step 1** retries a DN that starts with `+` as `\+...` when CUCM says the line was not found; the row result then ends with "(found as \+...)".
+- **Step 3** reports each pattern on its own: `Advertised pattern: added X; Route pattern: added Y in <partition>` (or `failed ... (<error>)`; any failure marks the row failed, SME Adv & Route Patterns shows the same text). It first looks for the Route Pattern (`cucm_routing.find_route_pattern`); when it exists it is not added and its pattern and description are reported. The checkbox "If the Route Pattern already exists, add the Advertised Pattern anyway" (`adv_anyway`, off by default) decides whether the Advertised Pattern is still added. SME Adv & Route Patterns does not do this check.
 - Each step is its own log ("Cutover ..."). Not tested against a real CUCM; the list parser was run on sample text and the app compiles.
 
 ### CUCM Migration > Cutover Cleanup
@@ -556,7 +558,7 @@ Use `extra_toolbar` (returns buttons) and `extra_dialogs` (returns dialogs, rece
   and `_pbt_toolbar` / `_pbt_dialogs` in `pages/devices.py`.
 - **Firmware workflow** (not CRUD) on Physical Phones (MPP): `MppPhonesState` with `can_*` all off.
   It reuses select and the per-row results runner. It lists nothing until Search is pressed
-  (`CrudPageConfig.search_first`, `run_search`: name or description contains the text, queried from CUCM).
+  (`CrudPageConfig.search_first`, `run_search`: name or description contains the text, or the Device Pool option for the pool name, queried from CUCM).
   The page has two tabs (`CrudPageConfig.wrap_body`): Search, and Bulk, which takes Paste Text (default) or CSV (fills the paste box) with inline results; `cucm_cleanup.parse_devices` accepts
   device names with or without SEP and MAC addresses in any format.
   The Active Load ID column comes from RisPort70 (`cucm_reports.active_loads`, registered phones only, blank on failure); Load Override is AXL `loadInformation`.

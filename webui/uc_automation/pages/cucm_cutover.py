@@ -107,6 +107,8 @@ def _buttons() -> rx.Component:
                       disabled=S.busy | (S.dn_count == 0) | (S.sme_names.length() == 0) | (S.settings_error != "")),
             spacing="3", wrap="wrap",
         ),
+        rx.checkbox("If the Route Pattern already exists, add the Advertised Pattern anyway (step 3)",
+                    checked=S.adv_anyway, on_change=S.set_adv_anyway),
         spacing="3", align="start", width="100%",
     ), width="100%")
 

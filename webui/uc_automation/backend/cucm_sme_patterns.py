@@ -10,7 +10,7 @@ import re
 
 from .cucm_axl import AxlError
 from .cucm_connections import CucmConnection
-from .cucm_routing import add_advertised_pattern, add_route_pattern
+from .cucm_routing import add_advertised_pattern, add_route_pattern, find_route_pattern
 
 PATTERN_TYPES = ["Enterprise Number", "+E.164 Number"]
 # AXL hostedRoutePSTNRule value -> label shown on the settings window
@@ -223,8 +223,11 @@ def parse_pattern_csv(data: bytes, names: list[str]) -> list[dict]:
 
 
 def add_pattern_pair(conn: CucmConnection, settings: dict[str, str], names: list[str], pattern: str,
-                     values: list[str]) -> str:
-    """Add the Advertised Pattern and the matching Route Pattern. Both are tried; raises AxlError naming each failure."""
+                     values: list[str], adv_anyway: bool | None = None) -> str:
+    """Add the Advertised Pattern and the matching Route Pattern. Both are tried; raises AxlError naming each failure.
+
+    `adv_anyway` None: no check. True or False: look for the Route Pattern first. When it exists it is not added and
+    its pattern and description are reported; the Advertised Pattern is still added only when `adv_anyway` is True."""
     require_sme(conn)
     adv = format_advertised_pattern(pattern)
     rp = format_route_pattern(pattern)
@@ -237,13 +240,27 @@ def add_pattern_pair(conn: CucmConnection, settings: dict[str, str], names: list
         adv_row["pstnFailPrepend"] = settings["pstn_prepend"].strip()
     rp_row = {"pattern": rp, "routePartitionName": settings["rp_partition"].strip(),
               "description": render_description(settings["rp_desc"], values, names, pattern), **dest}
-    errors = []
-    for label, fn, row in (("Advertised Pattern", add_advertised_pattern, adv_row),
-                           ("Route Pattern", add_route_pattern, rp_row)):
+    part = rp_row["routePartitionName"]
+    outcomes, failed = [], False
+    existing = find_route_pattern(conn, rp, part) if adv_anyway is not None else None
+    if existing:
+        found = (f"Route pattern: already exists {rp} in {part}, "
+                 f"description \"{existing.get('description', '')}\"")
+        if not adv_anyway:
+            raise AxlError(f"{found}; Advertised pattern: not added (option off)")
+        try:
+            add_advertised_pattern(conn, adv_row)
+        except AxlError as e:
+            raise AxlError(f"Advertised pattern: failed {adv} ({e}); {found}")
+        return f"Advertised pattern: added {adv}; {found}"
+    for label, fn, row, shown in (("Advertised pattern", add_advertised_pattern, adv_row, adv),
+                                  ("Route pattern", add_route_pattern, rp_row, f"{rp} in {part}")):
         try:
             fn(conn, row)
+            outcomes.append(f"{label}: added {shown}")
         except AxlError as e:
-            errors.append(f"{label}: {e}")
-    if errors:
-        raise AxlError("; ".join(errors))
-    return f"Added {adv} and {rp} in {rp_row['routePartitionName']}"
+            failed = True
+            outcomes.append(f"{label}: failed {shown} ({e})")
+    if failed:
+        raise AxlError("; ".join(outcomes))
+    return "; ".join(outcomes)

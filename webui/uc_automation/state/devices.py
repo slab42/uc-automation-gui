@@ -126,13 +126,15 @@ class MppPhonesState(CucmState, CrudMixin, PasteMixin):
     output_fields: ClassVar[tuple[str, ...]] = ("searched",)
     mpp_action: str = "migrate"
     searched: bool = False
+    search_by: str = "name"
     paste_phones: str = ""
     _mpp_targets: list[str] = []
     _term: str = ""
+    _by: str = "name"
 
     def _spec(self) -> ResourceSpec:
-        term = self._term
-        return dataclasses.replace(MPP, list_fn=lambda conn: d.list_mpp_phones(conn, term))
+        term, by = self._term, self._by
+        return dataclasses.replace(MPP, list_fn=lambda conn: d.list_mpp_phones(conn, term, by))
 
     @rx.var
     def mpp_action_label(self) -> str:
@@ -179,11 +181,16 @@ class MppPhonesState(CucmState, CrudMixin, PasteMixin):
             yield ev
 
     @rx.event
+    def set_search_by(self, value: str | list[str]):
+        self.search_by = value if isinstance(value, str) else value[0]
+
+    @rx.event
     async def run_search(self):
         term = self.search.strip()
         if not term or self.loading:
             return
         self._term = term
+        self._by = self.search_by
         self.searched = True
         self.selected = []
         async for ev in self._fetch():

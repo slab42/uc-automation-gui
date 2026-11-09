@@ -203,6 +203,14 @@ def _mpp_dialogs(S, h) -> list[rx.Component]:
     ]
 
 
+def _mpp_search_by(S) -> rx.Component:
+    return rx.segmented_control.root(
+        rx.segmented_control.item("Name Or Description", value="name"),
+        rx.segmented_control.item("Device Pool", value="pool"),
+        value=S.search_by, on_change=S.set_search_by,
+    )
+
+
 def _mpp_tabs(S, h, search_body: rx.Component) -> rx.Component:
     bulk = rx.vstack(
         paste_csv_tabs(
@@ -241,6 +249,6 @@ mpp_phones = build_crud_page(MppPhonesState, CrudPageConfig(
     columns=[Column("Name", "name", code=True), Column("Description", "description"),
              Column("Model", "model"), Column("Device pool", "devicePoolName"),
              Column("Active Load ID", "activeLoad"), Column("Load Override", "loadInformation")],
-    can_add=False, can_import=False, can_modify=False, can_delete=False, search_first=True, wrap_body=_mpp_tabs,
+    can_add=False, can_import=False, can_modify=False, can_delete=False, search_first=True, wrap_body=_mpp_tabs, search_options=_mpp_search_by,
     extra_toolbar=_mpp_toolbar, extra_dialogs=_mpp_dialogs,
 ))

@@ -291,15 +291,15 @@ def mpp_load_for_model(model: str, action: str = "migrate") -> str | None:
     return None
 
 
-def list_mpp_phones(conn: CucmConnection, term: str = "") -> list[dict[str, str]]:
+def list_mpp_phones(conn: CucmConnection, term: str = "", by: str = "name") -> list[dict[str, str]]:
     """Physical 78xx/88xx phones (the models with an MPP load mapping) whose name or description contains
-    `term` (a leading SEP is optional)."""
+    `term` (by="name"), or whose device pool name contains it (by="pool")."""
     term = term.strip().replace("%", "")
     if not term:
         return []
     by_name: dict[str, dict[str, str]] = {}
-    for field, value in (("name", term), ("description", term)):
-        for r in list_paged(conn, "listPhone", "phone", {field: f"%{value}%"}, MPP_AXL_FIELDS):
+    for field in (("devicePoolName",) if by == "pool" else ("name", "description")):
+        for r in list_paged(conn, "listPhone", "phone", {field: f"%{term}%"}, MPP_AXL_FIELDS):
             if r["name"].upper().startswith("SEP") and mpp_load_for_model(r["model"]):
                 by_name[r["name"]] = r
     rows = sorted(by_name.values(), key=lambda r: r["name"])
