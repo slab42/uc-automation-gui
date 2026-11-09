@@ -3,9 +3,10 @@
 import reflex as rx
 
 from ..backend import app_settings, applog
+from .auth import AuthState
 
 
-class SettingsState(rx.State):
+class SettingsState(AuthState):
     retention_days: str = ""
     max_mb: str = ""
     # "1" hides the platform cards on the home page (browser LocalStorage)
@@ -38,6 +39,8 @@ class SettingsState(rx.State):
 
     @rx.event
     def save_log_settings(self):
+        if not self.is_admin:
+            return rx.toast.error("Only the Admin account can change log retention.")
         try:
             days, mb = int(self.retention_days.strip()), int(self.max_mb.strip())
             if days < 0 or mb < 0:
@@ -50,5 +53,7 @@ class SettingsState(rx.State):
 
     @rx.event
     def reset_log_settings(self):
+        if not self.is_admin:
+            return
         self.retention_days = str(app_settings.DEFAULTS["log_retention_days"])
         self.max_mb = str(app_settings.DEFAULTS["log_max_mb"])

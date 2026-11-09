@@ -166,7 +166,7 @@ uc_automation.py             app + every add_page()
 - Logs page (`/logs`, sidebar above Credentials): newest first, search matches file names and contents,
   click a row to read it, select one or more and Export (one `.log`, or a `.zip` for several). It has no delete
   or import on purpose. The viewer and the content search read only the last 1000 lines of each log (`applog.LINE_LIMIT`); Export gives the whole file.
-  Old logs are pruned by `applog.prune_logs`: older than `log_retention_days` (default 90), then oldest first while the total is over `log_max_mb` (default 2048); 0 turns a limit off. It runs at app start, before a log opens (at most every 10 minutes) and when Settings > Log Retention is saved. Logs being written are never pruned.
+  Old logs are pruned by `applog.prune_logs`: older than `log_retention_days` (default 90), then oldest first while the total is over `log_max_mb` (default 2048); 0 turns a limit off. It runs at app start, before a log opens (at most every 10 minutes) and when Settings > Log Retention is saved. The Log Retention card is only shown to the Admin account (`rx.cond(AuthState.is_admin, ...)`), and `SettingsState` (an `AuthState` subclass) re-checks the Admin role in the save and reset handlers. Logs being written are never pruned.
   The Parser mode switch replaces the file list with the last 200 log lines (newest first)
   across all logs, filtered by the search text when there is one (`applog.parse_logs`). File names from the browser are validated against a strict pattern before any read.
 - Not logged: template downloads, selection/search clicks, dialog open/close, and CSV rejections on the MPP page.

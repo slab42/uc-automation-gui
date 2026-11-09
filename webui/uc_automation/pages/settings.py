@@ -3,6 +3,7 @@ from reflex_base.style import set_color_mode
 
 from ..components.layout import page
 from ..config import APP_NAME, BUILD
+from ..state.auth import AuthState
 from ..state.settings import SettingsState as S
 
 
@@ -89,5 +90,5 @@ def settings() -> rx.Component:
         ),
         _home_card(),
         _experimental_card(),
-        _log_card(),
+        rx.cond(AuthState.is_admin, _log_card()),
     )
