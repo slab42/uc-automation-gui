@@ -22,6 +22,7 @@ STATUS_ALL = "Both Found"
 STATUS_ADV = "Advertised Missing"
 STATUS_RP = "Route Pattern Missing"
 STATUS_NONE = "Both Missing"
+ANY_MISSING = "Any Missing"
 STATUSES = [STATUS_ALL, STATUS_ADV, STATUS_RP, STATUS_NONE]
 
 

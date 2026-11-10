@@ -45,13 +45,14 @@ class SmeCheckState(WebexSession, RunMixin, SmeSettingsMixin):
 
     @rx.var
     def status_options(self) -> list[str]:
-        return ["All"] + R.STATUSES
+        return ["All", R.ANY_MISSING] + R.STATUSES
 
     @rx.var
     def shown(self) -> list[dict[str, str]]:
         q = self.search.strip().lower()
         return [r for r in self.rows
-                if (self.status_filter == "All" or r["status"] == self.status_filter)
+                if (self.status_filter == "All" or r["status"] == self.status_filter
+                     or (self.status_filter == R.ANY_MISSING and r["status"] != R.STATUS_ALL))
                 and (not q or q in r["number"].lower() or q in r["location"].lower() or q in r["owner"].lower())]
 
     @rx.var
