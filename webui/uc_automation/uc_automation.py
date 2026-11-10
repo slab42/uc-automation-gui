@@ -209,7 +209,7 @@ app.add_page(rs_pages.redsky_home, route="/redsky", title=f"RedSky | {APP_NAME}"
 for _route, _title, _page, _state in [
     ("/redsky/buildings-add", "Add Buildings", rs_pages.buildings_add, rs_state.AddBuildingsState),
     ("/redsky/locations-add", "Add Locations", rs_pages.locations_add, rs_state.AddLocationsState),
-    ("/redsky/alerts-add", "Add Alerts", rs_pages.alerts_add, rs_state.AddAlertsState),
+    ("/redsky/alerts-add", "Add-Edit Alerts", rs_pages.alerts_add, rs_state.AddAlertsState),
     ("/redsky/bssid", "BSSID", rs_pages.bssid, rs_state.BssidState),
     ("/redsky/lldp", "LLDP", rs_pages.lldp, rs_state.LldpState),
     ("/redsky/private-ip", "Private IP", rs_pages.private_ip, rs_state.PrivateIpState),
@@ -219,7 +219,7 @@ for _route, _title, _page, _state in [
                  on_load=[RedskyState.load_connections, _state.load_lookups])
 for _route, _title, _page in [
     ("/redsky/primary-location", "Check Primary Location Exists", rs_pages.primary_location),
-    ("/redsky/alerts-check", "Check All Buildings", rs_pages.alerts_check),
+    ("/redsky/alerts-check", "Check Buildings", rs_pages.alerts_check),
     ("/redsky/import-precheck", "Import Precheck", rs_pages.import_precheck),
     ("/redsky/duplicate-buildings", "Find Duplicate Buildings", rs_pages.duplicate_buildings),
     ("/redsky/duplicates-remediate", "Remediate Duplicate Buildings", rs_pages.duplicates_remediate),

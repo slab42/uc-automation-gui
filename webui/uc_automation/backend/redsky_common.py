@@ -58,6 +58,7 @@ class CheckSpec:
     run: Callable[..., tuple[int, list[dict[str, str]]]]  # (client[, input]) -> (items checked, problem rows)
     ok_message: str = ""
     input_label: str = ""  # when set the page asks for a value and run gets it as its second argument
+    input_optional: bool = False  # the input may be left empty, run then gets ""
     input_hint: str = ""
     input_placeholder: str = ""
 

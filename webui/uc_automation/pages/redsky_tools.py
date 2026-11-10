@@ -46,20 +46,79 @@ def redsky_home() -> rx.Component:
     )
 
 
-def _control(S, spec: AddSpec, f: Field) -> rx.Component:
+def _control(S, spec: AddSpec, f: Field, edit: bool = False) -> rx.Component:
+    """The input for one field. `edit` binds it to the Edit tab row instead of the Add row."""
+    row, setter, prefix = (S.edit_row, S.set_edit_field, "edit-") if edit else (S.row, S.set_row_field, "")
     if f.yesno:
-        return rx.select(["Not Set", "Yes", "No"], value=S.row[f.key], on_change=lambda v: S.set_row_field(f.key, v))
-    box = rx.input(value=S.row[f.key], on_change=lambda v: S.set_row_field(f.key, v), width="100%",
-                   auto_complete="off", list=f"{spec.slug}-{f.key}" if f.options else None)
+        return rx.select(["Not Set", "Yes", "No"], value=row[f.key], on_change=lambda v: setter(f.key, v))
+    box = rx.input(value=row[f.key], on_change=lambda v: setter(f.key, v), width="100%",
+                   auto_complete="off", list=f"{prefix}{spec.slug}-{f.key}" if f.options else None)
     if not f.options:
         return box
     return rx.fragment(
         box,
-        rx.el.datalist(rx.foreach(S.lookups[f.options], lambda n: rx.el.option(value=n)), id=f"{spec.slug}-{f.key}"),
+        rx.el.datalist(rx.foreach(S.lookups[f.options], lambda n: rx.el.option(value=n)), id=f"{prefix}{spec.slug}-{f.key}"),
     )
 
 
-def add_page(S, spec: AddSpec) -> rx.Component:
+def _edit_tab(S, spec: AddSpec) -> list:
+    """Edit tab: search (nothing is loaded until then), click an alert to load it, edit, save."""
+    fields = [field(f.label + (" *" if f.required else ""), _control(S, spec, f, edit=True), f.hint)
+              for f in spec.fields]
+    return [
+        rx.text("Search for an alert by part of its name (leave empty to list all), then click one to edit it.",
+                size="2", color="var(--gray-11)"),
+        rx.hstack(
+            rx.input(value=S.edit_query, on_change=S.set_edit_query, placeholder="Alert name contains",
+                     auto_complete="off", width="100%", on_key_down=S.edit_query_key),
+            rx.button(rx.cond(S.edit_busy, rx.spinner(size="2"), rx.icon("search", size=16)), "Search",
+                      on_click=S.search_alerts, disabled=S.edit_busy),
+            spacing="3", width="100%",
+        ),
+        rx.cond(
+            S.edit_searched,
+            rx.cond(
+                S.edit_found.length() > 0,
+                rx.card(
+                    rx.scroll_area(
+                        rx.table.root(
+                            rx.table.header(rx.table.row(rx.table.column_header_cell("Alert"),
+                                                         rx.table.column_header_cell("Alert Type"))),
+                            rx.table.body(rx.foreach(S.edit_found, lambda r: rx.table.row(
+                                rx.table.cell(rx.link(r["name"], on_click=S.load_alert(r["id"]), cursor="pointer")),
+                                rx.table.cell(r["alertType"])))),
+                            variant="ghost", width="100%",
+                        ),
+                        max_height="40vh",
+                    ),
+                    padding="0", width="100%",
+                ),
+                rx.text("No alerts found.", size="2", color="var(--gray-11)"),
+            ),
+            rx.fragment(),
+        ),
+        rx.cond(S.edit_busy, rx.hstack(rx.spinner(size="2"), rx.text("Working with RedSky...", size="2"),
+                                       align="center", spacing="2"), rx.fragment()),
+        rx.cond(
+            S.edit_id != "",
+            rx.vstack(
+                rx.heading("Editing " + S.edit_row["name"], size="3"),
+                rx.foreach(S.edit_warnings, lambda w: rx.callout(w, icon="info", size="1", width="100%")),
+                rx.grid(*fields, columns=rx.breakpoints(initial="1", md="2"), spacing="3", width="100%"),
+                rx.hstack(
+                    rx.button(rx.cond(S.edit_busy, rx.spinner(size="2"), rx.icon("save", size=16)), "Save",
+                              on_click=S.save_alert, disabled=S.edit_busy),
+                    rx.button("Cancel", variant="soft", color_scheme="gray", on_click=S.cancel_edit),
+                    spacing="3",
+                ),
+                spacing="3", align="start", width="100%",
+            ),
+            rx.fragment(),
+        ),
+    ]
+
+
+def add_page(S, spec: AddSpec, edit_tab: bool = False) -> rx.Component:
     upload_id = f"{spec.slug}_upload"
     fields = [field(f.label + (" *" if f.required else ""), _control(S, spec, f), f.hint) for f in spec.fields]
     columns = ", ".join(spec.columns)
@@ -94,14 +153,15 @@ paste_csv_tabs(
                             ),
                         ],
                     ),
-]),
+], extra=[("Edit", _edit_tab(S, spec))] if edit_tab else ()),
             run_results(S, title_case(spec.noun)),
             spacing="4", align="start", width="100%",
         )),
     )
 
 
-def check_page(S, spec: CheckSpec) -> rx.Component:
+def check_page(S, spec: CheckSpec, link_handler=None) -> rx.Component:
+    """`link_handler`, when given, turns the first column into links that call it with the cell text."""
     return redsky_page(
         spec.title,
         need_connection(rx.vstack(
@@ -109,7 +169,7 @@ def check_page(S, spec: CheckSpec) -> rx.Component:
                 rx.vstack(
                     rx.text(spec.blurb, size="2", color="var(--gray-11)"),
                     rx.cond(spec.input_label != "", field(
-                        spec.input_label + " *",
+                        spec.input_label + ("" if spec.input_optional else " *"),
                         rx.input(value=S.input_value, on_change=S.set_input_value, width="100%", auto_complete="off",
                                  placeholder=spec.input_placeholder),
                         spec.input_hint), rx.fragment()),
@@ -140,7 +200,10 @@ def check_page(S, spec: CheckSpec) -> rx.Component:
                                     rx.table.header(rx.table.row(
                                         *[rx.table.column_header_cell(h) for _k, h in spec.columns])),
                                     rx.table.body(rx.foreach(S.problems, lambda r: rx.table.row(
-                                        *[rx.table.cell(r[k]) for k, _h in spec.columns]))),
+                                        *[rx.table.cell(
+                                            rx.link(r[k], on_click=link_handler(r[k]), cursor="pointer")
+                                            if link_handler and i == 0 else r[k])
+                                          for i, (k, _h) in enumerate(spec.columns)]))),
                                     variant="ghost", width="100%",
                                 ),
                                 max_height="60vh",
@@ -172,11 +235,11 @@ def primary_location() -> rx.Component:
 
 
 def alerts_add() -> rx.Component:
-    return add_page(AddAlertsState, alerts.ALERTS_ADD)
+    return add_page(AddAlertsState, alerts.ALERTS_ADD, edit_tab=True)
 
 
 def alerts_check() -> rx.Component:
-    return check_page(AlertsCheckState, alerts.ALERTS_CHECK)
+    return check_page(AlertsCheckState, alerts.ALERTS_CHECK, AlertsCheckState.open_in_add_alerts)
 
 
 def bssid() -> rx.Component:

@@ -2,7 +2,7 @@
 
 import reflex as rx
 
-from ..backend import cucm_sme_patterns as sme
+from ..backend import cucm_connections, cucm_sme_patterns as sme
 from ..backend.applog import OpLog
 from ..backend.cucm_axl import AxlError
 from .cucm import CucmState
@@ -33,8 +33,19 @@ class SmePatternsState(CucmState, RunMixin, PasteMixin, SmeSettingsMixin):
         return ",".join(["pattern"] + cols) + "\n" + "\n".join(rows) + "\n"
 
     @rx.var
+    def sme_names(self) -> list[str]:
+        """SME clusters among the organization's saved connections."""
+        return [c["name"] for c in self.org_connections if c.get("sme") == "yes"]
+
+    @rx.var
+    def sme_selected(self) -> str:
+        """The SME cluster in use: the first SME connection of the organization."""
+        names = self.sme_names
+        return names[0] if names else ""
+
+    @rx.var
     def is_sme(self) -> bool:
-        return self.active_info.get("sme", "") == "yes"
+        return bool(self.sme_selected)
 
     def _preview_pattern(self) -> str:
         return self.form_pattern or "5558594400"
@@ -55,7 +66,7 @@ class SmePatternsState(CucmState, RunMixin, PasteMixin, SmeSettingsMixin):
     def _checked_connection(self):
         """(connection, error): the active connection when it may be used for this tool."""
         try:
-            conn = sme.require_sme(self._conn())
+            conn = sme.require_sme(cucm_connections.load(self.sme_selected) if self.sme_selected else None)
         except AxlError as e:
             return None, str(e)
         if err := self.settings_error:

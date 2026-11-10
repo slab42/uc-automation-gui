@@ -1,6 +1,6 @@
 import reflex as rx
 
-from ..components.tool_widgets import code_block, one_multiple_card, confirm_dialog, csv_dropzone, field, paste_csv_tabs, run_results
+from ..components.tool_widgets import code_block, how_it_works, one_multiple_card, confirm_dialog, csv_dropzone, field, paste_csv_tabs, run_results
 from ..components.webex_nav import webex_page
 from ..components.webex_picker import picker
 from ..state.webex_users import (
@@ -357,10 +357,11 @@ def upgrade_license() -> rx.Component:
     return webex_page(
         "Upgrade Calling License",
         need_login(rx.vstack(
-            rx.callout("Upgrades a workspace from the Common Area Workspace license to the Professional Workspace "
-                       "license. This is one way: there is no downgrade. The workspace keeps its location, number "
-                       "and extension, and one that already has the Professional license is left as it is.",
-                       icon="info", width="100%"),
+            how_it_works(
+                "Upgrades a workspace from the Common Area Workspace license to the Professional Workspace license.",
+                "This is one way: there is no downgrade. The workspace keeps its location, number and extension.",
+                "A workspace that already has the Professional license is left as it is.",
+            ),
             one_multiple_card(
                 "One Workspace", [
                     field("Workspace name", search(S.form_workspace, "workspace", "license-workspaces",
@@ -586,9 +587,11 @@ def migrate() -> rx.Component:
     return webex_page(
         "Migrate",
         need_login(rx.vstack(
-            rx.callout("Moves users to another location. Their phone number and extension are kept. Only the "
-                       "PRIMARY number of a user is acted on. Workspaces cannot be moved by the Webex API and are "
-                       "skipped; recreate or move them in Control Hub.", icon="info", width="100%"),
+            how_it_works(
+                "Moves users to another location.",
+                "Their phone number and extension are kept. Only the PRIMARY number of a user is acted on.",
+                "Workspaces cannot be moved by the Webex API and are skipped; recreate or move them in Control Hub.",
+            ),
             picker(S, "New location", columns=(("Name", "name"),)),
             rx.card(
                 rx.vstack(

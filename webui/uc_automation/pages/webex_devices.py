@@ -1,7 +1,7 @@
 import reflex as rx
 
 from ..components.tool_widgets import (
-    code_block, collapsible_card, confirm_dialog, one_multiple_card, csv_dropzone, field, paste_csv_tabs, run_results)
+    code_block, collapsible_card, confirm_dialog, how_it_works, one_multiple_card, csv_dropzone, field, paste_csv_tabs, run_results)
 from ..components.webex_nav import webex_page
 from ..state.webex_devices import BulkAtaState, CucmGatewayState, CucmMigrateState, DeviceMigrateState
 from .webex_routing import need_login
@@ -142,10 +142,11 @@ def bulk_ata() -> rx.Component:
     return webex_page(
         "Bulk ATA/VG",
         need_login(rx.vstack(
-            rx.callout("Each port gets its own new Webex Calling workspace. The device is added to the first "
-                       "workspace, then every workspace is assigned to its port (the first line is port 1). "
-                       "A workspace that already exists is not reused: the device is skipped.",
-                       icon="info", width="100%"),
+            how_it_works(
+                "Creates a new Webex Calling workspace for each port of an analog telephone adapter (ATA) or voice gateway (VG).",
+                "The device is added to the first workspace, then every workspace is assigned to its port (the first line is port 1).",
+                "A workspace that already exists is not reused: the device is skipped.",
+            ),
             one_multiple_card(
 "One ATA Or VG", [
 rx.grid(
@@ -262,16 +263,10 @@ def device_migrate() -> rx.Component:
     return webex_page(
         "Webex-Webex Phone Migrate",
         need_login(rx.vstack(
-            rx.popover.root(
-                rx.popover.trigger(rx.button(rx.icon("info", size=16), "How it works", variant="soft", size="1")),
-                rx.popover.content(
-                    rx.text("Moves a physical phone to a user in another Webex org. Press an arrow: the phone with "
-                            "the MAC on the side the arrow leaves is deleted from its org, then added by MAC to the "
-                            "user on the side it points to (it is added back if that fails). Calling settings and "
-                            "numbers do not move: set up the destination user first. Factory reset the phone "
-                            "afterwards so it registers with the new org.", size="2"),
-                    max_width="420px",
-                ),
+            how_it_works(
+                "Moves a physical phone to a user in another Webex org.",
+                "Press an arrow. The phone with the MAC on the side the arrow leaves is deleted from its org, then added by MAC to the user on the side it points to (it is added back if that fails).",
+                "Calling settings and numbers do not move, so set up the destination user first. Factory reset the phone afterwards so it registers with the new org.",
             ),
             rx.grid(
                 _side(S, S.org_l, S.user_l, S.mac_l, "l", status=S.login_l, status_msg=S.login_msg_l),
@@ -336,20 +331,11 @@ def cucm_migrate() -> rx.Component:
         "CUCM-Webex Phone Migrate",
         need_login(rx.vstack(
             rx.callout("Tool still under development.", icon="construction", color_scheme="amber", width="100%"),
-            rx.popover.root(
-                rx.popover.trigger(rx.button(rx.icon("info", size=16), "How it works", variant="soft", size="1")),
-                rx.popover.content(
-                    rx.text("Left is CUCM, right is Webex. The right arrow adds the phone with the MAC on the left to "
-                            "the Webex user on the right; the CUCM phone is kept. The left arrow deletes the phone "
-                            "with the MAC on the right from Webex; its configuration must already exist in CUCM. "
-                            "The User on the CUCM side and, going left, on the Webex side are optional ownership "
-                            "checks. Going to Webex, factory reset the phone afterwards. Going to CUCM, the phone must "
-                            "still be converted to Enterprise firmware: open http://<phone IP>/admin/advanced, "
-                            "Voice > Provisioning, set the Profile Rule to "
-                            "https://cloudupgrader.webex.com/Cisco/M2E/$SWVER/$PN/$MA.cfg and save.",
-                            size="2"),
-                    max_width="420px",
-                ),
+            how_it_works(
+                "Moves a physical phone between CUCM (left) and Webex (right).",
+                "The right arrow adds the phone with the MAC on the left to the Webex user on the right; the CUCM phone is kept. The left arrow deletes the phone with the MAC on the right from Webex; its configuration must already exist in CUCM.",
+                "The User on the CUCM side and, going left, on the Webex side are optional ownership checks.",
+                "Going to Webex, factory reset the phone afterwards. Going to CUCM, the phone must still be converted to Enterprise firmware: open http://<phone IP>/admin/advanced, go to Voice > Provisioning, set the Profile Rule to https://cloudupgrader.webex.com/Cisco/M2E/$SWVER/$PN/$MA.cfg and save.",
             ),
             rx.grid(
                 _side(S, S.conn_l, S.user_l, S.mac_l, "l", S.cucm_names, "CUCM", "conn",
@@ -417,10 +403,11 @@ def cucm_gateway() -> rx.Component:
     return webex_page(
         "CUCM-Webex Analog Gateway Migrate",
         need_login(rx.vstack(
-            rx.callout("Reads an analog gateway from CUCM and creates a Webex Calling workspace for port 1 and for "
-                       "any other ports you tick. Nothing is changed in CUCM. Not tested against a real CUCM or "
-                       "Webex org: check the port numbers before you create.",
-                       icon="info", width="100%"),
+            how_it_works(
+                "Migrates an analog gateway from CUCM to Webex Calling.",
+                "It reads the gateway from CUCM and creates a Webex Calling workspace for port 1 and for any other ports you tick. Nothing is changed in CUCM.",
+                "Not tested against a real CUCM or Webex org: check the port numbers before you create.",
+            ),
             rx.card(
                 rx.vstack(
                     rx.heading("1. CUCM Gateway", size="4"),

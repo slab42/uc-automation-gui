@@ -15,6 +15,19 @@ def plural(noun: str) -> str:
     return noun + ("es" if noun.endswith(("s", "x", "ch", "sh")) else "s")
 
 
+def how_it_works(*content, max_width: str = "420px") -> rx.Component:
+    """The standard information control: a small "How It Works" button that opens a popover.
+
+    Pass one string per paragraph (or components): first an opening sentence saying what the tool is, then
+    further information and instructions, one paragraph each. Use this for every page-level explanation instead of an inline callout.
+    Warnings and errors stay callouts."""
+    body = [rx.text(c, size="2") if isinstance(c, str) else c for c in content]
+    return rx.popover.root(
+        rx.popover.trigger(rx.button(rx.icon("info", size=16), "How it works", variant="soft", size="1")),
+        rx.popover.content(rx.vstack(*body, spacing="3", align="start"), max_width=max_width),
+    )
+
+
 def field(label: str, control: rx.Component, hint: str = "") -> rx.Component:
     return rx.vstack(
         rx.text(label, size="2", weight="medium"),

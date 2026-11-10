@@ -155,7 +155,7 @@ class RedskyCheck(rx.State, mixin=True):
             yield rx.toast.error(_NO_CONNECTION)
             return
         args = (self.input_value,) if spec.input_label else ()
-        if spec.input_label and not self.input_value.strip():
+        if spec.input_label and not spec.input_optional and not self.input_value.strip():
             yield rx.toast.error(f"Enter the {spec.input_label.lower()} first.")
             return
         self.checking = True
@@ -165,7 +165,7 @@ class RedskyCheck(rx.State, mixin=True):
         yield
         log = self._tool_log(f"RedSky {spec.title}", f"redsky-{spec.slug}", conn)
         try:
-            if args:
+            if args and self.input_value.strip():
                 log.info(f"{spec.input_label}: {self.input_value}")
             try:
                 client = await asyncio.to_thread(RedskyClient, conn.username, conn.password, conn.org_id)
@@ -218,12 +218,138 @@ class NoTrackingState(RedskyState, RedskyCheck):
 
 
 class AddAlertsState(RedskyState, RedskyBulk):
+    """Add-Edit Alerts. The Edit tab loads nothing until the user searches, then loads the clicked alert."""
+
     SPEC = alerts.ALERTS_ADD
+    output_fields: ClassVar[tuple[str, ...]] = ("edit_found", "edit_searched", "edit_id", "edit_row", "edit_warnings")
     row: dict[str, str] = _blank(alerts.ALERTS_ADD)
+    edit_query: str = ""
+    edit_busy: bool = False
+    edit_searched: bool = False
+    edit_found: list[dict[str, str]] = []
+    edit_id: str = ""
+    edit_row: dict[str, str] = _blank(alerts.ALERTS_ADD)
+    edit_warnings: list[str] = []
+
+    @rx.event
+    def set_edit_query(self, value: str):
+        self.edit_query = value
+
+    @rx.event
+    def edit_query_key(self, key: str):
+        if key == "Enter" and not self.edit_busy:
+            return AddAlertsState.search_alerts
+
+    @rx.event
+    def set_edit_field(self, field: str, value: str):
+        self.edit_row = {**self.edit_row, field: value}
+
+    @rx.event
+    def cancel_edit(self):
+        self.edit_id = ""
+        self.edit_row = _blank(alerts.ALERTS_ADD)
+        self.edit_warnings = []
+
+    @rx.event
+    async def search_alerts(self):
+        conn = self._conn()
+        if conn is None:
+            yield rx.toast.error(_NO_CONNECTION)
+            return
+        self.edit_busy = True
+        self.edit_found = []
+        self.cancel_edit()
+        yield
+        log = self._tool_log("RedSky Edit Alerts: Search", "redsky-alerts-edit", conn)
+        try:
+            log.info(f"Search: {self.edit_query!r}")
+            try:
+                client = await asyncio.to_thread(RedskyClient, conn.username, conn.password, conn.org_id)
+                found = await asyncio.to_thread(alerts.search_alerts, client, self.edit_query)
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            finally:
+                self.edit_busy = False
+            self.edit_found, self.edit_searched = found, True
+            log.info(f"{len(found)} alert(s) found")
+        finally:
+            log.close()
+
+    @rx.event
+    async def load_alert(self, alert_id: str):
+        conn = self._conn()
+        if conn is None:
+            yield rx.toast.error(_NO_CONNECTION)
+            return
+        self.edit_busy = True
+        yield
+        log = self._tool_log("RedSky Edit Alerts: Load", "redsky-alerts-edit", conn)
+        try:
+            try:
+                client = await asyncio.to_thread(RedskyClient, conn.username, conn.password, conn.org_id)
+                row, warnings = await asyncio.to_thread(alerts.load_alert, client, alert_id)
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            except Exception as e:  # unexpected: show it rather than fail silently
+                log.error(f"Failed unexpectedly: {e!r}")
+                yield rx.toast.error(f"Unexpected error: {e}")
+                return
+            finally:
+                self.edit_busy = False
+            self.edit_id, self.edit_row, self.edit_warnings = alert_id, row, warnings
+            log.info(f"Loaded alert {row['name']}")
+            for w in warnings:
+                log.warning(w)
+        finally:
+            log.close()
+
+    @rx.event
+    async def save_alert(self):
+        conn = self._conn()
+        if conn is None:
+            yield rx.toast.error(_NO_CONNECTION)
+            return
+        if not self.edit_id:
+            return
+        self.edit_busy = True
+        yield
+        row = {k: v.strip() for k, v in self.edit_row.items()}
+        log = self._tool_log("RedSky Edit Alerts: Save", "redsky-alerts-edit", conn)
+        try:
+            log.info(f"Saving alert {row['name']} (id {self.edit_id})")
+            try:
+                client = await asyncio.to_thread(RedskyClient, conn.username, conn.password, conn.org_id)
+                detail = await asyncio.to_thread(alerts.save_alert, client, self.edit_id, row)
+            except UserError as e:
+                log.error(str(e))
+                yield rx.toast.error(str(e))
+                return
+            except Exception as e:  # unexpected: show it rather than hang the spinner
+                log.error(f"Failed unexpectedly: {e!r}")
+                yield rx.toast.error(f"Unexpected error: {e}")
+                return
+            finally:
+                self.edit_busy = False
+            log.info(detail)
+            self.edit_found = [{**f, "name": row["name"]} if f["id"] == self.edit_id else f for f in self.edit_found]
+            yield rx.toast.success(detail)
+        finally:
+            log.close()
 
 
 class AlertsCheckState(RedskyState, RedskyCheck):
     CHECK = alerts.ALERTS_CHECK
+
+    @rx.event
+    async def open_in_add_alerts(self, building: str):
+        """Building name clicked in the results: open Add-Edit Alerts with the name and scope filled in."""
+        add = await self.get_state(AddAlertsState)
+        add.row = {**_blank(alerts.ALERTS_ADD), "name": building, "scope": building}
+        return rx.redirect("/redsky/alerts-add")
 
 
 class BssidState(RedskyState, RedskyBulk):

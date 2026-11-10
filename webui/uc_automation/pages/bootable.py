@@ -3,6 +3,7 @@
 import reflex as rx
 
 from ..components.layout import page
+from ..components.tool_widgets import how_it_works
 from ..state.bootable import BootableState
 
 S = BootableState
@@ -12,13 +13,11 @@ def make_bootable() -> rx.Component:
     return page(
         "Tools - Make ISO Bootable",
         rx.vstack(
-            rx.text("Adds the missing boot record to a Cisco CUCM, IMP or CUC install ISO so a virtual or physical "
-                    "machine can boot from it. Everything runs inside this app. The new file downloads "
-                    "automatically as Bootable_<name>.iso. Nothing is kept: the upload, the working copy and the "
-                    "result are deleted when the download ends (within a minute).",
-                    size="2", color="var(--gray-11)"),
-            rx.callout("These ISOs are several GB. The computer running this app needs free temporary disk space of "
-                       "about twice the ISO size while it works.", icon="info", width="100%"),
+            how_it_works(
+                "Adds the missing boot record to a Cisco CUCM, IMP or CUC install ISO so a virtual or physical machine can boot from it.",
+                "Everything runs inside this app. The new file downloads automatically as Bootable_<name>.iso. Nothing is kept: the upload, the working copy and the result are deleted when the download ends (within a minute).",
+                "These ISOs are several GB. The computer running this app needs free temporary disk space of about twice the ISO size while it works.",
+            ),
             rx.card(
                 rx.vstack(
                     rx.upload(

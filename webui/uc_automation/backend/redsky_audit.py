@@ -380,7 +380,7 @@ NO_LOCATIONS = CheckSpec(
 )
 
 
-def _locations_without_tracking(client: RedskyClient) -> tuple[int, list[dict[str, str]]]:
+def _locations_without_tracking(client: RedskyClient, text: str = "") -> tuple[int, list[dict[str, str]]]:
     """Locations are read per Building so each knows its Building and address. A Location the organization-level list
     returns that is not under any Building (matched by id) is reported with a blank Building."""
     tracking = collect_tracking(client)
@@ -395,6 +395,9 @@ def _locations_without_tracking(client: RedskyClient) -> tuple[int, list[dict[st
         if loc["id"] not in seen:
             seen.add(loc["id"])
             entries.append(("", building_address(loc), loc))
+    text = text.strip().lower()
+    if text:  # only Locations whose name contains the text are checked and reported
+        entries = [e for e in entries if text in e[2].get("name", "").lower()]
     missing = [{"building": name, "address": address, "location": loc.get("name", "")}
                for name, address, loc in entries if loc["id"] not in tracking]
     return len(entries), missing
@@ -403,10 +406,15 @@ def _locations_without_tracking(client: RedskyClient) -> tuple[int, list[dict[st
 NO_TRACKING = CheckSpec(
     slug="no-tracking", title="Find Locations Without Device Tracking", noun="location",
     blurb="List every Location that has no device tracking: no static MAC, LLDP switch or port, BSSID or Private IP "
-          "range is tied to it. The check stops with an error if any of the four lists cannot be read.",
+          "range is tied to it. Enter text to check only Locations whose name contains it. The check stops with an error if any of the four lists cannot be read.",
     columns=(("building", "Building"), ("address", "Building Address"), ("location", "Location")),
     run=_locations_without_tracking,
     ok_message="Every location has device tracking.",
+    input_label="Location Name Contains",
+    input_optional=True,
+    input_hint="Optional. Only Locations whose name contains this text (any case) are checked and reported. "
+               "Leave empty to check every Location.",
+    input_placeholder="Floor 2",
 )
 
 

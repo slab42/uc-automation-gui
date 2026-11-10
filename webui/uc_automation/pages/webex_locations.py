@@ -1,7 +1,7 @@
 import reflex as rx
 
 from ..backend.countries import COUNTRIES
-from ..components.tool_widgets import code_block, confirm_dialog, csv_dropzone, field, paste_csv_tabs, run_results
+from ..components.tool_widgets import code_block, confirm_dialog, csv_dropzone, field, how_it_works, paste_csv_tabs, run_results
 from ..components.webex_nav import webex_page
 from ..components.search_input import search_input
 from ..components.webex_picker import picker
@@ -333,6 +333,11 @@ def migrate_pstn() -> rx.Component:
     return webex_page(
         "Migrate PSTN",
         need_login(rx.vstack(
+            how_it_works(
+                "Moves a Webex Calling location to a different PSTN connection: a trunk, route group or cloud connection.",
+                "Pick one location, or paste or upload a list of location names, then choose the new connection and confirm.",
+                "Numbers keep their location, and calls to and from them follow the new connection. Integrated CCP and Cisco PSTN cannot be set through the API.",
+            ),
             rx.tabs.root(
                 rx.tabs.list(
                     rx.tabs.trigger("Single Location", value="single"),

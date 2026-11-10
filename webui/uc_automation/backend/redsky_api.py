@@ -331,6 +331,16 @@ class RedskyClient:
     def list_alert_subscriptions(self) -> list[dict]:
         return self._list_paged(f"/admin-service/alertSubscription/company/{self.org_id}", {"sortBy": "name"})
 
+    def get_alert_subscription(self, subscription_id: str) -> dict:
+        return self._ok(self._request("GET", f"/admin-service/alertSubscription/{subscription_id}")).json()
+
+    def update_alert_subscription(self, payload: dict) -> None:
+        """PUT the whole subscription (EditAlertSubscriptionTO, with its id)."""
+        self._ok(self._request("PUT", "/admin-service/alertSubscription", json=payload))
+
+    def delete_alert_subscription_filters(self, subscription_id: str) -> None:
+        self._ok(self._request("DELETE", f"/admin-service/alertSubscription/{subscription_id}/filters"))
+
     def list_alert_subscription_filters(self, subscription_id: str) -> list[dict]:
         return self._list_paged(f"/admin-service/alertSubscription/{subscription_id}/filters", {"sortBy": "ouId"})
 

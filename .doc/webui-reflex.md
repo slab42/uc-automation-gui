@@ -61,7 +61,7 @@ backend/redsky_api.py        RedskyError, RedskyClient (login, 15 min token rene
 backend/redsky_common.py     Field / AddSpec / CheckSpec (one spec drives form, CSV template, parser and run loop), CSV rows, location lookup
 backend/redsky_geography.py  Add Buildings, Add Locations specs
 backend/redsky_precheck.py   Import Precheck: parse pasted/CSV names or IP ranges, check Buildings, Locations or Private IP ranges against RedSky
-backend/redsky_alerts.py     Add Alerts, Check All Buildings specs
+backend/redsky_alerts.py     Add-Edit Alerts, Check Buildings specs
 backend/redsky_networking.py BSSID, LLDP, Private IP, Public IP specs
 backend/cuc_users.py         CUC users: extension list parsing, status/usage rows and CSV
 backend/cuc_handlers.py      CUC call handlers: classify, menu entries, CSV in/out, call tree workbook (openpyxl)
@@ -257,7 +257,7 @@ uc_automation.py             app + every add_page()
 
 ### RedSky features
 
-- Menu (`components/redsky_nav.GROUPS`, also the `/redsky` home cards): **Buildings And Locations** = Add Buildings, Add Locations; **Tools** = Import Precheck, Remediate Duplicate Buildings (in development, `redsky_nav.IN_DEVELOPMENT`: hidden unless the Experimental setting is on); **Alerts** = Add Alerts, Check All Buildings; **Tracking** = BSSID, LLDP, Private IP, Public IP; **Reports** (last) = Check Primary Location Exists, Find Duplicate Buildings, Find Buildings Without Locations, Find Locations Without Device Tracking.
+- Menu (`components/redsky_nav.GROUPS`, also the `/redsky` home cards): **Buildings And Locations** = Add Buildings, Add Locations; **Tools** = Import Precheck, Remediate Duplicate Buildings (in development, `redsky_nav.IN_DEVELOPMENT`: hidden unless the Experimental setting is on); **Alerts** = Add-Edit Alerts, Check Buildings; **Tracking** = BSSID, LLDP, Private IP, Public IP; **Reports** (last) = Check Primary Location Exists, Find Duplicate Buildings, Find Buildings Without Locations, Find Locations Without Device Tracking.
   One active connection (picker in the menu bar, shared with the Credentials tab). Port of `redsky/*.py` (reference only).
 - **Add tools** share one page (`add_page`) built from an `AddSpec`: a single entry form (one field per CSV column, suggestions
   for buildings, locations, alert types and templates), then Paste Text (first) and CSV tabs that go through the same handler,
@@ -297,6 +297,13 @@ uc_automation.py             app + every add_page()
   - **Find Buildings Without Locations** (`/redsky/no-locations`) and **Find Locations Without Device Tracking** (`/redsky/no-tracking`)
     are `CheckSpec` pages. The tracking check stops with an error if any of the four lists cannot be read, so a Location is never
     reported untracked because a list was missing.
+  - In **Check Buildings** (`/redsky/alerts-check`) the Building name is a link: `AlertsCheckState.open_in_add_alerts` fills the
+    Add-Edit Alerts form (name and scope = the Building) and redirects to `/redsky/alerts-add` (`check_page(..., link_handler)`).
+  - **Add-Edit Alerts** (`/redsky/alerts-add`) has an **Edit** tab after the Add tabs. It loads nothing until the user searches (alert name
+    contains text, empty lists all); clicking an alert loads it (`alerts.load_alert`) into `AddAlertsState.edit_row`; Save PUTs the subscription
+    and replaces its scope only if it changed (`alerts.save_alert`). User and Informacast recipients and scope entries the form cannot
+    show are kept unchanged. Uses `/admin-service/alertSubscription` PUT, GET by id and DELETE on `/{id}/filters`. The tracking check has an optional "Location Name Contains" input (`CheckSpec.input_optional`):
+    when filled, only Locations whose name contains the text (case-insensitive) are checked and reported, and the total counts only those.
   - Unverified against a real tenant: the reference JSON has no networking or geography endpoints. Guessed: list paths for static
     MACs (`/networking-service/macAddress/company/{org}` and variants), BSSIDs and switch ports (`RedskyClient._list_first` tries
     several), PUT on the collection path to move a tracking record, DELETE `/geography-service/locations/{id}` and `/buildings/{id}`,
@@ -492,9 +499,9 @@ number and SQL are unverified, so test on a lab CUCM.
 ### CUCM Call Routing > SME Adv & Route Patterns
 
 - `/cucm/sme-adv-route-patterns`, `SmePatternsState`, `backend/cucm_sme_patterns.py`. Port of `uc-automation/cucm/AdvP_RP_add.py`: for each number it adds an Advertised Pattern (`addAdvertisedPatterns`) and a Route Pattern (`addRoutePattern`), reusing `cucm_routing.add_advertised_pattern` and `add_route_pattern`. Both are tried; a row fails if either fails and the detail names which. 10 digit numbers become `+1...` (Advertised) and `\+1...` (Route Pattern), as in the script.
-- **SME only**: `require_sme` refuses a connection without the SME cluster box (Credentials > CUCM). The page shows a red callout when the selected connection is not SME.
+- **SME only, no instance picker**: the page hides the Instance selector (`show_instance=False`) and always runs on the organization's SME cluster (the first connection of the active organization with the SME cluster box ticked, `sme_selected`, same as Webex Cutover step 3). `require_sme` still refuses a missing or non-SME connection. The page shows a red callout when the organization has no SME cluster.
 - Inputs: One Pattern (pattern plus one input per variable, labelled with the variable's name (`Var1` when the name is blank)) and Multiple Patterns (Paste Text first, CSV second; columns `pattern` then one per variable (the tab shows the variable names, `var_display`; a header may use the name or Var1 to Var9, any case, variable columns optional); the One Pattern inputs are the defaults for missing values).
-- **Settings window** (gear button, top right of the page body; kept in browser LocalStorage `sme_*`): the Cluster section only shows the active connection and an SME badge (no typing); **Variables** (above the Advertise section; `var_names_json`, LocalStorage `sme_var_names`): Var1 with a Name (default Department) and a plus (Add Variable, up to 9, Var2, Var3...) each with its own Name and a remove button (later ones move up, and the `{VarN}` in both descriptions are renumbered the same way: the deleted variable's placeholder is dropped, `renumber_template`). Advertise Pattern Settings (description template, Enterprise Number or +E164 Number pattern, PSTN setting: No PSTN / Use pattern / Specify with PSTN Failover Strip and Prepend Digits); Route Pattern Settings (description template, route partition, Route List or Gateway name). Description templates take `{Var1}` to `{Var9}` (any case, never the variable's name) and `{Pattern}` (last 10 digits); other `{names}` are rejected, and a variable used in a template needs a value for every row. The default templates use `{Var1}`. Defaults are the script's constants. Reset To Defaults restores them.
+- **Settings window** (gear button, top right of the page body; kept in browser LocalStorage `sme_*`): the Cluster section only shows the organization's SME cluster and an SME badge (no typing); **Variables** (above the Advertise section; `var_names_json`, LocalStorage `sme_var_names`): Var1 with a Name (default Department) and a plus (Add Variable, up to 9, Var2, Var3...) each with its own Name and a remove button (later ones move up, and the `{VarN}` in both descriptions are renumbered the same way: the deleted variable's placeholder is dropped, `renumber_template`). Advertise Pattern Settings (description template, Enterprise Number or +E164 Number pattern, PSTN setting: No PSTN / Use pattern / Specify with PSTN Failover Strip and Prepend Digits); Route Pattern Settings (description template, route partition, Route List or Gateway name). Description templates take `{Var1}` to `{Var9}` (any case, never the variable's name) and `{Pattern}` (last 10 digits); other `{names}` are rejected, and a variable used in a template needs a value for every row. The default templates use `{Var1}`. Defaults are the script's constants. Reset To Defaults restores them.
 - Logged as "SME add Advertised and Route Pattern(s)" with the connection, the settings and per-row results. Not tested against a real CUCM; request shapes were checked with zeep `create_message` on 12.5 and 15.0 and the description, number and CSV helpers were run on sample data.
 
 ### CUCM Migration > Webex Cutover
@@ -675,6 +682,7 @@ Schedules (update), E911 (select locations), Check Hardware Compatibility.
 Pages with a one-item input and a multiple-item input (Add Numbers, Call Forward, Reset PIN, Add Workspace, Add Device, Voicemail,
 Check Hardware Compatibility, Bulk ATA/VG, Text To U-Law Audio, Set User PIN, RedSky add pages) show them as two tabs of one card,
 built with `one_multiple_card` (`components/tool_widgets.py`): the single input is the first (default) tab, the bulk input the second.
+Page-level explanations use `how_it_works(...)` (`components/tool_widgets.py`): a small soft "How it works" button with an info icon that opens a popover, placed right under the under-development banner. Plain info is never an inline `rx.callout`; callouts are for warnings, errors, status and "no connection" prompts.
 `PanesMixin` (`state/run_mixin.py`) and `collapsible_card` remain for the Migrate pages' multiple-phones card.
 
 ### Home Cluster Locator (CUCM > Tools)

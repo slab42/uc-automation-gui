@@ -34,8 +34,8 @@ GROUPS = [
         ("Add Locations", LOCATIONS_ADD, "map-pin-plus", "Add Locations under a Building, one at a time or from a list."),
     ]),
     ("Alerts", [
-        ("Add Alerts", ALERTS_ADD, "bell-plus", "Add alert subscriptions with recipients and scope."),
-        ("Check All Buildings", ALERTS_CHECK, "bell-ring",
+        ("Add-Edit Alerts", ALERTS_ADD, "bell-plus", "Add alert subscriptions, or search for one and edit its recipients and scope."),
+        ("Check Buildings", ALERTS_CHECK, "bell-ring",
          "Find Buildings that have no alert named like the Building that covers it."),
     ]),
     ("Tracking", [
