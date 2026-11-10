@@ -18,6 +18,8 @@ class CutoverState(CucmState, RunMixin, PasteMixin, SmeSettingsMixin):
 
     # Page inputs
     paste_text: str = ""
+    prefix: str = ""
+    number_length: str = ""
     confirm_alt: bool = False
     confirm_move: bool = False
     adv_anyway: bool = False
@@ -43,7 +45,7 @@ class CutoverState(CucmState, RunMixin, PasteMixin, SmeSettingsMixin):
     @rx.var
     def dn_count(self) -> int:
         try:
-            return len(cut.parse_dn_list(self.paste_text, self.src_partition)) if self.paste_text.strip() else 0
+            return len(cut.parse_dn_list(self.paste_text, self.src_partition, self.prefix, self.number_length)) if self.paste_text.strip() else 0
         except ValueError:
             return 0
 
@@ -60,6 +62,14 @@ class CutoverState(CucmState, RunMixin, PasteMixin, SmeSettingsMixin):
     @rx.event
     def set_paste_text(self, value: str):
         self.paste_text = value
+
+    @rx.event
+    def set_prefix(self, value: str):
+        self.prefix = value
+
+    @rx.event
+    def set_number_length(self, value: str):
+        self.number_length = "".join(c for c in value if c.isdigit())[:3]
 
     @rx.event
     def set_confirm_alt(self, value: bool):
@@ -86,7 +96,7 @@ class CutoverState(CucmState, RunMixin, PasteMixin, SmeSettingsMixin):
 
     def _rows(self) -> list[dict[str, str]] | None:
         try:
-            rows = cut.parse_dn_list(self.paste_text, self.src_partition)
+            rows = cut.parse_dn_list(self.paste_text, self.src_partition, self.prefix, self.number_length)
         except ValueError as e:
             self._error = str(e)
             return None

@@ -8,7 +8,7 @@ from .tools import _need_connection
 
 S = CutoverState
 
-_EXAMPLE = "dn,partition\n5558594400,Phone-Line1-PT\n5558594401\n"
+_EXAMPLE = "dn,partition\n42065266095,Phone-Line1-PT\n+12065266095\n"
 
 
 def _settings_dialog() -> rx.Component:
@@ -76,6 +76,16 @@ def _sme_card() -> rx.Component:
 def _input_card() -> rx.Component:
     return rx.card(rx.vstack(
         rx.heading("Directory Numbers", size="3"),
+        rx.hstack(
+            field("Prefix Pattern", rx.input(value=S.prefix, on_change=S.set_prefix, width="200px", placeholder="+1")),
+            field("Number Length", rx.input(value=S.number_length, on_change=S.set_number_length, width="140px",
+                                            placeholder="10", input_mode="numeric")),
+            spacing="4", align="start", width="100%",
+        ),
+        rx.text("Number Length keeps that many digits from the right of each number (blank = all), then the Prefix "
+                "Pattern is put in front: 42065266095 with +1 and 10 becomes +12065266095. Numbers starting with + "
+                "are looked up as \\+ for DNs and Route Patterns, not for Advertised Patterns.",
+                size="1", color="var(--gray-10)"),
         paste_csv_tabs(
             S.paste_text, S.set_paste_text,
             "One DN per line, optional partition second (tab, pipe, semicolon or comma). A header row is optional. "

@@ -119,9 +119,9 @@ def format_advertised_pattern(pattern: str) -> str:
 
 
 def format_route_pattern(pattern: str) -> str:
-    """Numbers already in +1 format get a \\ prefix, 10 digit numbers \\+1, 11 digit numbers starting with 1 \\+."""
+    """Numbers starting with + get a \\ prefix, 10 digit numbers \\+1, 11 digit numbers starting with 1 \\+."""
     value = pattern.strip()
-    if value.startswith("+1"):
+    if value.startswith("+"):
         return "\\" + value
     if value.isdigit() and len(value) == 10:
         return "\\+1" + value
