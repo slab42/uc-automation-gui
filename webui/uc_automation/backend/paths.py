@@ -12,3 +12,4 @@ CUCM_SCHEMA_DIR = SCHEMA_DIR / "cucm"
 CUC_SCHEMA_DIR = SCHEMA_DIR / "cuc"
 LOG_DIR = WEBUI_ROOT / "logs"
 UCCX_DOWNLOAD_DIR = WEBUI_ROOT / "uccx_download"  # the one stored UCCX download (git-ignored, short lived)
+DEVICE_SETTINGS_PATH = WEBUI_ROOT / "device_settings.json"  # saved phone customizations per org and MAC (git-ignored)

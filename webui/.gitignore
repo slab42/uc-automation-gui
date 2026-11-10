@@ -10,3 +10,4 @@ assets/external/
 logs/
 app_settings.json
 users.json
+device_settings.json

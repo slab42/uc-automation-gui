@@ -7,8 +7,12 @@ destination org. If the add fails the phone is added back to where it was. Not t
 
 import csv
 import io
+import json
+import threading
 import time
+from datetime import datetime
 
+from .paths import DEVICE_SETTINGS_PATH
 from .webex_api import WebexClient, WebexError
 from .webex_tools import get_supported_devices
 from .webex_workspaces import normalize_mac
@@ -78,6 +82,85 @@ def _owner_body(device: dict) -> dict:
     raise WebexError("The phone has no workspace or person in the source org.")
 
 
+_store_lock = threading.Lock()
+
+
+def _load_store() -> dict:
+    try:
+        return json.loads(DEVICE_SETTINGS_PATH.read_text("utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _store_key(org: str, mac: str) -> str:
+    return f"{org}|{mac}"
+
+
+def read_customizations(c: WebexClient, device: dict, model: str) -> dict:
+    """What was customized on the phone in this org: the device level settings (only when the phone has its own,
+    customEnabled) and the key layout (only when CUSTOM). Reads that fail are skipped. {} when nothing is customized."""
+    saved: dict = {}
+    try:
+        st = c.call("GET", f"/telephony/config/devices/{device['id']}/settings",
+                    {"deviceModel": model} if model else None)
+        if st.get("customEnabled") and st.get("customizations"):
+            saved["settings"] = {"customEnabled": True, "customizations": st["customizations"]}
+    except WebexError:
+        pass
+    try:
+        lay = c.call("GET", f"/telephony/config/devices/{device['id']}/layout")
+        if lay.get("layoutMode") == "CUSTOM":
+            saved["layout"] = lay
+    except WebexError:
+        pass
+    return saved
+
+
+def save_customizations(org: str, mac: str, model: str, saved: dict) -> None:
+    """Keep the phone's customizations for when it moves back to `org`. Nothing customized removes an old entry."""
+    key = _store_key(org, mac)
+    with _store_lock:
+        store = _load_store()
+        if saved:
+            store[key] = {"model": model, "saved": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), **saved}
+        elif key in store:
+            del store[key]
+        else:
+            return
+        DEVICE_SETTINGS_PATH.write_text(json.dumps(store, indent=2), "utf-8")
+
+
+def restore_customizations(c: WebexClient, org: str, mac: str, model: str) -> str:
+    """Re-apply what was saved for this MAC when the phone left `org`. Returns a sentence for the result ('' when
+    nothing was saved). A failure is reported in the text, the move itself already succeeded."""
+    entry = _load_store().get(_store_key(org, mac))
+    if not entry:
+        return ""
+    device = None
+    for attempt in range(ADD_ATTEMPTS):
+        if attempt:
+            time.sleep(ADD_RETRY_SECONDS)
+        device = find_device(c, mac)
+        if device:
+            break
+    if device is None:
+        return f"Saved settings from {entry.get('saved', '')} were not applied: the phone was not found in {org}."
+    done, failed = [], []
+    for name, path, body in (("device settings", f"/telephony/config/devices/{device['id']}/settings", entry.get("settings")),
+                             ("key layout", f"/telephony/config/devices/{device['id']}/layout", entry.get("layout"))):
+        if not body:
+            continue
+        try:
+            c.call("PUT", path, {"deviceModel": model} if name == "device settings" and model else None, body)
+            done.append(name)
+        except WebexError as e:
+            failed.append(f"{name} ({e})")
+    text = f"Reapplied saved {' and '.join(done)} from {entry.get('saved', '')}." if done else ""
+    if failed:
+        text += f" Could not reapply {'; '.join(failed)}."
+    return text.strip()
+
+
 def migrate_phone(src: WebexClient, dst: WebexClient, row: dict[str, str], supported: dict[str, dict],
                   src_name: str, dst_name: str) -> str:
     """Move one phone to a user of the destination org. Everything is checked before the phone is deleted from the
@@ -100,6 +183,16 @@ def migrate_phone(src: WebexClient, dst: WebexClient, row: dict[str, str], suppo
         raise WebexError(f"A phone with MAC {mac} is already in {dst_name}.")
     person = find_person(dst, row["user"])
 
+    notes = []
+    try:
+        saved = read_customizations(src, device, src_code)
+        save_customizations(src_name, mac, src_code or dst_code, saved)
+        if saved:
+            notes.append(f"Saved the custom {' and '.join(k for k in ('settings', 'layout') if k in saved)} of the phone "
+                         f"for when it returns to {src_name}.")
+    except OSError as e:
+        notes.append(f"Could not save the phone's customizations ({e}).")
+
     src.call("DELETE", f"/devices/{device['id']}")
     last: WebexError | None = None
     for attempt in range(ADD_ATTEMPTS):
@@ -117,5 +210,11 @@ def migrate_phone(src: WebexClient, dst: WebexClient, row: dict[str, str], suppo
             raise WebexError(f"Could not add {mac} to {dst_name}: {last} Adding it back to {src_name} also "
                              f"failed ({e}). The phone is in neither org.") from e
         raise WebexError(f"Could not add {mac} to {dst_name}: {last} The phone was added back to {src_name}.")
-    return (f"Moved {product or dst_code} {mac} from {src_name} to {dst_name} (user {row['user']}). "
-            "Factory reset the phone so it registers with the new org.")
+    try:
+        restored = restore_customizations(dst, dst_name, mac, dst_code)
+    except Exception as e:  # the phone is already moved; never fail the run for the extras
+        restored = f"Could not reapply saved settings ({e})."
+    if restored:
+        notes.append(restored)
+    return " ".join([f"Moved {product or dst_code} {mac} from {src_name} to {dst_name} (user {row['user']}). "
+                     "Factory reset the phone so it registers with the new org."] + notes)
