@@ -104,6 +104,7 @@ def sme_pattern_check() -> rx.Component:
                     search_input(S.search, S.set_search, "Search number, location or owner", width="280px",
                                  max_width="100%"),
                     rx.select(S.status_options, value=S.status_filter, on_change=S.set_status_filter),
+                    rx.checkbox("Only Numbers With An Owner", checked=S.owned_only, on_change=S.set_owned_only),
                     rx.spacer(),
                     rx.button(rx.icon("refresh-cw", size=16), "Update", color_scheme="red",
                               on_click=S.ask_update, disabled=S.busy | (S.selected_count == 0)),

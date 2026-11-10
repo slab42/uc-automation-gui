@@ -22,6 +22,7 @@ class SmeCheckState(WebexSession, RunMixin, SmeSettingsMixin):
     rows: list[dict[str, str]] = []
     search: str = ""
     status_filter: str = "All"
+    owned_only: bool = False
     selected: list[str] = []
     confirm_open: bool = False
     use_regex: bool = False
@@ -53,6 +54,7 @@ class SmeCheckState(WebexSession, RunMixin, SmeSettingsMixin):
         return [r for r in self.rows
                 if (self.status_filter == "All" or r["status"] == self.status_filter
                      or (self.status_filter == R.ANY_MISSING and r["status"] != R.STATUS_ALL))
+                and (not self.owned_only or r["owner"].strip())
                 and (not q or q in r["number"].lower() or q in r["location"].lower() or q in r["owner"].lower())]
 
     @rx.var
@@ -87,6 +89,10 @@ class SmeCheckState(WebexSession, RunMixin, SmeSettingsMixin):
     @rx.event
     def set_search(self, value: str):
         self.search = value
+
+    @rx.event
+    def set_owned_only(self, value: bool):
+        self.owned_only = value
 
     @rx.event
     def set_status_filter(self, value: str):
