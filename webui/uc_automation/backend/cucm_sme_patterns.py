@@ -222,6 +222,45 @@ def parse_pattern_csv(data: bytes, names: list[str]) -> list[dict]:
     return out
 
 
+def _pattern_rows(settings: dict[str, str], names: list[str], pattern: str, values: list[str]) -> tuple[dict, dict]:
+    """The Advertised Pattern and Route Pattern rows (as add_advertised_pattern and add_route_pattern take them)."""
+    dest = {"routeListName": settings["rp_dest"].strip()} if settings["rp_dest_type"] == "Route List" \
+        else {"gatewayName": settings["rp_dest"].strip()}
+    adv_row = {"pattern": format_advertised_pattern(pattern), "patternType": settings["adv_type"],
+               "hostedRoutePSTNRule": settings["pstn_rule"],
+               "description": render_description(settings["adv_desc"], values, names, pattern)}
+    if settings["pstn_rule"] == "Specify":
+        adv_row["pstnFailStrip"] = settings["pstn_strip"].strip()
+        adv_row["pstnFailPrepend"] = settings["pstn_prepend"].strip()
+    rp_row = {"pattern": format_route_pattern(pattern), "routePartitionName": settings["rp_partition"].strip(),
+              "description": render_description(settings["rp_desc"], values, names, pattern), **dest}
+    return adv_row, rp_row
+
+
+def add_missing_patterns(conn: CucmConnection, settings: dict[str, str], names: list[str], pattern: str,
+                         values: list[str], need_adv: bool, need_rp: bool) -> str:
+    """Add only the Advertised Pattern and/or Route Pattern that are missing. Both are tried; raises AxlError naming
+    each failure."""
+    require_sme(conn)
+    adv_row, rp_row = _pattern_rows(settings, names, pattern, values)
+    steps = []
+    if need_adv:
+        steps.append(("Advertised pattern", add_advertised_pattern, adv_row, adv_row["pattern"]))
+    if need_rp:
+        steps.append(("Route pattern", add_route_pattern, rp_row, f"{rp_row['pattern']} in {rp_row['routePartitionName']}"))
+    outcomes, failed = [], False
+    for label, fn, row, shown in steps:
+        try:
+            fn(conn, row)
+            outcomes.append(f"{label}: added {shown}")
+        except AxlError as e:
+            failed = True
+            outcomes.append(f"{label}: failed {shown} ({e})")
+    if failed:
+        raise AxlError("; ".join(outcomes))
+    return "; ".join(outcomes) or "Nothing to add"
+
+
 def add_pattern_pair(conn: CucmConnection, settings: dict[str, str], names: list[str], pattern: str,
                      values: list[str], adv_anyway: bool | None = None) -> str:
     """Add the Advertised Pattern and the matching Route Pattern. Both are tried; raises AxlError naming each failure.

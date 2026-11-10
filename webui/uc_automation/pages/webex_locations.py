@@ -5,7 +5,7 @@ from ..components.tool_widgets import code_block, confirm_dialog, csv_dropzone, 
 from ..components.webex_nav import webex_page
 from ..components.search_input import search_input
 from ..components.webex_picker import picker
-from ..state.webex_locations import CopyLocationState, E911State, MigratePstnState, SchedulesState
+from ..state.webex_locations import CopyLocationState, E911State, MigratePstnState, SchedulesState, VmPortalState
 from .webex_routing import need_login
 
 _LOCATION_COLS = (("Location", "name"),)
@@ -509,6 +509,105 @@ def copy_location() -> rx.Component:
             confirm_dialog(S, "Copy this location?",
                            "Creates " + S.form_name + " from " + S.selected_label + " and enables it for Webex Calling.",
                            "Copy", S.run_copy),
+            spacing="4", align="start", width="100%",
+        )),
+    )
+
+
+def vm_portal() -> rx.Component:
+    S = VmPortalState
+
+    def row(r) -> rx.Component:
+        picked = S.selected.contains(r["id"])
+        return rx.table.row(
+            rx.table.cell(rx.checkbox(checked=picked, disabled=(r["error"] != "") | S.busy,
+                                      on_change=lambda c: S.toggle(r["id"], c))),
+            rx.table.cell(r["name"]),
+            rx.table.cell(rx.cond(
+                picked,
+                rx.input(value=S.name_edits.get(r["id"], r["portal"]), width="14rem", size="1", disabled=S.busy,
+                         on_change=lambda v: S.set_name_edit(r["id"], v)),
+                r["portal"])),
+            rx.table.cell(r["number"]),
+            rx.table.cell(rx.cond(
+                picked,
+                rx.input(value=S.edits.get(r["id"], r["extension"]), width="9rem", size="1", disabled=S.busy,
+                         on_change=lambda v: S.set_edit(r["id"], v)),
+                r["extension"])),
+            rx.cond(S.error_count > 0, rx.table.cell(r["error"]), rx.fragment()),
+        )
+
+    return webex_page(
+        "VM Portal",
+        need_login(rx.vstack(
+            rx.card(
+                rx.vstack(
+                    rx.hstack(
+                        search_input(S.search, S.set_search, "Search locations or numbers", width="260px",
+                                     max_width="100%"),
+                        rx.spacer(),
+                        rx.button(rx.cond(S.loading, rx.spinner(size="2"), rx.icon("refresh-cw", size=16)),
+                                  "Reload", variant="soft", on_click=S.reload, disabled=S.loading | S.busy),
+                        rx.button(rx.icon("download", size=16), "Export", variant="soft", on_click=S.export_csv,
+                                  disabled=S.rows.length() == 0),
+                        align="center", spacing="3", wrap="wrap", width="100%",
+                    ),
+                    rx.hstack(
+                        rx.text("Voice Portal Name", size="2", weight="medium"),
+                        rx.input(value=S.bulk_name, on_change=S.set_bulk_name, placeholder="Blank keeps, {location} = name",
+                                 width="14rem", disabled=S.busy),
+                        rx.text("Extension", size="2", weight="medium"),
+                        rx.input(value=S.bulk_ext, on_change=S.set_bulk_ext, placeholder="e.g. 9999", width="9rem",
+                                 disabled=S.busy),
+                        rx.button(rx.icon("arrow-down-to-line", size=16), "Apply To Selected", variant="soft",
+                                  on_click=S.apply_bulk, disabled=S.busy | (S.selected.length() == 0)),
+                        align="center", spacing="3", wrap="wrap",
+                    ),
+                    rx.text("Tick locations, type a voice portal name and/or extension and Apply To Selected to fill their boxes (or edit "
+                            "each box by hand), then press Update to push the changes.",
+                            size="2", color="var(--gray-11)"),
+                    rx.cond(S.load_error != "", rx.callout(S.load_error, icon="triangle-alert", color_scheme="red",
+                                                           width="100%"), rx.fragment()),
+                    rx.cond(S.error_count > 0, rx.callout(
+                        S.error_count.to_string() + " location(s) could not be read, see the Error column.",
+                        icon="triangle-alert", color_scheme="amber", width="100%"), rx.fragment()),
+                    rx.cond(
+                        S.loading,
+                        rx.hstack(rx.spinner(size="2"), rx.text(rx.cond(S.progress != "", S.progress, "Loading..."),
+                                                                size="2"), align="center", spacing="2"),
+                        rx.scroll_area(
+                            rx.table.root(
+                                rx.table.header(rx.table.row(
+                                    rx.table.column_header_cell(rx.checkbox(
+                                        checked=S.all_shown_selected, on_change=S.toggle_all,
+                                        disabled=(S.rows.length() == 0) | S.busy)),
+                                    rx.table.column_header_cell("Location"),
+                                    rx.table.column_header_cell("Voice Portal Name"),
+                                    rx.table.column_header_cell("VM Portal Phone Number"),
+                                    rx.table.column_header_cell("VM Portal Extension"),
+                                    rx.cond(S.error_count > 0, rx.table.column_header_cell("Error"), rx.fragment()))),
+                                rx.table.body(rx.foreach(S.shown, row)),
+                                variant="ghost", width="100%",
+                            ),
+                            max_height="60vh",
+                        ),
+                    ),
+                    rx.hstack(
+                        rx.button(rx.icon("save", size=16),
+                                  "Update " + S.changes.length().to_string() + " Location(s)...",
+                                  on_click=S.set_confirm_open(True),
+                                  disabled=S.busy | S.loading | (S.changes.length() == 0)),
+                        rx.text(S.selected.length().to_string() + " selected", size="2", color="var(--gray-11)"),
+                        align="center", spacing="3",
+                    ),
+                    spacing="3", align="start", width="100%",
+                ),
+                size="3", width="100%",
+            ),
+            run_results(S, "Location"),
+            confirm_dialog(S, "Update these VM Portals?",
+                           "Changes the voice portal name and/or extension of " + S.changes.length().to_string() + " location(s).",
+                           "Update", S.run_update),
             spacing="4", align="start", width="100%",
         )),
     )

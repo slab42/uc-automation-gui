@@ -204,6 +204,53 @@ def delete_event(c: WebexClient, item: dict[str, str]) -> str:
     return "Deleted"
 
 
+# --- Voice Portal (VM Portal) numbers ---
+
+def voice_portal_numbers(c: WebexClient, locations: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Phone number and extension of each location's voice portal (one call each, a few at a time).
+    A location whose portal cannot be read gets an Error text."""
+    def one(loc: dict[str, str]) -> dict[str, str]:
+        try:
+            vp = c.call("GET", f"{location_path(loc['id'])}/voicePortal")
+        except WebexError as e:
+            return {"id": loc["id"], "name": loc["name"], "portal": "", "number": "", "extension": "",
+                    "error": str(e)}
+        return {"id": loc["id"], "name": loc["name"], "portal": str(vp.get("name") or ""),
+                "number": str(vp.get("phoneNumber") or ""),
+                "extension": str(vp.get("extension") or ""), "error": ""}
+    with ThreadPoolExecutor(max_workers=E911_WORKERS) as pool:
+        return list(pool.map(one, locations))
+
+
+def set_voice_portal(c: WebexClient, location_id: str, extension: str, name: str) -> str:
+    """Change the voice portal extension and/or name of a location. The PUT needs the portal's other mandatory
+    settings (name, languageCode), so read them first and send them back unchanged except the new values."""
+    path = f"{location_path(location_id)}/voicePortal"
+    cur = c.call("GET", path)
+    body = {k: cur[k] for k in ("name", "languageCode", "phoneNumber", "extension", "directLineCallerIdName", "dialByName")
+            if cur.get(k) not in (None, "")}
+    if "directLineCallerIdName" not in body:  # deprecated fields, only when the new caller ID object is absent
+        body.update({k: cur[k] for k in ("firstName", "lastName") if cur.get(k)})
+    done = []
+    if extension:
+        body["extension"] = extension
+        done.append(f"Extension set to {extension}")
+    if name:
+        body["name"] = name
+        done.append(f"Name set to {name}")
+    c.call("PUT", path, body=body)
+    return ", ".join(done)
+
+
+def voice_portal_csv(rows: list[dict[str, str]]) -> str:
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(["Location", "Voice Portal Name", "VM Portal Phone Number", "VM Portal Extension"])
+    for r in rows:
+        w.writerow([r["name"], r["portal"], r["number"], r["extension"]])
+    return buf.getvalue()
+
+
 # --- RedSky E911 ---
 
 def e911_status(c: WebexClient, locations: list[dict[str, str]]) -> list[dict[str, str]]:

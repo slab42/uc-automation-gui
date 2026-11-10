@@ -2,7 +2,7 @@ import reflex as rx
 
 from ..components.cucm_nav import cucm_page
 from ..components.search_input import search_input
-from ..components.tool_widgets import code_block, collapsible_card, confirm_dialog, csv_dropzone, paste_csv_tabs, run_results
+from ..components.tool_widgets import code_block, collapsible_card, confirm_dialog, csv_dropzone, field, paste_csv_tabs, run_results
 from ..state.cucm_cleanup import CleanupState
 from .tools import _need_connection
 
@@ -13,6 +13,21 @@ _DEVICE_EXAMPLE = "name\nSEP001122334455\nSEPAABBCCDDEEFF\n"
 
 
 def _dn_inputs() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            field("Prefix Pattern", rx.input(value=S.prefix, on_change=S.set_prefix, width="200px", placeholder="+1")),
+            field("Number Length", rx.input(value=S.number_length, on_change=S.set_number_length, width="140px",
+                                            placeholder="10", input_mode="numeric")),
+            spacing="4", align="start", width="100%",
+        ),
+        rx.text("Number Length keeps that many digits from the right of each number (blank = all), then the Prefix "
+                "Pattern is put in front: 42065266095 with +1 and 10 becomes +12065266095. Numbers starting with + "
+                "are looked up as \\+.", size="1", color="var(--gray-10)"),
+        _dn_tabs(), spacing="3", align="start", width="100%",
+    )
+
+
+def _dn_tabs() -> rx.Component:
     return paste_csv_tabs(
             S.paste_dns, S.set_paste_dns,
             "One DN per line, optional partition second (tab, pipe, semicolon or comma). A header row is optional. "

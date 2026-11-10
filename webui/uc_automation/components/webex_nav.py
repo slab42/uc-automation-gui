@@ -31,11 +31,13 @@ MIGRATE = "/webex/migrate"
 SCHEDULES = "/webex/schedules"
 E911 = "/webex/e911"
 MIGRATE_PSTN = "/webex/migrate-pstn"
+VM_PORTAL = "/webex/vm-portal"
 GATEWAY_DIAL_PLAN = "/webex/gateway-dial-plan"
 COPY_LOCATION = "/webex/copy-location"
 HARDWARE = "/webex/hardware-compatibility"
 NAMING = "/webex/naming-check"
 LOCATIONS_REPORT = "/webex/locations-report"
+SME_CHECK = "/webex/sme-pattern-check"
 
 # Routes still under development: the menu item shows a badge
 IN_DEVELOPMENT = {NAMING, CUCM_MIGRATE, COPY_LOCATION}
@@ -60,6 +62,7 @@ GROUPS = [
         ("Copy Location", COPY_LOCATION, "copy",
          "In development. Create a new location from an existing one: time zone, languages, address, calling settings and schedules."),
         ("Migrate PSTN", MIGRATE_PSTN, "phone-call", "Move a location to a different PSTN trunk, route group or cloud connection."),
+        ("VM Portal", VM_PORTAL, "voicemail", "List every location with its VM Portal phone number and extension."),
     ]),
     ("Users", [
         ("Delete Users", DELETE_USERS, "user-x", "Delete users listed in a Control Hub CSV export."),
@@ -98,6 +101,8 @@ GROUPS = [
          "Show whether a user, or every user in a location, has an internal or external mailbox."),
         ("Locations Report", LOCATIONS_REPORT, "map-pin",
          "Count the users and workspaces with Webex Calling enabled in every location."),
+        ("SME Pattern Check", SME_CHECK, "route",
+         "Check the SME cluster for the Advertised Pattern and Route Pattern of every Webex number."),
     ]),
 ]
 

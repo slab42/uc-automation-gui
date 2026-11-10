@@ -759,3 +759,201 @@ class CopyLocationState(WebexSession, RunMixin, PickerMixin):
         if any(r["status"] == "OK" for r in self.results):
             self.form_name, self.form_address = "", {}
             return [type(self).reload]
+
+
+def _expand_location(name: str, location: str) -> str:
+    """Replace {location} (any case) in a voice portal name with the location's name."""
+    return re.sub(r"\{location\}", lambda _: location, name, flags=re.I).strip()
+
+
+class VmPortalState(WebexSession, RunMixin):
+    """Webex > Locations > VM Portal: voice portal phone number and extension of every location."""
+
+    output_fields: ClassVar[tuple[str, ...]] = ("rows", "selected", "edits", "name_edits", "results", "progress", "_result_org")
+    rows: list[dict[str, str]] = []
+    bulk_name: str = ""  # input above the table, copied like bulk_ext
+    bulk_ext: str = ""  # input above the table, copied to the ticked rows on Apply To Selected
+    selected: list[str] = []  # location ids
+    edits: dict[str, str] = {}  # location id -> extension typed in the box (only ticked rows are editable)
+    name_edits: dict[str, str] = {}  # location id -> voice portal name typed in the box
+    confirm_open: bool = False
+    search: str = ""
+    loading: bool = False
+    load_error: str = ""
+    _result_org: str = ""  # org and instance the rows were read from
+
+    @rx.var
+    def shown(self) -> list[dict[str, str]]:
+        q = self.search.strip().lower()
+        return [r for r in self.rows if q in (r["name"] + " " + r["portal"] + " " + r["number"] + " " + r["extension"]).lower()] \
+            if q else self.rows
+
+    @rx.var
+    def error_count(self) -> int:
+        return sum(1 for r in self.rows if r["error"])
+
+    @rx.var
+    def changes(self) -> list[dict[str, str]]:
+        """Ticked locations whose typed extension or voice portal name differs from the one read."""
+        return [r for r in self.rows if r["id"] in self.selected and not r["error"]
+                and (self.edits.get(r["id"], r["extension"]).strip() != r["extension"]
+                     or _expand_location(self.name_edits.get(r["id"], r["portal"]), r["name"]) != r["portal"])]
+
+    @rx.var
+    def all_shown_selected(self) -> bool:
+        ids = [r["id"] for r in self.shown if not r["error"]]
+        return bool(ids) and all(i in self.selected for i in ids)
+
+    @rx.event
+    def set_search(self, value: str):
+        self.search = value
+
+    @rx.event
+    def set_confirm_open(self, value: bool):
+        self.confirm_open = value
+
+    @rx.event
+    def toggle(self, row_id: str, checked: bool):
+        if checked and row_id not in self.selected:
+            self.selected.append(row_id)
+        elif not checked:
+            self.selected = [s for s in self.selected if s != row_id]
+            self.edits = {k: v for k, v in self.edits.items() if k != row_id}
+            self.name_edits = {k: v for k, v in self.name_edits.items() if k != row_id}
+
+    @rx.event
+    def toggle_all(self, checked: bool):
+        """Select all (or none) of the locations shown, so a search narrows what Select All ticks."""
+        ids = [r["id"] for r in self.shown if not r["error"]]
+        if checked:
+            self.selected = list(dict.fromkeys(self.selected + ids))
+        else:
+            self.selected = [s for s in self.selected if s not in ids]
+            self.edits = {k: v for k, v in self.edits.items() if k not in ids}
+            self.name_edits = {k: v for k, v in self.name_edits.items() if k not in ids}
+
+    @rx.event
+    def set_bulk_ext(self, value: str):
+        self.bulk_ext = value
+
+    @rx.event
+    def set_bulk_name(self, value: str):
+        self.bulk_name = value
+
+    @rx.event
+    def apply_bulk(self):
+        """Copy the box values (extension and/or name, whichever is filled) into the inputs of every ticked
+        location. Nothing is sent until Update."""
+        ext, name = self.bulk_ext.strip(), self.bulk_name.strip()
+        if not ext and not name:
+            return rx.toast.error("Enter an extension, a voice portal name or both.")
+        if ext and not ext.isdigit():
+            return rx.toast.error("The extension must be digits only.")
+        if not self.selected:
+            return rx.toast.error("Select at least one location.")
+        if ext:
+            self.edits = {**self.edits, **{i: ext for i in self.selected}}
+        if name:
+            self.name_edits = {**self.name_edits, **{i: name for i in self.selected}}
+
+    @rx.event
+    def set_edit(self, row_id: str, value: str):
+        self.edits[row_id] = value
+
+    @rx.event
+    def set_name_edit(self, row_id: str, value: str):
+        self.name_edits[row_id] = value
+
+    @rx.event
+    async def run_update(self):
+        if not self.confirm_open or self.busy:
+            return
+        self.confirm_open = False
+        todo = []  # (row, new extension or "", new name or "") for what actually changed
+        for r in self.changes:
+            ext = self.edits.get(r["id"], r["extension"]).strip()
+            name = _expand_location(self.name_edits.get(r["id"], r["portal"]), r["name"])
+            todo.append((r, ext if ext != r["extension"] else "", name if name != r["portal"] else ""))
+        if not todo:
+            yield rx.toast.error("Nothing was changed.")
+            return
+        bad = [r["name"] for r, ext, _ in todo if ext and not ext.isdigit()]
+        if bad:
+            yield rx.toast.error("Extensions must be digits only: " + ", ".join(bad))
+            return
+        blank = [r["name"] for r in self.rows if r["id"] in self.selected and r["portal"]
+                 and not _expand_location(self.name_edits.get(r["id"], r["portal"]), r["name"])]
+        if blank:
+            yield rx.toast.error("The voice portal name cannot be empty: " + ", ".join(blank))
+            return
+        log = self._webex_log("Update VM Portal extensions", "webex-vm-portal-update")
+        try:
+            log.info(f"{len(todo)} location(s)")
+            client = await self._connect(log)
+            if client is None:
+                yield rx.toast.error(self.webex_message)
+                return
+            items = [(r["name"], lambda rid=r["id"], e=ext, n=name: L.set_voice_portal(client, rid, e, n))
+                     for r, ext, name in todo]
+            yield self._start_run(items, "Updating", log, workers=L.E911_WORKERS, then="_after_update")
+        finally:
+            log.close()
+
+    def _after_update(self, log: OpLog):
+        return [type(self).reload]
+
+    def _org_key(self) -> str:
+        return f"{self.active_org}|{self.webex_active}"
+
+    @rx.event
+    async def load_page(self):
+        """Page load (also after an Org or Instance change): drop rows of another org, read the current one."""
+        await self._refresh_session()
+        if self._result_org != self._org_key():
+            self.rows, self.search, self.load_error = [], "", ""
+        if self.webex_ok and not self.rows:
+            async for ev in self._load():
+                yield ev
+
+    @rx.event
+    async def reload(self):
+        async for ev in self._load():
+            yield ev
+
+    async def _load(self):
+        if self.loading:
+            return
+        self.loading, self.load_error, self.rows, self.selected, self.edits = True, "", [], [], {}
+        self.name_edits = {}
+        yield
+        log = self._webex_log("List VM Portal numbers", "webex-vm-portal-numbers")
+        try:
+            client = await self._connect(log)
+            if client is None:
+                self.load_error = self.webex_message
+                return
+            try:
+                locs = await asyncio.to_thread(L.list_locations, client)
+                self.progress = f"Reading the VM Portal of {len(locs)} location(s)"
+                yield
+                rows = await asyncio.to_thread(L.voice_portal_numbers, client, locs)
+            except UserError as e:
+                self.load_error = str(e)
+                log.error(str(e))
+                return
+            self._result_org = self._org_key()
+            self.rows = rows
+            for r in rows:
+                if r["error"]:
+                    log.error(f"{r['name']}: {r['error']}")
+            log.info(f"{len(rows)} location(s) read, {sum(1 for r in rows if r['error'])} failed")
+        finally:
+            log.close()
+            self.loading, self.progress = False, ""
+
+    @rx.event
+    def export_csv(self):
+        if not self.rows:
+            return rx.toast.error("Nothing to export.")
+        return rx.download(data=L.voice_portal_csv(self.rows),
+                           filename=f"webex_vm_portal_numbers_{datetime.now():%Y-%m-%d_%H-%M-%S}.csv")

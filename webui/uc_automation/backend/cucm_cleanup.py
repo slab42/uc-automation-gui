@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from .cucm_axl import AxlError, list_paged, sql_quote, sql_rows, _call, _text
 from .cucm_connections import CucmConnection
-from .cucm_cutover import label as dn_label, parse_dn_list
+from .cucm_cutover import dn_key, label as dn_label, parse_dn_list
 from .cucm_devices import (find_button_template_usage, format_phone_identifier, list_phone_button_templates,
                            remove_common_device_config, remove_phone, remove_phone_button_template,
                            remove_softkey_template)
@@ -24,9 +24,10 @@ from .cucm_system import remove_device_pool
 _HEADERS = ("name", "device", "devicename", "device name", "mac")
 
 
-def parse_dns(text: str) -> list[dict[str, str]]:
-    """Rows {dn, partition}. A blank partition matches the DN in any partition."""
-    return parse_dn_list(text, "")
+def parse_dns(text: str, prefix: str = "", length: str = "") -> list[dict[str, str]]:
+    """Rows {dn, partition}. A blank partition matches the DN in any partition. `length` and `prefix` work as in
+    Webex Cutover (keep that many characters from the right, then put the prefix in front)."""
+    return parse_dn_list(text, "", prefix, length)
 
 
 def parse_devices(text: str) -> list[str]:
@@ -44,7 +45,7 @@ def parse_devices(text: str) -> list[str]:
 
 def matches(rows: list[dict[str, str]], pattern: str, partition: str) -> bool:
     """True when the DN (pattern, partition) is in the list (a list row without a partition matches any)."""
-    return any(r["dn"] == pattern and (not r["partition"] or r["partition"] == partition) for r in rows)
+    return any(dn_key(r["dn"]) == pattern and (not r["partition"] or r["partition"] == partition) for r in rows)
 
 
 # --- 1. devices and orphan DNs ---
@@ -113,8 +114,8 @@ def remove_device(conn: CucmConnection, name: str) -> str:
 
 
 def remove_listed_dn(conn: CucmConnection, row: dict[str, str]) -> str:
-    """A DN from the list: removed when no device uses it (it may already be gone with its device)."""
-    notes = _remove_if_orphan(conn, row["dn"], row["partition"])
+    """A DN from the list (a + DN is looked up as \\+...): removed when no device uses it (it may already be gone with its device)."""
+    notes = _remove_if_orphan(conn, dn_key(row["dn"]), row["partition"])
     return "; ".join(notes) if notes else "Not found (already removed)"
 
 

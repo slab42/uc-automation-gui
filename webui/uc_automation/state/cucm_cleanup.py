@@ -20,6 +20,8 @@ class CleanupState(CucmState, RunMixin):
     # Page inputs
     input_open: bool = True
     paste_dns: str = ""
+    prefix: str = ""
+    number_length: str = ""
     paste_devices: str = ""
     confirm_devices: bool = False
 
@@ -45,7 +47,7 @@ class CleanupState(CucmState, RunMixin):
     @rx.var
     def dn_count(self) -> int:
         try:
-            return len(cl.parse_dns(self.paste_dns)) if self.paste_dns.strip() else 0
+            return len(cl.parse_dns(self.paste_dns, self.prefix, self.number_length)) if self.paste_dns.strip() else 0
         except ValueError:
             return 0
 
@@ -83,6 +85,14 @@ class CleanupState(CucmState, RunMixin):
     @rx.event
     def set_paste_dns(self, value: str):
         self.paste_dns = value
+
+    @rx.event
+    def set_prefix(self, value: str):
+        self.prefix = value
+
+    @rx.event
+    def set_number_length(self, value: str):
+        self.number_length = "".join(c for c in value if c.isdigit())[:3]
 
     @rx.event
     def set_paste_devices(self, value: str):
@@ -123,7 +133,7 @@ class CleanupState(CucmState, RunMixin):
 
     def _dns(self) -> list[dict[str, str]]:
         try:
-            return cl.parse_dns(self.paste_dns) if self.paste_dns.strip() else []
+            return cl.parse_dns(self.paste_dns, self.prefix, self.number_length) if self.paste_dns.strip() else []
         except ValueError:
             return []
 
@@ -139,7 +149,7 @@ class CleanupState(CucmState, RunMixin):
             yield rx.toast.error("Add a CUCM connection first.")
             return
         try:
-            dns = cl.parse_dns(self.paste_dns) if self.paste_dns.strip() else []
+            dns = cl.parse_dns(self.paste_dns, self.prefix, self.number_length) if self.paste_dns.strip() else []
         except ValueError as e:
             yield rx.toast.error(str(e))
             return

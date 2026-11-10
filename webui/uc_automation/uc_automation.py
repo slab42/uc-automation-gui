@@ -47,8 +47,9 @@ from .pages.tools import em_bulk_login, phone_count, set_user_pin
 from .pages.system import codec_lists, device_pools, locations, regions
 from .pages.webex_routing import add_numbers, call_forward, call_queues, hunt_groups as webex_hunt_groups, virtual_lines, webex_home
 from .pages.webex_dialplan import gateway_dial_plan
-from .pages.webex_locations import copy_location, e911, migrate_pstn, schedules
+from .pages.webex_locations import copy_location, e911, migrate_pstn, schedules, vm_portal
 from .pages.webex_reports import locations_report
+from .pages.webex_sme_check import sme_pattern_check
 from .pages.webex_tools import hardware_compatibility
 from .pages.webex_naming import naming_check
 from .pages.webex_devices import bulk_ata, cucm_gateway, cucm_migrate, device_migrate
@@ -91,8 +92,9 @@ from .state.webex import WebexState
 from .state.webex_devices import BulkAtaState, CucmGatewayState, CucmMigrateState, DeviceMigrateState
 from .state.webex_groups import CallQueuesState, HuntGroupsState as WebexHuntGroupsState, VirtualLinesState
 from .state.webex_dialplan import GatewayDialPlanState
-from .state.webex_locations import CopyLocationState, E911State, MigratePstnState, SchedulesState
+from .state.webex_locations import CopyLocationState, E911State, MigratePstnState, SchedulesState, VmPortalState
 from .state.webex_reports import LocationsReportState
+from .state.webex_sme_check import SmeCheckState
 from .state.webex_tools import HardwareCompatState
 from .state.webex_naming import NamingCheckState
 from .state.webex_users import (
@@ -161,9 +163,11 @@ for _route, _title, _page, _state in [
     ("/webex/e911", "E911", e911, E911State),
     ("/webex/copy-location", "Copy Location", copy_location, CopyLocationState),
     ("/webex/migrate-pstn", "Migrate PSTN", migrate_pstn, MigratePstnState),
+    ("/webex/vm-portal", "VM Portal", vm_portal, VmPortalState),
     ("/webex/hardware-compatibility", "Check Hardware Compatibility", hardware_compatibility, HardwareCompatState),
     ("/webex/naming-check", "Naming Check", naming_check, NamingCheckState),
     ("/webex/locations-report", "Locations Report", locations_report, LocationsReportState),
+    ("/webex/sme-pattern-check", "SME Pattern Check", sme_pattern_check, SmeCheckState),
 ]:
     app.add_page(_page, route=_route, title=f"{_title} | {APP_NAME}", on_load=_state.load_page)
 for _route, _title, _page, _state in [
