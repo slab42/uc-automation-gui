@@ -25,6 +25,8 @@ class GatewayDialPlanState(WebexSession, RunMixin, PickerMixin, PasteMixin):
     new_name: str = ""
     paste_create: str = ""
     paste_add: str = ""
+    prefix_create: str = ""
+    prefix_add: str = ""
     patterns: list[str] = []
     detail_loading: bool = False
     pattern_search: str = ""
@@ -73,6 +75,10 @@ class GatewayDialPlanState(WebexSession, RunMixin, PickerMixin, PasteMixin):
     @rx.event
     def choose_none(self):
         self.chosen = []
+
+    @rx.event
+    def set_prefix(self, field: str, value: str):
+        setattr(self, f"prefix_{field}", value)
 
     @rx.event
     def set_route_label(self, value: str):
@@ -163,7 +169,7 @@ class GatewayDialPlanState(WebexSession, RunMixin, PickerMixin, PasteMixin):
             yield rx.toast.error("Choose a CSV file first.")
             return
         try:
-            patterns = D.parse_patterns_csv(await files[0].read())
+            patterns = D.apply_prefix(D.parse_patterns_csv(await files[0].read()), self.prefix_create)
         except ValueError as e:
             yield rx.toast.error(str(e))
             return
@@ -210,7 +216,7 @@ class GatewayDialPlanState(WebexSession, RunMixin, PickerMixin, PasteMixin):
             yield rx.toast.error("Choose a CSV file first.")
             return
         try:
-            patterns = D.parse_patterns_csv(await files[0].read())
+            patterns = D.apply_prefix(D.parse_patterns_csv(await files[0].read()), self.prefix_add)
         except ValueError as e:
             yield rx.toast.error(str(e))
             return

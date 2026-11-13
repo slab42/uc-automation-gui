@@ -13,6 +13,7 @@ from .webex_groups import _list
 
 PLANS = "/telephony/config/premisePstn/dialPlans"
 PATTERN_BATCH = 50  # patterns per PUT
+CREATE_BATCH = 200  # most patterns Webex accepts in the create request
 ROUTE_LABELS = {"TRUNK": "Trunk", "ROUTE_GROUP": "Route Group"}
 
 
@@ -48,6 +49,12 @@ def parse_patterns_csv(data: bytes) -> list[str]:
     return patterns
 
 
+def apply_prefix(patterns: list[str], prefix: str) -> list[str]:
+    """Put a prefix in front of every pattern (spaces around the prefix are ignored), de-duplicated in order."""
+    prefix = prefix.strip()
+    return list(dict.fromkeys(prefix + p for p in patterns)) if prefix else patterns
+
+
 def list_patterns(c: WebexClient, plan_id: str) -> list[str]:
     return sorted(_list(c, f"{PLANS}/{plan_id}/dialPatterns", "dialPatterns"))
 
@@ -55,8 +62,21 @@ def list_patterns(c: WebexClient, plan_id: str) -> list[str]:
 def create_dial_plan(c: WebexClient, name: str, route: dict[str, str], patterns: list[str]) -> str:
     if not name.strip():
         raise WebexError("Enter a dial plan name.")
-    c.call("POST", PLANS, body={"name": name.strip(), "routeId": route["id"], "routeType": route["kind"],
-                                "dialPatterns": patterns})
+    created = c.call("POST", PLANS, body={"name": name.strip(), "routeId": route["id"], "routeType": route["kind"],
+                                          "dialPatterns": patterns[:CREATE_BATCH]})
+    rest = patterns[CREATE_BATCH:]
+    if rest:
+        plan_id = created.get("id")
+        if not plan_id:
+            raise WebexError(f"The dial plan was created with {CREATE_BATCH} pattern(s) but Webex returned no id, "
+                             f"so the other {len(rest)} could not be added. Add them on the Edit Dial Plan tab.")
+        try:
+            for i in range(0, len(rest), PATTERN_BATCH):
+                body = {"dialPatterns": [{"dialPattern": p, "action": "ADD"} for p in rest[i:i + PATTERN_BATCH]]}
+                c.call("PUT", f"{PLANS}/{plan_id}/dialPatterns", body=body)
+        except WebexError as e:
+            raise WebexError(f"The dial plan was created but adding the remaining patterns failed: {e}. "
+                             "Open it on the Edit Dial Plan tab and add the missing patterns.") from e
     return f"Created with {len(patterns)} dial pattern(s) on {route['label']}"
 
 

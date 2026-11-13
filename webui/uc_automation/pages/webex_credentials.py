@@ -300,8 +300,6 @@ def _org_row(o) -> rx.Component:
         rx.select(S.webex_login_names, value=o["login"],
                   on_change=lambda v: S.set_login_for_org(o["name"], v),
                   placeholder="Choose credentials", size="1"),
-        rx.cond(o["name"] != S.webex_active,
-                rx.button("Use", size="1", variant="soft", on_click=S.use_org(o["name"])), rx.fragment()),
         rx.icon_button(rx.icon("pencil", size=15), variant="ghost", on_click=S.edit_org(o["name"])),
         _delete_button("Delete this organization?", S.delete_org(o["name"])),
     )

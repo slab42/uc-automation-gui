@@ -1,8 +1,9 @@
 """Cutover Cleanup (CUCM): remove the devices and DNs left behind by a Webex cutover, then the objects they leave
 unused.
 
-Delete Devices removes phones and then their orphan DNs (modelled on phones_delete.py and ctiRP_delete.py). The
-hunt group step finds line groups that hold any of the DNs. The Remediate steps list objects with no references
+The hunt group step runs first, while the DNs still exist: it finds the hunt pilots, hunt lists and line groups that
+use any of the DNs. Delete Devices removes phones and then their orphan DNs (modelled on phones_delete.py and
+ctiRP_delete.py). The Remediate steps list objects with no references
 (the *_remediate.py scripts) so the user can tick the ones to delete. Reuses `cucm_dn`, `cucm_hunt`,
 `cucm_devices`, `cucm_routing` and `cucm_system`.
 """
@@ -16,7 +17,9 @@ from .cucm_cutover import dn_key, label as dn_label, parse_dn_list
 from .cucm_devices import (find_button_template_usage, format_phone_identifier, list_phone_button_templates,
                            remove_common_device_config, remove_phone, remove_phone_button_template,
                            remove_softkey_template)
-from .cucm_hunt import _hunt_lists_using_line_group
+from .cucm_hunt import (_hunt_list_line_groups, _hunt_lists_using_line_group, _pilots_on_hunt_list,
+                        list_hunt_pilots)
+from .keys import split_key
 from .cucm_routing import (find_pickup_group_usage, list_pickup_groups, remove_css, remove_partition,
                            remove_pickup_group)
 from .cucm_system import remove_device_pool
@@ -48,7 +51,7 @@ def matches(rows: list[dict[str, str]], pattern: str, partition: str) -> bool:
     return any(dn_key(r["dn"]) == pattern and (not r["partition"] or r["partition"] == partition) for r in rows)
 
 
-# --- 1. devices and orphan DNs ---
+# --- 2. devices and orphan DNs ---
 
 def _dn_rows(conn: CucmConnection, pattern: str, partition: str) -> list[dict]:
     """[{pattern, partition, devices}] for the device DNs with this pattern (any partition when blank).
@@ -119,7 +122,7 @@ def remove_listed_dn(conn: CucmConnection, row: dict[str, str]) -> str:
     return "; ".join(notes) if notes else "Not found (already removed)"
 
 
-# --- 2. hunt groups ---
+# --- 1. hunt groups (searched first, while the DNs still exist) ---
 
 def _line_group_members(conn: CucmConnection, name: str) -> list[tuple[str, str]]:
     resp = _call(conn, "getLineGroup", name=name, returnedTags={
@@ -132,45 +135,120 @@ def _line_group_members(conn: CucmConnection, name: str) -> list[tuple[str, str]
             if getattr(m, "directoryNumber", None) is not None and m.directoryNumber.pattern]
 
 
-def find_line_groups(conn: CucmConnection, dns: list[dict[str, str]]) -> list[dict[str, str]]:
-    """Line groups with any of the DNs as a member: {name, matched, members, hunt_lists}."""
+def _split_members(members: list[tuple[str, str]], dns: list[dict[str, str]]):
+    hit = [m for m in members if matches(dns, *m)]
+    return hit, [m for m in members if not matches(dns, *m)]
+
+
+def _labels(members: list[tuple[str, str]]) -> str:
+    return "; ".join(dn_label({"dn": p, "partition": part}) for p, part in members)
+
+
+def _pilot_ref(pattern: str, partition: str) -> dict[str, str]:
+    return {"pattern": pattern, **({"routePartitionName": partition} if partition else {})}
+
+
+def _hunt_list_blockers(conn: CucmConnection, name: str, dns: list[dict[str, str]]) -> list[str]:
+    """Why a hunt list must not be deleted: pilots that are not in the list, line groups holding other numbers."""
+    why = []
+    listed = {dn_key(r["dn"]) for r in dns}
+    other_pilots = [p for p in _pilots_on_hunt_list(conn, name) if p and p not in listed]
+    if other_pilots:
+        why.append(f"used by pilot {', '.join(other_pilots[:3])}")
+    for lg in _hunt_list_line_groups(conn, name):
+        _, others = _split_members(_line_group_members(conn, lg), dns)
+        if others:
+            why.append(f"line group {lg} holds other numbers")
+    return why
+
+
+def find_hunt_objects(conn: CucmConnection, dns: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Hunt pilots, hunt lists and line groups that use any of the DNs, found before the DNs are deleted.
+
+    Rows {key, kind, name, matched, others, related, deletable ("1"/"0"), reason}. A line group that also holds
+    numbers outside the list, and a hunt list that depends on one (or on a pilot outside the list), is not deletable.
+    """
+    kind_order = {"Hunt Pilot": 0, "Hunt List": 1, "Line Group": 2}
+    rows: list[dict[str, str]] = []
+    hunt_lists: set[str] = set()
+
+    for p in list_hunt_pilots(conn):
+        if matches(dns, p["pattern"], p["routePartitionName"]):
+            label = dn_label({"dn": p["pattern"].lstrip("\\"), "partition": p["routePartitionName"]})
+            rows.append({"key": f"Hunt Pilot:{p['pattern']}|{p['routePartitionName']}", "kind": "Hunt Pilot",
+                         "name": label, "matched": label, "others": "", "related": p["huntListName"] or "None",
+                         "deletable": "1", "reason": ""})
+            if p["huntListName"]:
+                hunt_lists.add(p["huntListName"])
+
     names = [r["name"] for r in list_paged(conn, "listLineGroup", "lineGroup", {"name": "%"}, ["name"])]
 
     def look(name: str) -> dict[str, str] | None:
-        members = _line_group_members(conn, name)
-        hit = [(p, part) for p, part in members if matches(dns, p, part)]
+        hit, others = _split_members(_line_group_members(conn, name), dns)
         if not hit:
             return None
         try:
-            lists = ", ".join(_hunt_lists_using_line_group(conn, name))
+            lists = _hunt_lists_using_line_group(conn, name)
         except AxlError:
-            lists = "(not checked)"
-        return {"name": name, "matched": "; ".join(dn_label({"dn": p, "partition": part}) for p, part in hit),
-                "members": str(len(members)), "hunt_lists": lists or "None"}
+            lists = []
+        return {"key": f"Line Group:{name}", "kind": "Line Group", "name": name, "matched": _labels(hit),
+                "others": _labels(others), "related": ", ".join(lists) or "None",
+                "deletable": "0" if others else "1",
+                "reason": "Also holds numbers that are not in the list" if others else "", "_lists": lists}
 
     with ThreadPoolExecutor(4) as pool:
-        found = [r for r in pool.map(look, names) if r]
-    return sorted(found, key=lambda r: r["name"].lower())
+        groups = [r for r in pool.map(look, names) if r]
+    for g in groups:
+        hunt_lists.update(g.pop("_lists"))
+    rows.extend(groups)
+
+    for hl in sorted(hunt_lists):
+        try:
+            why = _hunt_list_blockers(conn, hl, dns)
+            pilots = ", ".join(_pilots_on_hunt_list(conn, hl)) or "None"
+        except AxlError as e:
+            why, pilots = [f"could not be checked: {e}"], "(not checked)"
+        rows.append({"key": f"Hunt List:{hl}", "kind": "Hunt List", "name": hl, "matched": "", "others": "",
+                     "related": f"Pilots: {pilots}", "deletable": "0" if why else "1", "reason": "; ".join(why)})
+    return sorted(rows, key=lambda r: (kind_order[r["kind"]], r["name"].lower()))
 
 
 def remove_dns_from_line_group(conn: CucmConnection, name: str, dns: list[dict[str, str]]) -> str:
-    members = _line_group_members(conn, name)
-    hit = [(p, part) for p, part in members if matches(dns, p, part)]
+    hit, others = _split_members(_line_group_members(conn, name), dns)
     if not hit:
         return "None of the DNs are members any more"
-    if len(hit) == len(members):
+    if not others:
         raise AxlError("Every member is in the list, so the line group would be empty. Delete the line group instead.")
     body = [{"directoryNumber": {"pattern": p, **({"routePartitionName": part} if part else {})}} for p, part in hit]
     _call(conn, "updateLineGroup", name=name, removeMembers={"member": body})
-    return f"Removed {len(hit)} DN(s): " + "; ".join(dn_label({"dn": p, "partition": part}) for p, part in hit)
+    return f"Removed {len(hit)} DN(s): " + _labels(hit)
 
 
-def remove_line_group(conn: CucmConnection, name: str) -> str:
-    used = _hunt_lists_using_line_group(conn, name)
-    if used:
-        raise AxlError(f"Still in hunt list {', '.join(used[:3])}. Remove it from the hunt list first.")
-    _call(conn, "removeLineGroup", name=name)
-    return "Removed"
+def remove_hunt_object(conn: CucmConnection, key: str, dns: list[dict[str, str]]) -> str:
+    """Delete one row from find_hunt_objects. The checks are repeated now, so nothing outside the list is lost."""
+    kind, _, ref = key.partition(":")
+    if kind == "Hunt Pilot":
+        pattern, partition = split_key(ref)
+        if not matches(dns, pattern, partition):
+            raise AxlError("Not one of the DNs in the list")
+        _call(conn, "removeHuntPilot", **_pilot_ref(pattern, partition))
+        return "Removed"
+    if kind == "Hunt List":
+        why = _hunt_list_blockers(conn, ref, dns)
+        if why:
+            raise AxlError("Not deleted: " + "; ".join(why))
+        _call(conn, "removeHuntList", name=ref)
+        return "Removed"
+    if kind == "Line Group":
+        _, others = _split_members(_line_group_members(conn, ref), dns)
+        if others:
+            raise AxlError(f"Not deleted: it also holds {_labels(others)}")
+        used = _hunt_lists_using_line_group(conn, ref)
+        if used:
+            raise AxlError(f"Still in hunt list {', '.join(used[:3])}. Delete the hunt list first.")
+        _call(conn, "removeLineGroup", name=ref)
+        return "Removed"
+    raise AxlError(f"Unknown hunt object: {key}")
 
 
 # --- 3 to 9. unused objects ---

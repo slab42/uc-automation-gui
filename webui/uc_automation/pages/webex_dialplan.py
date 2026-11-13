@@ -11,7 +11,18 @@ _HELP = "One dial pattern per line, or separated by commas. A header row is opti
 _EXAMPLE = "+1555123!\n+1555124!\n9011!"
 
 
-def _patterns_input(S, paste_var, field_name: str, upload_id: str, button_label: str, on_text, on_csv) -> rx.Component:
+def _patterns_input(S, paste_var, prefix_var, field_name: str, upload_id: str, button_label: str, on_text,
+                    on_csv) -> rx.Component:
+    return rx.vstack(
+        field("Prefix (optional)", rx.input(value=prefix_var, on_change=lambda v: S.set_prefix(field_name, v),
+                                            placeholder="e.g. +1", width="12rem", max_width="100%")),
+        rx.text("Added in front of every pattern before it is sent.", size="1", color="var(--gray-10)"),
+        _tabs(S, paste_var, field_name, upload_id, button_label, on_text, on_csv),
+        spacing="2", align="start", width="100%",
+    )
+
+
+def _tabs(S, paste_var, field_name: str, upload_id: str, button_label: str, on_text, on_csv) -> rx.Component:
     def button(on_click) -> rx.Component:
         return rx.button(rx.cond(S.busy, rx.spinner(size="2"), rx.icon("plus", size=16)), button_label,
                          on_click=on_click, disabled=S.busy)
@@ -36,7 +47,7 @@ def _create_card(S) -> rx.Component:
             field("Route", rx.select(S.route_labels, value=S.route_label, on_change=S.set_route_label,
                                      placeholder="Select a trunk or route group", min_width="22rem")),
             rx.text("Dial patterns", size="2", weight="medium"),
-            _patterns_input(S, S.paste_create, "create", "dp_create_upload", "Create Dial Plan",
+            _patterns_input(S, S.paste_create, S.prefix_create, "create", "dp_create_upload", "Create Dial Plan",
                             S.create_from_text, S.create_from_csv),
             spacing="3", align="start", width="100%",
         ),
@@ -89,7 +100,7 @@ def _edit_card(S) -> rx.Component:
                                     color="var(--gray-11)"),
                             rx.cond(S.patterns.length() > 0, _pattern_list(S), rx.fragment()),
                             rx.text("Add dial patterns", size="2", weight="medium"),
-                            _patterns_input(S, S.paste_add, "add", "dp_add_upload", "Add Dial Patterns",
+                            _patterns_input(S, S.paste_add, S.prefix_add, "add", "dp_add_upload", "Add Dial Patterns",
                                             S.add_from_text, S.add_from_csv),
                             spacing="3", align="start", width="100%",
                         ),

@@ -140,6 +140,12 @@ def _load_users(conn: CucmConnection):
     return users, dev, ext
 
 
+def _email(user: dict) -> str:
+    """Full email address of an end user. CUCM Mail ID is often only the part before the @, so take the
+    first of Mail ID or Directory URI that holds an @."""
+    return next((v for v in (user.get("mailid", ""), user.get("directoryuri", "")) if "@" in v), "")
+
+
 def pool_export(conn: CucmConnection, pools: list[str], registration: bool = False,
                 progress: Callable[[str], None] | None = None) -> dict:
     """Collect everything for the phones in `pools`.
@@ -217,7 +223,7 @@ def pool_export(conn: CucmConnection, pools: list[str], registration: bool = Fal
             "Phone Template": p["template"],
             "Registration Status": reg_status(name),
             "User ID": ids[0] if ids else "", "First Name": u.get("firstname", ""), "Last Name": u.get("lastname", ""),
-            "Email": u.get("mailid") or u.get("directoryuri", ""), "Owner Source": source, "guessed": guessed,
+            "Email": _email(u), "Owner Source": source, "guessed": guessed,
             "Notes": f"Other users: {', '.join(ids[1:])}" if len(ids) > 1 else "",
             "lines": p["lines"],
         })

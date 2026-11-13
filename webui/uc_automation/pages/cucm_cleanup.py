@@ -82,15 +82,15 @@ def _remediate_button(number: str, label: str, kind: str, icon: str) -> rx.Compo
 def _buttons() -> rx.Component:
     return rx.card(rx.vstack(
         rx.heading("Cleanup Steps", size="3"),
-        rx.text("Each button runs only its own step. The Remediate buttons list objects and nothing is deleted "
-                "until you tick them and confirm.", size="2", color="var(--gray-11)"),
+        rx.text("Each button runs only its own step. Run step 1 before step 2: it needs the DNs to still exist. The "
+                "Remediate buttons list objects and nothing is deleted until you tick them and confirm.", size="2", color="var(--gray-11)"),
         rx.hstack(
-            rx.button(rx.icon("trash-2", size=16), "1. Delete Devices And Orphan DNs", color_scheme="red",
+            rx.button(rx.cond(S.hunt_scanning, rx.spinner(size="2"), rx.icon("users", size=16)),
+                      "1. Remediate Hunt Groups", variant="soft", on_click=S.scan_hunt,
+                      disabled=S.working | (S.dn_count == 0)),
+            rx.button(rx.icon("trash-2", size=16), "2. Delete Devices And Orphan DNs", color_scheme="red",
                       on_click=S.set_confirm_devices(True),
                       disabled=S.working | ((S.dn_count == 0) & (S.device_count == 0))),
-            rx.button(rx.cond(S.hunt_scanning, rx.spinner(size="2"), rx.icon("users", size=16)),
-                      "2. Remediate Hunt Groups", variant="soft", on_click=S.scan_hunt,
-                      disabled=S.working | (S.dn_count == 0)),
             spacing="3", wrap="wrap",
         ),
         rx.divider(),
@@ -118,14 +118,18 @@ def _hunt_panel() -> rx.Component:
     return rx.cond(
         S.hunt_scanning | S.hunt_scanned | (S.hunt_error != ""),
         rx.card(rx.vstack(
-            rx.heading("Line Groups With These DNs", size="3"),
-            rx.cond(S.hunt_scanning, rx.hstack(rx.spinner(size="2"), rx.text("Reading line groups...", size="2"),
+            rx.heading("Hunt Pilots, Hunt Lists And Line Groups With These DNs", size="3"),
+            rx.cond(S.hunt_scanning, rx.hstack(rx.spinner(size="2"), rx.text("Reading hunt groups...", size="2"),
                                                align="center", spacing="2"), rx.fragment()),
             rx.cond(S.hunt_error != "", rx.callout(S.hunt_error, icon="triangle-alert", color_scheme="red",
                                                    width="100%"), rx.fragment()),
             rx.cond(
                 S.hunt_rows.length() > 0,
                 rx.vstack(
+                    rx.callout("A line group that also holds numbers outside the list, and a hunt list that depends "
+                               "on one, is highlighted and cannot be deleted. Use Remove DNs From Line Groups to take "
+                               "only your numbers out of it.", icon="triangle-alert", color_scheme="amber", size="1",
+                               width="100%"),
                     rx.hstack(
                         rx.button("Select All", size="1", variant="soft", on_click=S.select_all_hunt),
                         rx.button("Clear", size="1", variant="soft", color_scheme="gray", on_click=S.clear_hunt),
@@ -134,7 +138,7 @@ def _hunt_panel() -> rx.Component:
                         rx.button(rx.icon("user-minus", size=16), "Remove DNs From Line Groups", color_scheme="red",
                                   variant="soft", on_click=S.set_confirm_hunt("remove"),
                                   disabled=S.working | (S.hunt_selected.length() == 0)),
-                        rx.button(rx.icon("trash-2", size=16), "Delete Line Groups", color_scheme="red",
+                        rx.button(rx.icon("trash-2", size=16), "Delete Selected", color_scheme="red",
                                   on_click=S.set_confirm_hunt("delete"),
                                   disabled=S.working | (S.hunt_selected.length() == 0)),
                         align="center", spacing="3", wrap="wrap", width="100%",
@@ -142,25 +146,37 @@ def _hunt_panel() -> rx.Component:
                     rx.scroll_area(rx.table.root(
                         rx.table.header(rx.table.row(
                             rx.table.column_header_cell(""),
-                            rx.table.column_header_cell("Line Group"),
+                            rx.table.column_header_cell("Type"),
+                            rx.table.column_header_cell("Name"),
                             rx.table.column_header_cell("DNs In The List"),
-                            rx.table.column_header_cell("Members"),
-                            rx.table.column_header_cell("Hunt Lists"),
+                            rx.table.column_header_cell("Other Numbers"),
+                            rx.table.column_header_cell("Related"),
+                            rx.table.column_header_cell("Status"),
                         )),
                         rx.table.body(rx.foreach(S.hunt_rows, lambda r: rx.table.row(
-                            rx.table.cell(rx.checkbox(checked=S.hunt_selected.contains(r["name"]),
-                                                      on_change=lambda c: S.toggle_hunt(r["name"], c))),
+                            rx.table.cell(rx.checkbox(
+                                checked=S.hunt_selected.contains(r["key"]),
+                                on_change=lambda c: S.toggle_hunt(r["key"], c),
+                                # a blocked line group can still be ticked, to remove only the listed DNs from it
+                                disabled=(r["deletable"] != "1") & (r["kind"] != "Line Group"))),
+                            rx.table.cell(r["kind"]),
                             rx.table.cell(rx.code(r["name"])),
                             rx.table.cell(r["matched"]),
-                            rx.table.cell(r["members"]),
-                            rx.table.cell(r["hunt_lists"]),
+                            rx.table.cell(r["others"]),
+                            rx.table.cell(r["related"]),
+                            rx.table.cell(rx.cond(
+                                r["deletable"] == "1",
+                                rx.badge("Can Delete", color_scheme="green"),
+                                rx.tooltip(rx.badge("Blocked", color_scheme="amber"), content=r["reason"]))),
+                            background=rx.cond(r["deletable"] == "1", "", "var(--amber-3)"),
                         ))),
                         size="2",
                     ), max_height="50vh"),
                     spacing="3", align="start", width="100%",
                 ),
                 rx.cond(S.hunt_scanned & (S.hunt_error == ""),
-                        rx.text("No line group holds these DNs.", size="2", color="var(--gray-11)"), rx.fragment()),
+                        rx.text("No hunt pilot, hunt list or line group uses these DNs.", size="2",
+                                color="var(--gray-11)"), rx.fragment()),
             ),
             spacing="3", align="start", width="100%",
         ), width="100%"),
@@ -180,6 +196,8 @@ def _remediate_panel() -> rx.Component:
             rx.cond(
                 S.rem_rows.length() > 0,
                 rx.vstack(
+                    search_input(S.rem_filter, S.set_rem_filter, "Filter the results", width="320px",
+                                 max_width="100%"),
                     rx.hstack(
                         rx.tooltip(
                             rx.badge(S.rem_unused.length().to_string() + " unused", color_scheme="green",
@@ -233,8 +251,9 @@ def cutover_cleanup() -> rx.Component:
         rx.callout("This tool is still under development.",
                    icon="construction", color_scheme="amber", width="100%"),
         _need_connection(S, rx.vstack(
-            rx.text("Clean up the selected cluster after a Webex cutover: delete the old devices and their orphan "
-                    "DNs, then remove the hunt group members and unused objects they leave behind.", size="2",
+            rx.text("Clean up the selected cluster after a Webex cutover: first find and remove the hunt pilots, hunt "
+                    "lists and line groups that use the numbers, then delete the old devices and their orphan DNs, "
+                    "then remove the unused objects they leave behind.", size="2",
                     color="var(--gray-11)"),
             _input_card(),
             _buttons(),
@@ -250,12 +269,14 @@ def cutover_cleanup() -> rx.Component:
         rx.alert_dialog.root(
             rx.alert_dialog.content(
                 rx.alert_dialog.title(rx.cond(S.confirm_hunt == "remove", "Remove the DNs from the line groups?",
-                                              "Delete the line groups?")),
+                                              "Delete the selected hunt objects?")),
                 rx.alert_dialog.description(rx.cond(
                     S.confirm_hunt == "remove",
-                    "Removes the DNs in the list from every selected line group. A group whose members are all in "
-                    "the list is not changed.",
-                    "Deletes every selected line group. A line group still in a hunt list is refused.")),
+                    "Removes the DNs in the list from every selected line group and keeps the other members. A "
+                    "group whose members are all in the list is not changed (delete it instead). Hunt pilots and "
+                    "hunt lists selected are ignored.",
+                    "Deletes the selected hunt pilots, then hunt lists, then line groups. Anything that holds or "
+                    "serves numbers outside the list is refused. This cannot be undone.")),
                 rx.hstack(
                     rx.button("Cancel", variant="soft", color_scheme="gray", on_click=S.set_confirm_hunt("")),
                     rx.button(rx.cond(S.confirm_hunt == "remove", "Remove", "Delete"), color_scheme="red",

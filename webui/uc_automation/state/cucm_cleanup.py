@@ -1,4 +1,5 @@
-"""State for CUCM > Migration > Cutover Cleanup: delete devices and orphan DNs, then remediate what is left unused."""
+"""State for CUCM > Migration > Cutover Cleanup: remediate hunt groups, delete devices and orphan DNs, then remediate
+what is left unused."""
 
 import asyncio
 from typing import ClassVar
@@ -15,7 +16,7 @@ from .run_mixin import RunMixin
 class CleanupState(CucmState, RunMixin):
     output_fields: ClassVar[tuple[str, ...]] = (
         "hunt_rows", "hunt_selected", "hunt_scanned", "hunt_error",
-        "rem_rows", "rem_only_unused", "rem_selected", "rem_warnings", "rem_scanned", "rem_kind")
+        "rem_rows", "rem_filter", "rem_only_unused", "rem_selected", "rem_warnings", "rem_scanned", "rem_kind")
 
     # Page inputs
     input_open: bool = True
@@ -25,7 +26,7 @@ class CleanupState(CucmState, RunMixin):
     paste_devices: str = ""
     confirm_devices: bool = False
 
-    # 2. hunt groups
+    # 1. hunt groups
     hunt_rows: list[dict[str, str]] = []
     hunt_selected: list[str] = []
     hunt_scanned: bool = False
@@ -37,6 +38,7 @@ class CleanupState(CucmState, RunMixin):
     rem_search: str = ""
     rem_kind: str = ""
     rem_rows: list[dict[str, str]] = []
+    rem_filter: str = ""  # filters the result table
     rem_only_unused: bool = False
     rem_selected: list[str] = []
     rem_warnings: list[str] = []
@@ -65,12 +67,18 @@ class CleanupState(CucmState, RunMixin):
 
     @rx.var
     def rem_shown(self) -> list[dict[str, str]]:
-        """The rows in the table: all of them, or only the unused ones after clicking the unused badge."""
-        return [r for r in self.rem_rows if r["status"] == "Unused"] if self.rem_only_unused else self.rem_rows
+        """The rows in the table: all of them, or only the unused ones after clicking the unused badge, narrowed by
+        the filter text (matches any column)."""
+        rows = [r for r in self.rem_rows if r["status"] == "Unused"] if self.rem_only_unused else self.rem_rows
+        q = self.rem_filter.strip().lower()
+        if q:
+            rows = [r for r in rows if any(q in str(r.get(k, "")).lower() for k in ("name", "status", "detail"))]
+        return rows
 
     @rx.var
     def rem_unused(self) -> list[str]:
-        return [r["name"] for r in self.rem_rows if r["status"] == "Unused"]
+        """Unused objects among the rows currently shown (so Select All Unused respects the filter)."""
+        return [r["name"] for r in self.rem_shown if r["status"] == "Unused"]
 
     @rx.var
     def working(self) -> bool:
@@ -97,6 +105,10 @@ class CleanupState(CucmState, RunMixin):
     @rx.event
     def set_paste_devices(self, value: str):
         self.paste_devices = value
+
+    @rx.event
+    def set_rem_filter(self, value: str):
+        self.rem_filter = value
 
     @rx.event
     def set_rem_search(self, value: str):
@@ -137,7 +149,7 @@ class CleanupState(CucmState, RunMixin):
         except ValueError:
             return []
 
-    # --- 1. delete devices and orphan DNs ---
+    # --- 2. delete devices and orphan DNs ---
 
     @rx.event
     def run_delete_devices(self):
@@ -171,7 +183,7 @@ class CleanupState(CucmState, RunMixin):
         finally:
             log.close()
 
-    # --- 2. hunt groups ---
+    # --- 1. hunt groups ---
 
     @rx.event
     async def scan_hunt(self):
@@ -189,12 +201,12 @@ class CleanupState(CucmState, RunMixin):
         self.hunt_scanning, self.hunt_error, self.hunt_rows, self.hunt_selected = True, "", [], []
         self.hunt_scanned = False
         yield
-        log = OpLog("Cleanup find line groups with DNs", "cleanup-find-line-groups")
+        log = OpLog("Cleanup find hunt pilots, hunt lists and line groups with DNs", "cleanup-find-hunt-groups")
         try:
             log.info(f"Connection: {conn.name} ({conn.server}) as {conn.username}")
             log.info(f"Source: {len(dns)} directory number(s)")
             try:
-                rows = await asyncio.to_thread(cl.find_line_groups, conn, dns)
+                rows = await asyncio.to_thread(cl.find_hunt_objects, conn, dns)
             except AxlError as e:
                 log.error(f"Failed: {e}")
                 self.hunt_error = str(e)
@@ -202,21 +214,23 @@ class CleanupState(CucmState, RunMixin):
                 log.error(f"Failed unexpectedly: {e!r}")
                 self.hunt_error = f"Unexpected error: {e}"
             else:
-                log.info(f"{len(rows)} line group(s) hold these DNs")
+                log.info(f"{len(rows)} hunt object(s) use these DNs")
                 for r in rows:
-                    log.info(f"{r['name']}: {r['matched']} (hunt lists: {r['hunt_lists']})")
+                    state = "can be deleted" if r["deletable"] == "1" else f"blocked: {r['reason']}"
+                    log.info(f"{r['kind']} {r['name']}: {r['matched'] or '-'} ({r['related']}) {state}")
                 self.hunt_rows, self.hunt_scanned = rows, True
         finally:
             log.close()
             self.hunt_scanning = False
 
     @rx.event
-    def toggle_hunt(self, name: str, checked: bool):
-        self.hunt_selected = [n for n in self.hunt_selected if n != name] + ([name] if checked else [])
+    def toggle_hunt(self, key: str, checked: bool):
+        self.hunt_selected = [n for n in self.hunt_selected if n != key] + ([key] if checked else [])
 
     @rx.event
     def select_all_hunt(self):
-        self.hunt_selected = [r["name"] for r in self.hunt_rows]
+        """Only the rows that may be deleted."""
+        self.hunt_selected = [r["key"] for r in self.hunt_rows if r["deletable"] == "1"]
 
     @rx.event
     def clear_hunt(self):
@@ -231,27 +245,36 @@ class CleanupState(CucmState, RunMixin):
         if conn is None:
             yield rx.toast.error("Add a CUCM connection first.")
             return
-        self.input_open = False
         dns = self._dns()
-        names = list(self.hunt_selected)
-        title = "Remove DNs from line groups" if mode == "remove" else "Delete line groups"
-        log = OpLog(f"Cleanup {title.lower()}", f"cleanup-{mode}-line-groups")
+        rows = {r["key"]: r for r in self.hunt_rows if r["key"] in self.hunt_selected}
+        if mode == "remove":  # members can be removed from any line group, including ones that hold other numbers
+            keys = [k for k, r in rows.items() if r["kind"] == "Line Group"]
+        else:  # the same safety rule as the table: never a row that is blocked
+            keys = [k for k, r in rows.items() if r["deletable"] == "1"]
+        if not keys:
+            yield rx.toast.error("Nothing selected can be " + ("changed." if mode == "remove" else "deleted."))
+            return
+        self.input_open = False
+        order = {"Hunt Pilot": 0, "Hunt List": 1, "Line Group": 2}  # pilots, then hunt lists, then line groups
+        keys.sort(key=lambda k: order[rows[k]["kind"]])
+        title = "Remove DNs from line groups" if mode == "remove" else "Delete hunt objects"
+        log = OpLog(f"Cleanup {title.lower()}", f"cleanup-{mode}-hunt-groups")
         try:
             log.info(f"Connection: {conn.name} ({conn.server}) as {conn.username}")
-            log.info(f"Selected: {len(names)} line group(s): {', '.join(names)}")
+            log.info(f"Selected: {len(keys)}: {', '.join(rows[k]['kind'] + ' ' + rows[k]['name'] for k in keys)}")
             log.info(f"Directory numbers in the list: {', '.join(cl.dn_label(r) for r in dns)}")
             if mode == "remove":
-                items = [(n, (lambda n=n: cl.remove_dns_from_line_group(conn, n, dns))) for n in names]
+                items = [(k, (lambda n=rows[k]["name"]: cl.remove_dns_from_line_group(conn, n, dns))) for k in keys]
             else:
-                items = [(n, (lambda n=n: cl.remove_line_group(conn, n))) for n in names]
+                items = [(k, (lambda k=k: cl.remove_hunt_object(conn, k, dns))) for k in keys]
             yield self._start_run(items, "Removing" if mode == "remove" else "Deleting", log, then="_after_hunt")
         finally:
             log.close()
 
     def _after_hunt(self, log):
-        """Drop the line groups that were changed from the list."""
+        """Drop the rows that were changed (deleted, or a line group that no longer holds any of the DNs)."""
         done = {r["key"] for r in self.results if r["status"] == "OK"}
-        self.hunt_rows = [r for r in self.hunt_rows if r["name"] not in done]
+        self.hunt_rows = [r for r in self.hunt_rows if r["key"] not in done]
         self.hunt_selected = [n for n in self.hunt_selected if n not in done]
 
     # --- 3 to 9. unused objects ---
@@ -271,6 +294,7 @@ class CleanupState(CucmState, RunMixin):
         self.input_open = False
         self.rem_scanning, self.rem_kind, self.rem_rows, self.rem_selected = True, kind, [], []
         self.rem_warnings, self.rem_scanned, self.rem_only_unused = [], False, False
+        self.rem_filter = ""
         yield
         log = OpLog(f"Cleanup find unused {cl.TITLES[kind].lower()}", f"cleanup-unused-{kind}")
         try:
