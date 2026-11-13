@@ -6,6 +6,30 @@ from ..state.cucm_pool_export import PoolExportState
 from .tools import _need_connection
 
 
+def _settings_dialog() -> rx.Component:
+    S = PoolExportState
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("Device Export Settings"),
+            rx.vstack(
+                rx.heading("Excel Output Options", size="3"),
+                rx.text("Unchecked columns are left out of the Excel output. All are off by default. Registration "
+                        "Status is included only when Pull Registration Status is checked on the page.",
+                        size="2", color="var(--gray-11)"),
+                rx.foreach(S.excel_option_names, lambda o: rx.checkbox(
+                    o, checked=S.excel_on.contains(o), on_change=lambda v: S.toggle_excel_opt(o, v))),
+                rx.hstack(
+                    rx.button("Reset", variant="soft", color_scheme="gray", on_click=S.reset_excel_opts),
+                    rx.spacer(), rx.button("Done", on_click=S.set_settings_open(False)),
+                    width="100%", align="center"),
+                spacing="3", align="start", width="100%",
+            ),
+            max_width="480px", max_height="85vh", overflow_y="auto",
+        ),
+        open=S.settings_open, on_open_change=S.set_settings_open,
+    )
+
+
 def pool_export() -> rx.Component:
     S = PoolExportState
     picker = rx.card(
@@ -57,6 +81,10 @@ def pool_export() -> rx.Component:
                              width="360px", max_width="100%"),
                 rx.button(rx.cond(S.searching, rx.spinner(size="2"), rx.icon("search", size=16)), "Find Device Pools",
                           on_click=S.search_pools, disabled=S.searching | S.running),
+                rx.spacer(),
+                rx.tooltip(rx.icon_button(rx.icon("settings", size=18), variant="soft",
+                                          on_click=S.set_settings_open(True), aria_label="Settings"),
+                           content="Settings"),
                 align="center", spacing="3", wrap="wrap", width="100%",
             ),
             rx.cond(S.pools.length() > 0, rx.vstack(
@@ -102,6 +130,7 @@ def pool_export() -> rx.Component:
             )),
             spacing="4", align="start", width="100%",
         ),
+        _settings_dialog(),
         on_connection_change=S.switch_connection,
         on_org_change=S.switch_org,
     )

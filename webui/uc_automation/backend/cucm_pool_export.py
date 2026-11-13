@@ -18,9 +18,15 @@ from .cucm_reports import registered_names
 
 WORKERS = 4
 LINE_FIELDS = ["DN", "Partition", "Display", "Label", "External Mask", "Caller ID"]
-PHONE_COLUMNS = ["Type", "Device Name", "MAC", "Device Type", "Protocol", "Device Pool", "Description",
+PHONE_COLUMNS = ["Type", "Device Name", "Device Type", "Device Pool", "Description",
                  "Phone Template", "Registration Status", "User ID", "First Name", "Last Name", "Email",
                  "Owner Source", "Notes"]
+# Excel Output Options: option label -> the column(s) it adds. A line field applies to every Line N.
+EXCEL_OPTIONS = {
+    "First Name": ["First Name"], "Last Name": ["Last Name"], "Owner Source": ["Owner Source"],
+    "Phone Template": ["Phone Template"], "Line Partitions": ["Partition"], "Line Displays": ["Display"],
+    "Line Labels": ["Label"], "Line External Masks": ["External Mask"], "Line Caller ID": ["Caller ID"],
+}
 BLF_COLUMNS = ["Device Name", "BLF Index", "Destination", "Label"]
 _TAGS = {
     "name": "", "description": "", "product": "", "model": "", "protocol": "", "devicePoolName": "",
@@ -126,17 +132,42 @@ def _load_dn_descriptions(conn: CucmConnection) -> dict[tuple[str, str], str]:
 
 def _load_users(conn: CucmConnection):
     """(users by lower-case id, device name -> user ids, (DN, partition) -> user ids by primary extension)."""
-    users = {r["userid"].lower(): r for r in sql_rows(
-        conn, "select userid, firstname, lastname, mailid, directoryuri from enduser", 5)}
+    try:
+        rows = list_paged(conn, "listUser", "user", {"userid": "%"},
+                          ["userid", "firstName", "lastName", "mailid", "directoryUri"])
+    except AxlError:   # older CUCM without Directory URI
+        rows = list_paged(conn, "listUser", "user", {"userid": "%"}, ["userid", "firstName", "lastName", "mailid"])
+    users = {r["userid"].strip().lower(): {"userid": r["userid"], "firstname": r.get("firstName", ""),
+                                   "lastname": r.get("lastName", ""), "mailid": r.get("mailid", ""),
+                                   "directoryuri": r.get("directoryUri", "")} for r in rows if r.get("userid")}
     dev: dict[str, list[str]] = {}
-    for r in sql_rows(conn, "select d.name as device, e.userid as userid from enduserdevicemap m "
-                            "join device d on d.pkid = m.fkdevice join enduser e on e.pkid = m.fkenduser", 2):
-        dev.setdefault(r["device"].upper(), []).append(r["userid"])
+    try:
+        for r in sql_rows(conn, "select d.name as device, e.userid as userid from enduserdevicemap m "
+                                "join device d on d.pkid = m.fkdevice join enduser e on e.pkid = m.fkenduser", 2):
+            dev.setdefault(r["device"].upper(), []).append(r["userid"])
+    except AxlError:
+        pass
     ext: dict[tuple[str, str], list[str]] = {}
-    for r in sql_rows(conn, "select e.userid as userid, n.dnorpattern as dn, rp.name as part from enduser e "
-                            "join numplan n on n.pkid = e.fknumplan_primary "
-                            "left join routepartition rp on rp.pkid = n.fkroutepartition", 3):
-        ext.setdefault((r["dn"], r["part"]), []).append(r["userid"])
+    try:   # primary extension: a failure here must not lose names and emails
+        from zeep.helpers import serialize_object
+        skip = 0
+        while True:
+            resp = _call(conn, "listUser", searchCriteria={"userid": "%"},
+                         returnedTags={"userid": "", "primaryExtension": {"pattern": "", "routePartitionName": ""}},
+                         skip=skip, first=500)
+            data = serialize_object(resp["return"]) if resp["return"] is not None else {}
+            batch = (data or {}).get("user") or []
+            for u in batch:
+                pe = u.get("primaryExtension") or {}
+                if u.get("userid") and pe.get("pattern"):
+                    part = pe.get("routePartitionName")
+                    part = part.get("_value_1", "") if isinstance(part, dict) else (part or "")
+                    ext.setdefault((pe["pattern"], part), []).append(u["userid"])
+            if len(batch) < 500:
+                break
+            skip += 500
+    except AxlError:
+        pass
     return users, dev, ext
 
 
@@ -215,11 +246,10 @@ def pool_export(conn: CucmConnection, pools: list[str], registration: bool = Fal
                                       ("Line 1 Description", line1.get("Description", "")),
                                       ("Line 1 Display", line1.get("Display", ""))], users)
             ids, guessed = ([uid], True) if uid else ([], False)
-        u = users.get(ids[0].lower(), {}) if ids else {}
+        u = users.get(ids[0].strip().lower(), {}) if ids else {}
         phones.append({
             "Type": "User" if ids else "Workspace", "Device Name": name,
-            "MAC": name[3:] if name.upper().startswith("SEP") else "", "Device Type": d["model"],
-            "Protocol": p["protocol"], "Device Pool": d["pool"], "Description": p["description"],
+            "Device Type": d["model"], "Device Pool": d["pool"], "Description": p["description"],
             "Phone Template": p["template"],
             "Registration Status": reg_status(name),
             "User ID": ids[0] if ids else "", "First Name": u.get("firstname", ""), "Last Name": u.get("lastname", ""),
@@ -233,8 +263,14 @@ def pool_export(conn: CucmConnection, pools: list[str], registration: bool = Fal
     return {"phones": phones, "blfs": blfs, "errors": errors, "max_lines": max_lines, "reg_complete": reg_complete}
 
 
-def phone_headers(max_lines: int) -> list[str]:
-    return PHONE_COLUMNS + [f"Line {n} {f}" for n in range(1, max_lines + 1) for f in LINE_FIELDS]
+def phone_headers(max_lines: int, options: set[str] | None = None, registration: bool = True) -> list[str]:
+    """Phone sheet headers. `options` is the set of EXCEL_OPTIONS to include (None = all);
+    Registration Status is dropped when `registration` is False."""
+    on = set(EXCEL_OPTIONS) if options is None else options
+    off = {c for k, cols in EXCEL_OPTIONS.items() if k not in on for c in cols}
+    cols = [c for c in PHONE_COLUMNS if c not in off and (registration or c != "Registration Status")]
+    fields = [f for f in LINE_FIELDS if f not in off]
+    return cols + [f"Line {n} {f}" for n in range(1, max_lines + 1) for f in fields]
 
 
 def phone_row(phone: dict, max_lines: int) -> dict[str, str]:
@@ -247,7 +283,8 @@ def phone_row(phone: dict, max_lines: int) -> dict[str, str]:
     return row
 
 
-def build_workbook(result: dict, extra_sheets: list[tuple[str, list[str], list[dict]]] | None = None) -> bytes:
+def build_workbook(result: dict, extra_sheets: list[tuple[str, list[str], list[dict]]] | None = None,
+                   options: set[str] | None = None, registration: bool = True) -> bytes:
     """The export workbook (xlsx bytes). `extra_sheets` is [(name, headers, rows)] for later additions
     such as a Hunt Groups sheet."""
     from io import BytesIO
@@ -259,7 +296,8 @@ def build_workbook(result: dict, extra_sheets: list[tuple[str, list[str], list[d
 
     header_fill = PatternFill("solid", fgColor="1F4E78")
     header_font = Font(color="FFFFFF", bold=True)
-    phones, max_lines = result["phones"], result["max_lines"]
+    phones = sorted(result["phones"], key=lambda p: (p["Device Name"].lower(), p["Email"].lower()))
+    max_lines = result["max_lines"]
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -286,14 +324,22 @@ def build_workbook(result: dict, extra_sheets: list[tuple[str, list[str], list[d
         c[p["Type"]] += 1
     summary = [{"Device Pool": k, "Phones": v["User"] + v["Workspace"], "Users": v["User"], "Workspaces": v["Workspace"]}
                for k, v in sorted(pools.items(), key=lambda kv: kv[0].lower())]
-    headers = phone_headers(max_lines)
+    headers = phone_headers(max_lines, options, registration)
     sheet("Phones", "Phones", headers, [phone_row(p, max_lines) for p in phones])
     yellow = PatternFill("solid", fgColor="FFFF00")
-    cols = [headers.index(c) + 1 for c in ("User ID", "First Name", "Last Name", "Email")]
+    cols = [headers.index(c) + 1 for c in ("User ID", "First Name", "Last Name", "Email") if c in headers]
     for i, p in enumerate(phones, 2):
         if p.get("guessed"):
             for c in cols:
                 wb["Phones"].cell(row=i, column=c).fill = yellow
+    if phones:   # highlight duplicate (non-blank) emails
+        from openpyxl.formatting.rule import FormulaRule
+        col = get_column_letter(headers.index("Email") + 1)
+        last = len(phones) + 1
+        wb["Phones"].conditional_formatting.add(
+            f"{col}2:{col}{last}",
+            FormulaRule(formula=[f'AND({col}2<>"",COUNTIF(${col}$2:${col}${last},{col}2)>1)'],
+                        fill=PatternFill("solid", bgColor="FFC7CE", fgColor="FFC7CE"), font=Font(color="9C0006")))
     sheet("BLFs", "BLFs", BLF_COLUMNS, result["blfs"])
     sheet("Summary", "Summary", ["Device Pool", "Phones", "Users", "Workspaces"], summary)
     sheet("Errors", "Errors", ["Device Name", "Error"], result["errors"])

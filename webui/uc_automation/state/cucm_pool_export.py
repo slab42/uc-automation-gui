@@ -20,6 +20,10 @@ class PoolExportState(CucmState):
     pools: list[str] = []
     selected: list[str] = []
     registration: bool = False
+    settings_open: bool = False
+    excel_option_names: list[str] = list(x.EXCEL_OPTIONS)
+    # Excel Output Options: comma separated names of the enabled options (browser LocalStorage, all off by default)
+    excel_opts: str = rx.LocalStorage("", name="pool_export_excel_opts")
     searching: bool = False
     running: bool = False
     preview: list[dict[str, str]] = []
@@ -28,6 +32,23 @@ class PoolExportState(CucmState):
     warning: str = ""
     progress: str = ""
     _xlsx: bytes = b""
+
+    @rx.var
+    def excel_on(self) -> list[str]:
+        return [o for o in self.excel_opts.split(",") if o]
+
+    @rx.event
+    def set_settings_open(self, value: bool):
+        self.settings_open = value
+
+    @rx.event
+    def toggle_excel_opt(self, name: str, checked: bool):
+        on = [o for o in x.EXCEL_OPTIONS if (o in self.excel_on and o != name) or (o == name and checked)]
+        self.excel_opts = ",".join(on)
+
+    @rx.event
+    def reset_excel_opts(self):
+        self.excel_opts = ""
 
     @rx.var
     def has_result(self) -> bool:
@@ -88,6 +109,7 @@ class PoolExportState(CucmState):
             self.error = "Select at least one device pool."
             return
         pools, registration = list(self.selected), self.registration
+        options = set(self.excel_on)
         self.running = True
         self.clear_result()
         self.progress = ""
@@ -96,6 +118,7 @@ class PoolExportState(CucmState):
         try:
             log.info(f"Connection: {conn.name} ({conn.server}) as {conn.username}")
             log.info(f"Device pools: {', '.join(pools)}; registration: {'yes' if registration else 'no'}")
+            log.info(f"Excel output options: {', '.join(sorted(options)) or 'none'}")
             latest = {"msg": ""}
 
             def note(msg: str) -> None:
@@ -110,7 +133,7 @@ class PoolExportState(CucmState):
                         self.progress = latest["msg"]
                         yield
                 result = task.result()
-                data = await asyncio.to_thread(x.build_workbook, result)
+                data = await asyncio.to_thread(x.build_workbook, result, None, options, registration)
             except AxlError as e:
                 self.error = str(e)
                 log.error(f"Export failed: {e}")
