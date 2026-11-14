@@ -7,7 +7,10 @@ When none is found, the phone description, then the line 1 description, then the
 matched against user IDs and first/last name combinations. A guess is marked in Owner Source and highlighted.
 """
 
+import calendar
 import re
+
+from datetime import date, datetime
 
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -17,16 +20,20 @@ from .cucm_connections import CucmConnection
 from .cucm_reports import registered_names
 
 WORKERS = 4
-LINE_FIELDS = ["DN", "Partition", "Display", "Label", "External Mask", "Caller ID"]
-PHONE_COLUMNS = ["Type", "Device Name", "Device Type", "Device Pool", "Description",
-                 "Phone Template", "Registration Status", "User ID", "First Name", "Last Name", "Email",
+LINE_FIELDS = ["DN", "Partition", "Description", "Display", "Label", "External Mask", "Caller ID"]
+PHONE_COLUMNS = ["Webex Location", "Type", "Device Name", "Device Type", "Device Pool", "Description",
+                 "Phone Template", "Registration Status", "Last Registered", "User ID", "First Name", "Last Name", "Email",
                  "Owner Source", "Notes"]
-# Excel Output Options: option label -> the column(s) it adds. A line field applies to every Line N.
+# Excel Output Options: option label -> (phone columns, line fields). Unchecked options are hidden columns.
 EXCEL_OPTIONS = {
-    "First Name": ["First Name"], "Last Name": ["Last Name"], "Owner Source": ["Owner Source"],
-    "Phone Template": ["Phone Template"], "Line Partitions": ["Partition"], "Line Displays": ["Display"],
-    "Line Labels": ["Label"], "Line External Masks": ["External Mask"], "Line Caller ID": ["Caller ID"],
+    "Device Pool Name": (["Device Pool"], []),
+    "First Name": (["First Name"], []), "Last Name": (["Last Name"], []), "Owner Source": (["Owner Source"], []),
+    "Phone Template": (["Phone Template"], []), "Line Partitions": ([], ["Partition"]),
+    "Line Descriptions": ([], ["Description"]), "Line Displays": ([], ["Display"]), "Line Labels": ([], ["Label"]),
+    "Line External Masks": ([], ["External Mask"]), "Line Caller ID": ([], ["Caller ID"]),
 }
+# Phone fields the Webex Location can be taken from
+LOCATION_FIELDS = ["Device Pool", "Device Name", "Description", "Phone Template", "Device Type", "User ID", "Email"]
 BLF_COLUMNS = ["Device Name", "BLF Index", "Destination", "Label"]
 _TAGS = {
     "name": "", "description": "", "product": "", "model": "", "protocol": "", "devicePoolName": "",
@@ -39,10 +46,11 @@ _TAGS = {
 
 
 def list_pools(conn: CucmConnection, search: str = "") -> list[str]:
-    """Device pool names containing `search` (case-insensitive), sorted."""
-    q = search.strip().lower()
+    """Device pool names containing `search` (case-insensitive), sorted. `|` separates alternatives:
+    "Phone|711" finds names containing Phone or 711. A blank search lists all."""
+    terms = [t.strip().lower() for t in search.split("|") if t.strip()]
     names = [p["name"] for p in list_paged(conn, "listDevicePool", "devicePool", {"name": "%"}, ["name"])]
-    return sorted((n for n in names if q in n.lower()), key=str.lower)
+    return sorted((n for n in names if not terms or any(t in n.lower() for t in terms)), key=str.lower)
 
 
 def _aslist(v) -> list:
@@ -225,6 +233,31 @@ def pool_export(conn: CucmConnection, pools: list[str], registration: bool = Fal
     if registration and devices:
         reg, reg_complete = registered_names(conn, [d["name"] for d in devices], "Phone", progress)
 
+    last_seen: dict[str, date] = {}
+    seen_ok = False
+    if registration and devices:   # registrationdynamic keeps the last time (epoch seconds) each device was seen
+        try:
+            for r in sql_rows(conn, (
+                    "select d.name as name, rd.lastseen as seen, rd.lastactive as active from registrationdynamic rd "
+                    "join device d on d.pkid = rd.fkdevice join devicepool dp on dp.pkid = d.fkdevicepool "
+                    f"where dp.name in ({quoted})"), 3):
+                stamp = max((int(v) for v in (r["seen"], r["active"]) if v.strip().isdigit()), default=0)
+                if stamp > 0:
+                    last_seen[r["name"].upper()] = datetime.fromtimestamp(stamp).date()
+            seen_ok = True
+        except AxlError as e:
+            errors.append({"Device Name": "", "Error": f"Last registered lookup failed: {e}"})
+
+    def last_registered(name: str) -> str:
+        """ISO date, "Never" (lookup worked, never seen, not registered) or blank (unknown)."""
+        if not registration:
+            return ""
+        if name.upper() in reg:
+            return str(date.today())
+        if name.upper() in last_seen:
+            return str(last_seen[name.upper()])
+        return "Never" if seen_ok and reg_complete else ""
+
     def reg_status(name: str) -> str:
         if not registration:
             return ""
@@ -238,9 +271,9 @@ def pool_export(conn: CucmConnection, pools: list[str], registration: bool = Fal
             p = {"description": "", "protocol": "", "template": "", "owner": "", "lines": [], "blfs": []}
         ids, source = resolve_owner(p, dev_users, primary_ext, name)
         guessed = False
+        for ln in p["lines"]:
+            ln["Description"] = dn_desc.get((ln["DN"], ln["Partition"]), "")
         if not ids and users:
-            for ln in p["lines"]:
-                ln["Description"] = dn_desc.get((ln["DN"], ln["Partition"]), "")
             line1 = next((ln for ln in p["lines"] if ln["index"] == 1), p["lines"][0] if p["lines"] else {})
             uid, source = guess_user([("Phone Description", p["description"]),
                                       ("Line 1 Description", line1.get("Description", "")),
@@ -252,6 +285,7 @@ def pool_export(conn: CucmConnection, pools: list[str], registration: bool = Fal
             "Device Type": d["model"], "Device Pool": d["pool"], "Description": p["description"],
             "Phone Template": p["template"],
             "Registration Status": reg_status(name),
+            "Last Registered": last_registered(name),
             "User ID": ids[0] if ids else "", "First Name": u.get("firstname", ""), "Last Name": u.get("lastname", ""),
             "Email": _email(u), "Owner Source": source, "guessed": guessed,
             "Notes": f"Other users: {', '.join(ids[1:])}" if len(ids) > 1 else "",
@@ -263,14 +297,61 @@ def pool_export(conn: CucmConnection, pools: list[str], registration: bool = Fal
     return {"phones": phones, "blfs": blfs, "errors": errors, "max_lines": max_lines, "reg_complete": reg_complete}
 
 
-def phone_headers(max_lines: int, options: set[str] | None = None, registration: bool = True) -> list[str]:
-    """Phone sheet headers. `options` is the set of EXCEL_OPTIONS to include (None = all);
-    Registration Status is dropped when `registration` is False."""
-    on = set(EXCEL_OPTIONS) if options is None else options
-    off = {c for k, cols in EXCEL_OPTIONS.items() if k not in on for c in cols}
-    cols = [c for c in PHONE_COLUMNS if c not in off and (registration or c != "Registration Status")]
-    fields = [f for f in LINE_FIELDS if f not in off]
-    return cols + [f"Line {n} {f}" for n in range(1, max_lines + 1) for f in fields]
+def _replacement(text: str) -> str:
+    """Python replacement template: $1 is accepted as well as \\1."""
+    return re.sub(r"\$(\d+)", r"\\g<\1>", text)
+
+
+def check_location_regex(pattern: str, replace: str | None = None) -> str:
+    """"" when `pattern` (and the replacement, when given) is usable, else the error text."""
+    try:
+        rx = re.compile(pattern)
+        if replace is not None and pattern:
+            rx.sub(_replacement(replace), "")
+            # a group reference that does not exist only fails when the pattern matches, so test an empty match too
+            for m in [rx.search(s) for s in ("", "a", "a-b", "1")]:
+                if m:
+                    m.expand(_replacement(replace))
+    except (re.error, IndexError) as e:
+        return f"Invalid regular expression: {e}"
+    return ""
+
+
+def derive_location(phone: dict, field: str, pattern: str, replace: str | None = None) -> str:
+    """Webex Location of a phone: the value of `field`, narrowed by the regex `pattern` (blank = whole value).
+    Extract mode (`replace` is None): with a match the first capture group is used if the pattern has one, else
+    the whole match; no match gives "". Replace mode: every match is replaced by `replace` (\\1 or $1 for groups)
+    and the rest of the value is kept."""
+    value = str(phone.get(field, "") or "")
+    if not pattern:
+        return value
+    try:
+        if replace is not None:
+            return re.sub(pattern, _replacement(replace), value)
+        m = re.search(pattern, value)
+    except (re.error, IndexError):
+        return ""
+    if not m:
+        return ""
+    return (m.group(1) if m.re.groups else m.group(0)) or ""
+
+
+def phone_headers(max_lines: int, registration: bool = True) -> list[str]:
+    """Phone sheet headers. Registration Status and Last Registered are dropped when `registration` is False."""
+    cols = [c for c in PHONE_COLUMNS if registration or c not in ("Registration Status", "Last Registered")]
+    return cols + [f"Line {n} {f}" for n in range(1, max_lines + 1) for f in LINE_FIELDS]
+
+
+def hidden_headers(headers: list[str], options: set[str] | None) -> set[str]:
+    """Headers to hide: the columns of every EXCEL_OPTIONS entry that is not in `options` (None = none hidden)."""
+    if options is None:
+        return set()
+    hide: set[str] = set()
+    for label, (cols, fields) in EXCEL_OPTIONS.items():
+        if label not in options:
+            hide.update(cols)
+            hide.update(h for h in headers if h.startswith("Line ") and h.split(" ", 2)[2] in fields)
+    return hide
 
 
 def phone_row(phone: dict, max_lines: int) -> dict[str, str]:
@@ -284,9 +365,15 @@ def phone_row(phone: dict, max_lines: int) -> dict[str, str]:
 
 
 def build_workbook(result: dict, extra_sheets: list[tuple[str, list[str], list[dict]]] | None = None,
-                   options: set[str] | None = None, registration: bool = True) -> bytes:
+                   options: set[str] | None = None, registration: bool = True,
+                   location_field: str = "Device Pool", location_regex: str = "",
+                   location_replace: str | None = None, bad_emails: set[str] | None = None,
+                   supported_models: set[str] | None = None) -> bytes:
     """The export workbook (xlsx bytes). `extra_sheets` is [(name, headers, rows)] for later additions
-    such as a Hunt Groups sheet."""
+    such as a Hunt Groups sheet. `bad_emails` (lower case) are the addresses Webex does not know: their Email cells
+    get Excel's Bad colors, and so do blank Email cells of rows that have a User ID (only when `bad_emails` is
+    given, even if empty). `supported_models` (lower case model codes and display names Webex supports, from
+    get_supported_devices): Device Type cells not in it get the Bad colors (only when given)."""
     from io import BytesIO
 
     from openpyxl import Workbook
@@ -296,7 +383,10 @@ def build_workbook(result: dict, extra_sheets: list[tuple[str, list[str], list[d
 
     header_fill = PatternFill("solid", fgColor="1F4E78")
     header_font = Font(color="FFFFFF", bold=True)
-    phones = sorted(result["phones"], key=lambda p: (p["Device Name"].lower(), p["Email"].lower()))
+    phones = sorted(({**p, "Webex Location": derive_location(p, location_field, location_regex, location_replace)}
+                     for p in result["phones"]), key=lambda p: p["Device Name"].lower())
+    # second sort (stable, so equal User IDs stay in Device Name order); blank User IDs go last like Excel does
+    phones.sort(key=lambda p: (not p["User ID"].strip(), p["User ID"].strip().lower()))
     max_lines = result["max_lines"]
     wb = Workbook()
     wb.remove(wb.active)
@@ -324,22 +414,82 @@ def build_workbook(result: dict, extra_sheets: list[tuple[str, list[str], list[d
         c[p["Type"]] += 1
     summary = [{"Device Pool": k, "Phones": v["User"] + v["Workspace"], "Users": v["User"], "Workspaces": v["Workspace"]}
                for k, v in sorted(pools.items(), key=lambda kv: kv[0].lower())]
-    headers = phone_headers(max_lines, options, registration)
+    headers = phone_headers(max_lines, registration)
     sheet("Phones", "Phones", headers, [phone_row(p, max_lines) for p in phones])
+    hidden = hidden_headers(headers, options)
+    for i, h in enumerate(headers, 1):
+        if h in hidden:
+            wb["Phones"].column_dimensions[get_column_letter(i)].hidden = True
+    notes: dict[str, list[str]] = {}   # header -> what its highlighting means, shown as a header comment
+
+    def note(header: str, text: str) -> None:
+        if header in headers:
+            notes.setdefault(header, []).append(text)
+
     yellow = PatternFill("solid", fgColor="FFFF00")
-    cols = [headers.index(c) + 1 for c in ("User ID", "First Name", "Last Name", "Email") if c in headers]
+    cols = [headers.index(c) + 1 for c in ("User ID", "First Name", "Last Name") if c in headers]
+    guessed_any = False
     for i, p in enumerate(phones, 2):
         if p.get("guessed"):
+            guessed_any = True
             for c in cols:
                 wb["Phones"].cell(row=i, column=c).fill = yellow
-    if phones:   # highlight duplicate (non-blank) emails
+    if guessed_any:
+        for h in ("User ID", "First Name", "Last Name"):
+            note(h, "Yellow: the user was guessed from the phone description or line text (see Owner Source), not found as an owner or associated user.")
+    if phones:   # Type only accepts User or Workspace
+        from openpyxl.worksheet.datavalidation import DataValidation
+        tcol = get_column_letter(headers.index("Type") + 1)
+        dv = DataValidation(type="list", formula1='"User,Workspace"', allow_blank=False, showErrorMessage=True,
+                            errorTitle="Invalid Type", error="Type must be User or Workspace.")
+        dv.add(f"{tcol}2:{tcol}{len(phones) + 1}")
+        wb["Phones"].add_data_validation(dv)
+    if registration and "Last Registered" in headers:   # last registered more than 3 months ago or never: Bad on the device name
+        today = date.today()
+        m = today.year * 12 + today.month - 1 - 3
+        cutoff = date(m // 12, m % 12 + 1, min(today.day, calendar.monthrange(m // 12, m % 12 + 1)[1]))
+        bad_fill, bad_font = PatternFill("solid", fgColor="FFC7CE"), Font(color="9C0006")
+        ncol = headers.index("Device Name") + 1
+        for i, p in enumerate(phones, 2):
+            last = p["Last Registered"]
+            if last == "Never" or (last and date.fromisoformat(last) < cutoff):
+                note("Device Name", "Red: this phone last registered more than 3 months ago, or never.")
+                cell = wb["Phones"].cell(row=i, column=ncol)
+                cell.fill, cell.font = bad_fill, bad_font
+    if bad_emails is not None and "Email" in headers:   # Excel's Bad style
+        bad_fill, bad_font = PatternFill("solid", fgColor="FFC7CE"), Font(color="9C0006")
+        ecol = headers.index("Email") + 1
+        for i, p in enumerate(phones, 2):
+            email = p["Email"].strip().lower()
+            if email in bad_emails or (not email and p["User ID"].strip()):
+                note("Email", "Red: this email address was not found in Webex, or the phone has a User ID but no email.")
+                cell = wb["Phones"].cell(row=i, column=ecol)
+                cell.fill, cell.font = bad_fill, bad_font
+    if supported_models is not None and "Device Type" in headers:   # phone models Webex does not support: Bad style
+        bad_fill, bad_font = PatternFill("solid", fgColor="FFC7CE"), Font(color="9C0006")
+        dcol = headers.index("Device Type") + 1
+        for i, p in enumerate(phones, 2):
+            if p["Device Type"].strip().lower() not in supported_models:
+                note("Device Type", "Red: this phone model is not in the list of devices supported by Webex Calling.")
+                cell = wb["Phones"].cell(row=i, column=dcol)
+                cell.fill, cell.font = bad_fill, bad_font
+    if phones:   # highlight duplicate (non-blank) user IDs with Excel's Neutral colors
         from openpyxl.formatting.rule import FormulaRule
-        col = get_column_letter(headers.index("Email") + 1)
+        col = get_column_letter(headers.index("User ID") + 1)
         last = len(phones) + 1
         wb["Phones"].conditional_formatting.add(
             f"{col}2:{col}{last}",
             FormulaRule(formula=[f'AND({col}2<>"",COUNTIF(${col}$2:${col}${last},{col}2)>1)'],
-                        fill=PatternFill("solid", bgColor="FFC7CE", fgColor="FFC7CE"), font=Font(color="9C0006")))
+                        fill=PatternFill("solid", bgColor="FFEB9C", fgColor="FFEB9C"), font=Font(color="9C5700")))
+    if phones:
+        seen_ids = [p["User ID"].strip().lower() for p in phones if p["User ID"].strip()]
+        if len(seen_ids) != len(set(seen_ids)):
+            note("User ID", "Orange: this User ID appears on more than one phone.")
+    from openpyxl.comments import Comment
+    for h, texts in notes.items():
+        c = Comment("\n".join(dict.fromkeys(texts)), "UC Automations")
+        c.width, c.height = 280, 40 + 30 * len(texts)
+        wb["Phones"].cell(row=1, column=headers.index(h) + 1).comment = c
     sheet("BLFs", "BLFs", BLF_COLUMNS, result["blfs"])
     sheet("Summary", "Summary", ["Device Pool", "Phones", "Users", "Workspaces"], summary)
     sheet("Errors", "Errors", ["Device Name", "Error"], result["errors"])
@@ -348,3 +498,27 @@ def build_workbook(result: dict, extra_sheets: list[tuple[str, list[str], list[d
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+def missing_in_webex(client, emails: list[str], note: Callable[[str], None] | None = None) -> tuple[set[str], list[str]]:
+    """Check each distinct email against Webex people. Returns (lower case emails Webex has no user for, failure texts)."""
+    from .webex_api import WebexError
+
+    todo = sorted({e.strip().lower() for e in emails if e.strip()})
+    missing: set[str] = set()
+    failed: list[str] = []
+
+    def check(email: str) -> None:
+        try:
+            found = client.call("GET", "/people", {"email": email}).get("items") or []
+        except WebexError as e:
+            failed.append(f"{email}: {e}")
+            return
+        if not found:
+            missing.add(email)
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        for n, _ in enumerate(pool.map(check, todo), 1):
+            if note and (n % 25 == 0 or n == len(todo)):
+                note(f"Checked {n} of {len(todo)} email addresses in Webex")
+    return missing, failed

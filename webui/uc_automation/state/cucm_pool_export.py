@@ -10,17 +10,28 @@ import reflex as rx
 from ..backend import cucm_pool_export as x
 from ..backend.applog import OpLog
 from ..backend.cucm_axl import AxlError
+from ..backend.webex_tools import get_supported_devices
 from .cucm import CucmState
+from .webex_routing import WebexSession
+
+
+DEFAULT_LOCATION_REGEX = r"^(\w+)[_-](\w+)[_-]?.*"
+DEFAULT_LOCATION_REPLACE = r"\1 \2"
 
 
 class PoolExportState(CucmState):
 
-    output_fields: ClassVar[tuple[str, ...]] = ("pools", "selected", "preview", "counts", "error", "warning", "progress", "_xlsx")
+    output_fields: ClassVar[tuple[str, ...]] = ("pools", "selected", "preview", "counts", "error", "warning", "progress", "_xlsx", "_result", "email_check")
     pool_search: str = ""
     pools: list[str] = []
     selected: list[str] = []
-    registration: bool = False
+    registration: bool = True
     settings_open: bool = False
+    location_field: str = rx.LocalStorage("Device Pool", name="pool_export_location_field")
+    location_regex: str = rx.LocalStorage(DEFAULT_LOCATION_REGEX, name="pool_export_location_regex")
+    location_replace_on: str = rx.LocalStorage("1", name="pool_export_location_replace_on")
+    location_replace: str = rx.LocalStorage(DEFAULT_LOCATION_REPLACE, name="pool_export_location_replace")
+    location_field_names: list[str] = list(x.LOCATION_FIELDS)
     excel_option_names: list[str] = list(x.EXCEL_OPTIONS)
     # Excel Output Options: comma separated names of the enabled options (browser LocalStorage, all off by default)
     excel_opts: str = rx.LocalStorage("", name="pool_export_excel_opts")
@@ -32,6 +43,10 @@ class PoolExportState(CucmState):
     warning: str = ""
     progress: str = ""
     _xlsx: bytes = b""
+    _result: dict = {}
+    _build: tuple = ()
+    email_check: str = ""
+    validating: bool = False
 
     @rx.var
     def excel_on(self) -> list[str]:
@@ -49,6 +64,30 @@ class PoolExportState(CucmState):
     @rx.event
     def reset_excel_opts(self):
         self.excel_opts = ""
+        self.location_field = "Device Pool"
+        self.location_regex = DEFAULT_LOCATION_REGEX
+        self.location_replace_on = "1"
+        self.location_replace = DEFAULT_LOCATION_REPLACE
+
+    @rx.event
+    def set_location_replace_on(self, value: bool):
+        self.location_replace_on = "1" if value else "0"
+
+    @rx.event
+    def set_location_replace(self, value: str):
+        self.location_replace = value
+
+    @rx.event
+    def set_location_field(self, value: str):
+        self.location_field = value
+
+    @rx.event
+    def set_location_regex(self, value: str):
+        self.location_regex = value
+
+    @rx.var
+    def location_regex_error(self) -> str:
+        return x.check_location_regex(self.location_regex, self.location_replace if self.location_replace_on == "1" else None)
 
     @rx.var
     def has_result(self) -> bool:
@@ -77,14 +116,18 @@ class PoolExportState(CucmState):
         self.error = ""
         self.warning = ""
         self._xlsx = b""
+        self._result = {}
+        self.email_check = ""
 
     @rx.event
     async def search_pools(self):
+        if self.searching or self.running:
+            return
         conn = self._conn()
         if conn is None:
             return
         self.searching = True
-        self.error = ""
+        self.clear_result()
         yield
         try:
             found = await asyncio.to_thread(x.list_pools, conn, self.pool_search)
@@ -110,6 +153,11 @@ class PoolExportState(CucmState):
             return
         pools, registration = list(self.selected), self.registration
         options = set(self.excel_on)
+        if self.location_regex_error:
+            self.error = f"Webex Location settings: {self.location_regex_error}"
+            return
+        loc_field, loc_regex = self.location_field, self.location_regex
+        loc_replace = self.location_replace if self.location_replace_on == "1" else None
         self.running = True
         self.clear_result()
         self.progress = ""
@@ -118,6 +166,8 @@ class PoolExportState(CucmState):
         try:
             log.info(f"Connection: {conn.name} ({conn.server}) as {conn.username}")
             log.info(f"Device pools: {', '.join(pools)}; registration: {'yes' if registration else 'no'}")
+            log.info(f"Webex Location: {loc_field}" + (f" with regex {loc_regex}" if loc_regex else "")
+                     + (f" replaced by {loc_replace!r}" if loc_replace is not None else ""))
             log.info(f"Excel output options: {', '.join(sorted(options)) or 'none'}")
             latest = {"msg": ""}
 
@@ -133,7 +183,7 @@ class PoolExportState(CucmState):
                         self.progress = latest["msg"]
                         yield
                 result = task.result()
-                data = await asyncio.to_thread(x.build_workbook, result, None, options, registration)
+                data = await asyncio.to_thread(x.build_workbook, result, None, options, registration, loc_field, loc_regex, loc_replace)
             except AxlError as e:
                 self.error = str(e)
                 log.error(f"Export failed: {e}")
@@ -146,6 +196,8 @@ class PoolExportState(CucmState):
             else:
                 phones = result["phones"]
                 self._xlsx = data
+                self._result = result
+                self._build = (options, registration, loc_field, loc_regex, loc_replace)
                 self.preview = [{
                     "type": p["Type"], "name": p["Device Name"], "model": p["Device Type"], "pool": p["Device Pool"],
                     "user": p["User ID"], "email": p["Email"], "source": p["Owner Source"],
@@ -166,6 +218,71 @@ class PoolExportState(CucmState):
         finally:
             log.close()
             self.running = False
+            self.progress = ""
+
+    @rx.event
+    async def validate_emails(self):
+        if not self._result or self.validating or self.running:
+            return
+        emails = [p["Email"] for p in self._result["phones"] if p["Email"].strip()]
+        ws = await self.get_state(WebexSession)
+        await ws._refresh_session()
+        if not ws.webex_active:
+            self.error = f"No Webex org is saved for the organization {self.active_org or '(none)'}. Add one on the Credentials page."
+            return
+        if not ws.webex_ok:
+            self.error = f"Webex org {ws.webex_active}: {ws.webex_message}"
+            return
+        self.validating = True
+        self.error = ""
+        self.email_check = ""
+        yield
+        log = ws._webex_log("Validate emails in Webex", "device-export-webex-validate")
+        try:
+            client = await ws._connect(log)
+            if client is None:
+                self.error = ws.webex_message or "Could not connect to Webex."
+                return
+            log.info(f"{len(emails)} phone email(s) to check")
+            supported = set(await asyncio.to_thread(get_supported_devices, client))
+            log.info(f"{len(supported)} supported Webex device name(s) loaded")
+            latest = {"msg": ""}
+
+            def note(msg: str) -> None:
+                latest["msg"] = msg
+                log.info(msg)
+
+            task = asyncio.create_task(asyncio.to_thread(x.missing_in_webex, client, emails, note))
+            while not task.done():
+                await asyncio.wait([task], timeout=1.5)
+                if latest["msg"] != self.progress:
+                    self.progress = latest["msg"]
+                    yield
+            missing, failed = task.result()
+            no_email = sum(1 for p in self._result["phones"] if p["User ID"].strip() and not p["Email"].strip())
+            self._xlsx = await asyncio.to_thread(x.build_workbook, self._result, None, *self._build, missing, supported)
+            distinct = len({e.strip().lower() for e in emails})
+            self.email_check = f"{len(missing)} of {distinct} email addresses not found in Webex (highlighted Bad in the Email column)."
+            if no_email:
+                self.email_check += f" {no_email} phone(s) have a User ID but no email (also highlighted)."
+            bad_models = sorted({p["Device Type"] for p in self._result["phones"]
+                                 if p["Device Type"].strip().lower() not in supported})
+            if bad_models:
+                self.email_check += (f" {len(bad_models)} device type(s) are not supported by Webex "
+                                     f"(highlighted Bad in the Device Type column): {', '.join(bad_models)}.")
+                log.warning(f"Unsupported device types: {', '.join(bad_models)}")
+            for m in sorted(missing):
+                log.warning(f"Not in Webex: {m}")
+            if failed:
+                self.warning = f"{len(failed)} email(s) could not be checked: {failed[0]}"
+                for f in failed:
+                    log.error(f)
+        except Exception as e:
+            self.error = f"Email validation failed: {e}"
+            log.error(f"Email validation failed: {e!r}")
+        finally:
+            log.close()
+            self.validating = False
             self.progress = ""
 
     @rx.event

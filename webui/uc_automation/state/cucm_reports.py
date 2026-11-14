@@ -120,6 +120,8 @@ class DeviceReportState(CucmState):
 
     @rx.event
     async def run_report(self):
+        if self.running:
+            return
         conn = self._conn()
         if conn is None:
             return

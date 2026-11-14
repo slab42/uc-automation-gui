@@ -54,7 +54,7 @@ def device_report() -> rx.Component:
                 ),
                 rx.cond(S.mode == "Search",
                         search_input(S.pool_search, S.set_pool_search, "Device pool name contains",
-                                     width="320px", max_width="100%"),
+                                     on_enter=S.run_report, width="320px", max_width="100%"),
                         rx.fragment()),
                 rx.spacer(),
                 rx.button(rx.cond(S.running, rx.spinner(size="2"), rx.icon("play", size=16)), "Run Report",
