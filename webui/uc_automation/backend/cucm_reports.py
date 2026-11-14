@@ -26,16 +26,18 @@ RATE_WAIT = 60           # seconds to wait when RisPort70 still reports the rate
 RATE_RETRIES = 3
 _ris_lock = threading.Lock()
 _ris_last: dict[str, float] = {}
-KINDS = ["Phones", "Analog Phones", "CTI Devices", "Gateways"]
+KINDS = ["Phones", "Analog Phones", "CTI Devices", "Gateways", "SIP Trunks"]
+COUNT_ONLY = ("Gateways", "SIP Trunks")   # counted per pool, not part of the device total or registration
 _DEVICE_SQL = (
     "select dp.name as pool, d.name as name, tm.name as model from device d "
     "join devicepool dp on dp.pkid = d.fkdevicepool join typeclass tc on tc.enum = d.tkclass "
     "join typemodel tm on tm.enum = d.tkmodel where tc.name = 'Phone'"
 )
-_GATEWAY_SQL = (
+_COUNT_SQL = (
     "select dp.name as pool, count(*) as cnt from device d join devicepool dp on dp.pkid = d.fkdevicepool "
-    "join typeclass tc on tc.enum = d.tkclass where tc.name = 'Gateway' group by dp.name"
+    "join typeclass tc on tc.enum = d.tkclass where tc.name = '{cls}' group by dp.name"
 )
+_COUNT_CLASS = {"Gateways": "Gateway", "SIP Trunks": "Trunk"}
 
 
 def _xml_escape(s: str) -> str:
@@ -157,7 +159,7 @@ def _kind(model: str) -> str:
 def device_report(conn: CucmConnection, pool_filter: str = "", kinds: list[str] | None = None,
                   registration: bool = True, progress: Callable[[str], None] | None = None
                   ) -> tuple[list[dict[str, str]], bool]:
-    """([{devicePool, registered, unregistered, total, gateways}], registration complete) for the selected kinds.
+    """([{devicePool, registered, unregistered, total, gateways, trunks}], registration complete) for the selected kinds.
 
     When registration is incomplete (RisPort70 rate limit), registered holds the count found so far and
     unregistered is blank.
@@ -167,7 +169,7 @@ def device_report(conn: CucmConnection, pool_filter: str = "", kinds: list[str] 
     non-gateway kind is selected; otherwise registered and unregistered are blank."""
     kinds = list(KINDS if kinds is None else kinds)
     q = pool_filter.strip().lower()
-    want_dev = [k for k in kinds if k != "Gateways"]
+    want_dev = [k for k in kinds if k not in COUNT_ONLY]
     pools = [p["name"] for p in list_paged(conn, "listDevicePool", "devicePool", {"name": "%"}, ["name"])]
     if q:
         pools = [p for p in pools if q in p.lower()]
@@ -185,19 +187,23 @@ def device_report(conn: CucmConnection, pool_filter: str = "", kinds: list[str] 
     if do_reg:
         names = [n for v in by_pool.values() for n in v]
         reg, complete = registered_names(conn, names, "Any" if "CTI Devices" in want_dev else "Phone", progress)
-    gw_count: dict[str, int] = {}
-    if "Gateways" in kinds:
-        for r in sql_rows(conn, _GATEWAY_SQL, 2):
-            try:
-                gw_count[r["pool"]] = int(r["cnt"])
-            except (KeyError, ValueError):
-                continue
+    counts: dict[str, dict[str, int]] = {}
+    for kind in COUNT_ONLY:
+        counts[kind] = {}
+        if kind in kinds:
+            for r in sql_rows(conn, _COUNT_SQL.format(cls=_COUNT_CLASS[kind]), 2):
+                try:
+                    counts[kind][r["pool"]] = int(r["cnt"])
+                except (KeyError, ValueError):
+                    continue
     rows = []
     for p in sorted(pools, key=str.lower):
         names = by_pool[p]
         up = sum(1 for n in names if n.upper() in reg)
         rows.append({"devicePool": p, "registered": str(up) if do_reg else "", "unregistered": str(len(names) - up) if do_reg and complete else "",
-                     "total": str(len(names)), "gateways": str(gw_count.get(p, 0))})
+                     "total": str(len(names)),
+                     "gateways": str(counts["Gateways"].get(p, 0)) if "Gateways" in kinds else "",
+                     "trunks": str(counts["SIP Trunks"].get(p, 0)) if "SIP Trunks" in kinds else ""})
     return rows, complete
 
 
@@ -226,7 +232,7 @@ def consolidate_rows(rows: list[dict[str, str]], key: Callable[[str], str]) -> l
     for k in sorted(groups, key=str.lower):
         g = groups[k]
         row = {"devicePool": k, "pools": str(len(g))}
-        for f in ("registered", "unregistered", "total", "gateways"):
+        for f in ("registered", "unregistered", "total", "gateways", "trunks"):
             row[f] = str(sum(int(x[f]) for x in g)) if g[0][f] != "" else ""
         out.append(row)
     return out

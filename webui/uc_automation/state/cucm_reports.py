@@ -30,8 +30,8 @@ class DeviceReportState(CucmState):
     group_delimiter: str = "-"
     group_parts: str = "2"
     group_regex: str = ""
-    kinds: list[str] = list(r.KINDS)
-    registration: bool = True
+    kinds: list[str] = []
+    registration: bool = False
     error: str = ""
     warning: str = ""
     progress: str = ""
@@ -69,16 +69,24 @@ class DeviceReportState(CucmState):
     @rx.var
     def totals(self) -> dict[str, str]:
         return {k: f"{sum(int(x[k]) for x in self.report_rows if x[k]):,}" if self.report_rows[0][k] != "" else ""
-                for k in ("registered", "unregistered", "total", "gateways")} if self.report_rows else {}
+                for k in ("registered", "unregistered", "total", "gateways", "trunks")} if self.report_rows else {}
 
     @rx.var
     def reg_available(self) -> bool:
         """Registration only applies to phones, analog phones and CTI devices."""
-        return any(k != "Gateways" for k in self.kinds)
+        return any(k not in r.COUNT_ONLY for k in self.kinds)
 
     @rx.var
     def show_reg(self) -> bool:
         return bool(self.report_rows) and self.report_rows[0]["registered"] != ""
+
+    @rx.var
+    def show_trunks(self) -> bool:
+        return bool(self.report_rows) and self.report_rows[0]["trunks"] != ""
+
+    @rx.var
+    def show_gw(self) -> bool:
+        return bool(self.report_rows) and self.report_rows[0]["gateways"] != ""
 
     @rx.event
     def toggle_kind(self, kind: str, checked: bool):
@@ -175,7 +183,7 @@ class DeviceReportState(CucmState):
                 log.info(f"{len(rows)} device pool(s)")
                 for x in rows:
                     log.debug(f"{x['devicePool']}: registered {x['registered']}, unregistered {x['unregistered']}, "
-                              f"gateways {x['gateways']}")
+                              f"gateways {x['gateways']}, trunks {x['trunks']}")
         finally:
             log.close()
             self.running = False
@@ -188,9 +196,13 @@ class DeviceReportState(CucmState):
         buf = io.StringIO()
         w = csv.writer(buf, lineterminator="\n")
         grouped = self.grouping != "Off" and not self.group_error
-        w.writerow(["device_pool", *(["pools"] if grouped else []), "registered", "unregistered", "total_devices", "gateways"])
+        reg, gw, tr = self.show_reg, self.show_gw, self.show_trunks
+        w.writerow(["device_pool", *(["pools"] if grouped else []), *(["registered", "unregistered"] if reg else []),
+                    "total_devices", *(["gateways"] if gw else []), *(["sip_trunks"] if tr else [])])
         for x in self.report_rows:
-            w.writerow([x["devicePool"], *([x["pools"]] if grouped else []), x["registered"], x["unregistered"], x["total"], x["gateways"]])
+            w.writerow([x["devicePool"], *([x["pools"]] if grouped else []),
+                        *([x["registered"], x["unregistered"]] if reg else []), x["total"],
+                        *([x["gateways"]] if gw else []), *([x["trunks"]] if tr else [])])
         server = (self.active_info or {}).get("server", "cucm")
         stamp = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
         return rx.download(data=buf.getvalue(), filename=f"device-report-{server}-{stamp}.csv")
